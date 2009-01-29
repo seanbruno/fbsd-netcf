@@ -1,0 +1,19 @@
+<interface type="bridge" startmode="onboot">
+  <name>br0</name>
+  <uuid>deadbeef-feed-deaf-1230-456789abcdef</uuid>
+  <mtu size="1500"/>
+  <bridge stp="off">
+    <interface type="ethernet">
+      <name>eth0</name>
+      <!-- FIXME: allowing UUID here doesn't make much sense -->
+      <uuid>deadbeef-feed-deaf-2301-456789abcdef</uuid>
+      <!-- FIXME: is it reasonable to alllow separate MTU's for bridge and
+           enslaved if ? -->
+      <mtu size="1492"/>
+      <mac address="ab:bb:cc:dd:ee:ff"/>
+    </interface>
+    <interface type="ethernet">
+      <name>eth1</name>
+    </interface>
+  </bridge>
+</interface>

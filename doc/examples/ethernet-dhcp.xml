@@ -1,0 +1,7 @@
+<interface type="ethernet" startmode="none">
+  <name>eth0</name>
+  <uuid>deadbeef-feed-deaf-0123-456789abcdef</uuid>
+  <mtu size="1492"/>
+  <mac address="aa:bb:cc:dd:ee:ff"/>
+  <dhcp peerdns="no"/>
+</interface>
