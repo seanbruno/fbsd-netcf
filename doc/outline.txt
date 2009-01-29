@@ -1,0 +1,148 @@
+For certain applications, we want libvirt to be able to configure host
+network interfaces in a variety of ways; currently, we are most interested
+in teaching libvirt how to set up ordinary ethernet interfaces, bridges,
+bonding and vlan's.
+
+Below is a high-level proposal of how that could be done. Please comment
+copiously ;)
+
+1. XML Format
+=============
+
+The first question is how the user would describe the host interfaces they
+want. Below are some sketches of what an XML representation of the various
+kinds of interfaces would look like. This covers the minimal amount of
+settings for these to be useful, though I am sure we'll need to add more
+over time.
+
+All of these should also allow a <uuid> element for specifying a uuid; I
+omitted that for brevity.
+
+<interface type='physical'>
+   <name>eth0</name>
+   <mac address='00:19:d2:9f:88:96'/>
+   <dhcp peerdns="yes"/>
+ </interface>
+
+ <interface type='physical'>
+   <name>eth1</name>
+   <mac address='00:19:d2:9f:88:97'/>
+   <ip address="192.168.0.5/24" gateway="192.168.0.1"/>
+ </interface>
+
+ <interface type='physical'
+   <name>eth2</name>
+   <mac address='00:19:d2:9f:88:98'/>
+ </interface>
+
+ <interface type='bond'>
+   <name>bond0</name>
+   <bond mode='active-backup'>
+     <interface name="eth0" primary="yes"/>
+     <interface name="eth1"/>
+   </bond>
+ </bond>
+
+ <interface type='bridge'>
+   <name>br0</name>
+   <bridge stp='off'>
+     <interface name="eth2"/>
+   </bridge>
+   <dhcp peerdns="yes"/>
+ </bridge>
+
+ <interface type='vlan'>
+    <name>vlan0</name>
+    <vlan tag="42" reorder_hdr="yes">
+      <interface name='eth0'>
+    </vlan>
+ </inteface>
+
+2. API Changes
+==============
+
+There are two options for dealing with network interfaces: (1) use the
+existing virNetwork* calls or (2) add completely new API calls.
+
+Repurposing existing virNetwork* calls
+--------------------------------------
+
+The existing calls map well to the operations we need for managing
+interfaces, with a few exceptions:
+
+  - virNetworkGetAutostart/SetAutostart: depending on how we implement all
+    this (see below), 'autostart' might actually mean 'on boot', not 'when
+    libvirtd starts'
+  - virNetworkGetBridgeName doesn't make sense for interfaces, and should
+    return NULL for interfaces
+
+We'll probably also end up adding some functions to query details about an
+interface, in particular, a call to see what kind of network/interface a
+virNetworkPtr represents
+
+Add completely new virInterface* calls
+--------------------------------------
+
+This would add roughly the same API calls as the virNetwork* calls,
+i.e. we'd have something like
+
+  typedef struct virInterface *virInterfacePtr;
+
+  int  virInterfaceCreate(virInterfacePtr);
+  virInterfacePtr virInterfaceCreateXML(..);
+  ...
+
+plus some calls to extract information from a virInterfacePtr
+
+The second option seems cleaner to me and easier to implement, and avoids
+any subtle changes in the behavior of existing API, though I don't like
+that we'll be adding another 20 or so calls to libvirt's public API, with
+attendant churn both in the drivers and in virsh.
+
+3. Implementation
+=================
+
+Configuring network interfaces is highly OS and OS-variant/distro
+dependant. There are at least two different ways how libvirt can go about
+modifying the host to create interfaces:
+
+  1. Modify the system's network setup scripts (ifcfg-XXX on RH)
+
+  2. Directly use the system's network utilities like ifconfig
+
+  3. Rely on NetworkManager (not an option right now, as NM doesn't know
+    about bridges and the like)
+
+Option (1) saves us from replicating every bit of network setup
+functionality that those scripts already have - besides configuring the
+interface, we also might have to setup routes, run dhclient etc.
+
+Option (2) would require far fewer backend implementations than (1) - we
+should be able to get away with one implementation for Linux, rather than
+one for Fedora/RHEL, one for Debian, one for SuSe, three for gentoo
+etc.
+
+If we want 'autostart' for an interface to mean 'bring up the if as soon as
+the system boots', we are pretty much forced to go with option (1).
+
+All in all, option (1) seems more attractive, since it should save us from
+dealing with a lot of low-level details of network setup, and the distro
+scripts should be much better integrated with the rest of the system than
+what we come up with for libvirt.
+
+4. Misc issues
+==============
+
+  * Should interfaces have labels/roles ('data-interface') to help admins
+    make sense of the current config ?
+
+  * Do we expect interfaces to be in a specific state before we create them
+    or do we just tear them down and reconfigure them no matter what ?
+
+  * Are there crucial config options that are not covered by the sketches
+    above (e.g., setting an explicit MTU) ? Are there things in the XML
+    sketches above that will be impossible to implement on some OS ?
+
+  * Should this even be done as part of libvirt ? It seems like a very
+    generic network config tool, and libvirt merely the conduit to exposing
+    this through an API, most importantly, a remotable API.
