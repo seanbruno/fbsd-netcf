@@ -32,6 +32,7 @@
         <attribute name="address"><ref name="mac-addr"/></attribute>
       </element>
     </optional>
+    <!-- FIXME: Allow (some) ethtool options -->
   </define>
 
   <!-- Ethernet adapter without IP addressing, e.g. for a bridge -->
@@ -71,6 +72,9 @@
       </element>
     </element>
   </define>
+  <!-- Jim Fehlig would like support for other bridge attributes, in
+       particular hellotime, forwarddelay, and maxage
+  -->
 
   <!--
       Bonds
@@ -143,6 +147,8 @@
         <value>onboot</value>
         <value>none</value>
         <value>hotplug</value>
+        <!-- Jim Fehlig lists the following that SuSe supports:
+             manual, ifplug, nfsroot -->
       </choice>
     </attribute>
   </define>
@@ -157,6 +163,13 @@
           </attribute>
         </optional>
       </element>
+      <!-- FIXME: This format should be good enough for IPv4 and IPv6, i.e.
+
+           ipaddr="192.168.0.5/24"
+           ipaddr="2001:DB8:ABCD::1/64"
+
+           but will cause some backend pain
+      -->
       <element name="ip">
         <optional>
           <attribute name="address"><ref name="ip-mask"/></attribute>
@@ -167,6 +180,38 @@
       </element>
     </choice>
   </define>
+  <!-- Jim Fehlig (<jfehlig@novell.com>) suggest the
+       following additions to DHCP:
+
+       WRT dhcp element, would it make sense to consider hostname (hostname
+       to send to server) and if to change the local hostname to the
+       hostname delivered via dhcp?  E.g.  hostname="foo" (default
+       `hostname`) sethostname
+
+       Also route:
+         setrouting (default "yes")
+         setdefaultroute (default "yes")
+
+       and NIS:
+         nis (default "yes")
+         setnisdomain (default "yes")
+
+       What about dhcpv6?  A separate <dhcp6 /> element?
+  -->
+
+  <!-- Jim Fehlig suggest adding static routing info
+
+       As for routing info, how about a separate route element:
+
+       <route gateway="192.168.0.1" /> # destination=default
+       <route destination="default" gateway="192.168.0.1" />
+       <route destination="10.0.0.0/8" gateway="192.168.0.2" />
+       <route destination="2001:DB8:C::/64" gateway="2001:DB8:C::1" />
+       <route destination="2001:DB8::/32"> # unrecheable route (loopback)
+
+       It would perhaps make sense to use iproute2 names, that is prefix
+       instead of destination and nexthop instead of gateway.
+  -->
 
   <!-- Auxiliary definitions -->
   <define name="on-or-off">
