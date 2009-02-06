@@ -7,6 +7,7 @@
     <interface type="ethernet">
       <name>eth1</name>
     </interface>
-    <ip address="192.168.50.7/24" gateway="192.168.50.1"/>
+    <ip address="192.168.50.7/24"/>
+    <route gateway="192.168.50.1"/>
   </bond>
 </interface>

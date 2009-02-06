@@ -170,14 +170,18 @@
 
            but will cause some backend pain
       -->
-      <element name="ip">
+      <group>
+        <element name="ip">
+          <optional>
+            <attribute name="address"><ref name="ip-mask"/></attribute>
+          </optional>
+        </element>
         <optional>
-          <attribute name="address"><ref name="ip-mask"/></attribute>
+          <element name="route">
+            <attribute name="gateway"><ref name="ip-addr"/></attribute>
+          </element>
         </optional>
-        <optional>
-          <attribute name="gateway"><ref name="ip-addr"/></attribute>
-        </optional>
-      </element>
+      </group>
     </choice>
   </define>
   <!-- Jim Fehlig (<jfehlig@novell.com>) suggest the
