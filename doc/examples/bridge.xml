@@ -2,6 +2,7 @@
   <name>br0</name>
   <uuid>deadbeef-feed-deaf-1230-456789abcdef</uuid>
   <mtu size="1500"/>
+  <dhcp/>
   <bridge stp="off">
     <interface type="ethernet">
       <name>eth0</name>
