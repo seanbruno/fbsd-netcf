@@ -1,4 +1,4 @@
-all: augeas.rnc
+all: augeas.rnc interface.rnc
 
 %.rnc: %.rng
 	trang $< $@

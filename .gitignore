@@ -1,2 +1,1 @@
-doc/interface.rnc
-xml/augeas.rnc
+xml/*.rnc
