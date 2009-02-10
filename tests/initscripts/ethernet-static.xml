@@ -1,0 +1,15 @@
+<!-- A sketch of how the ethernet-static.xml example would be
+     turned into actual files.
+
+     The XML notation is close to what would turn up in a Augeas tree -->
+
+<forest>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth1">
+    <node label="DEVICE" value="eth1"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="BOOTPROTO" value="none"/>
+    <node label="IPADDR" value="192.168.0.5"/>
+    <node label="NETMASK" value="255.255.255.0"/>
+    <node label="GATEWAY" value="192.168.0.1"/>
+  </tree>
+</forest>

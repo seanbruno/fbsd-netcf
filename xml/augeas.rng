@@ -1,0 +1,46 @@
+<!--
+     A very simple XML representation of parts of the Augeas tree
+
+     The main advantage of this representation is that it's easy to
+     convert it into calls in the public API
+-->
+<grammar xmlns="http://relaxng.org/ns/structure/1.0"
+         datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+  <start>
+    <ref name="forest"/>
+  </start>
+
+  <define name="forest">
+    <element name="forest">
+      <oneOrMore>
+        <element name="tree">
+          <attribute name="path"><ref name="path-pattern"/></attribute>
+          <zeroOrMore>
+            <element name="node">
+              <attribute name="label"><ref name="label-pattern"/></attribute>
+              <optional>
+                <attribute name="value"><text/></attribute>
+              </optional>
+            </element>
+          </zeroOrMore>
+        </element>
+      </oneOrMore>
+    </element>
+  </define>
+
+  <!--
+      Type library
+  -->
+  <define name='path-pattern'>
+    <data type='string'>
+      <param name="pattern">[a-zA-Z0-9_\.\+\-/%]+</param>
+    </data>
+  </define>
+
+  <define name='label-pattern'>
+    <data type='string'>
+      <param name="pattern">[a-zA-Z0-9_\.\+\-%]+</param>
+    </data>
+  </define>
+
+</grammar>
