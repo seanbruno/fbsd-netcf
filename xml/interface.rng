@@ -87,6 +87,7 @@
       </attribute>
       <ref name="startmode"/>
       <ref name="basic-attrs"/>
+      <ref name="interface-addressing"/>
       <element name="bond">
         <interleave>
           <optional>
@@ -114,7 +115,6 @@
           <!-- The slave interfaces -->
           <ref name="bare-ethernet-interface"/>
         </oneOrMore>
-        <ref name="interface-addressing"/>
       </element>
     </element>
   </define>

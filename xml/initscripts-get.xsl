@@ -53,9 +53,7 @@
     <tree>
       <xsl:call-template name="basic-attrs"/>
       <xsl:call-template name="startmode"/>
-      <xsl:for-each select='bond'>
-        <xsl:call-template name="interface-addressing"/>
-      </xsl:for-each>
+      <xsl:call-template name="interface-addressing"/>
       <node label="BONDING_OPTS">
         <xsl:attribute name="value"><xsl:if test="bond/@mode">mode=<xsl:value-of select='bond/@mode'/></xsl:if><xsl:if test="bond/@primary"> primary=<xsl:value-of select='bond/@primary'/></xsl:if>
         </xsl:attribute>

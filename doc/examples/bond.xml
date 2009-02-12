@@ -1,5 +1,7 @@
 <interface type="bond" startmode="none">
   <name>bond0</name>
+  <ip address="192.168.50.7/24"/>
+  <route gateway="192.168.50.1"/>
   <bond mode="active-backup" primary="eth0">
     <interface type="ethernet">
       <name>eth0</name>
@@ -7,7 +9,5 @@
     <interface type="ethernet">
       <name>eth1</name>
     </interface>
-    <ip address="192.168.50.7/24"/>
-    <route gateway="192.168.50.1"/>
   </bond>
 </interface>
