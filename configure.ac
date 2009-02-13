@@ -20,5 +20,6 @@ AC_SUBST(NETCF_CFLAGS)
 
 gl_INIT
 
-AC_OUTPUT(Makefile \
-          src/Makefile)
+AC_OUTPUT(Makefile     \
+          src/Makefile \
+          tests/Makefile)

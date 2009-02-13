@@ -1,4 +1,4 @@
-SUBDIRS=src
+SUBDIRS=src tests
 
 xmldir=$(datadir)/netcf/xml
 

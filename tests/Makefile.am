@@ -1,9 +1,8 @@
-RNG=../xml/interface.rng
-all:
+RNG=$(top_srcdir)/xml/interface.rng
 
-check:
-	@(for f in examples/*.xml; do                        \
-	    if [ "$$f" != "examples/schemas.xml" ] ; then    \
+xmllint:
+	@(for f in interface/*.xml; do                       \
+	    if [ $$(basename $$f) != "schemas.xml" ] ; then  \
 	      xmllint -relaxng $(RNG) -noout $$f             \
 	        || echo FAIL;                                \
             fi;                                              \
