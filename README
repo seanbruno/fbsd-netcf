@@ -1,0 +1,16 @@
+Introduction
+============
+
+netcf is a cross-platform network configuration library.
+
+It takes the description of a network interface in its own
+platform-independent format and adapts the local system's network
+configuration to provide that interface.
+
+As an example, imagine you want to bondeth0 and eth1 together to bond0. On
+Fedora, that requires modifying the files ifcfg-eth0, ifcfg-eth1 and
+ifcfg-bond0 in /etc/sysconfig/network-scripts; on Debian, it requires
+changing several entries in /etc/network/interfaces.
+
+This library provides a convenient facility for programs that want to
+shield themselves from the intricacies of networking setup.
