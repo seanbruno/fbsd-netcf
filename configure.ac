@@ -21,5 +21,7 @@ AC_SUBST(NETCF_CFLAGS)
 gl_INIT
 
 AC_OUTPUT(Makefile     \
+          gnulib/lib/Makefile \
+          gnulib/tests/Makefile \
           src/Makefile \
           tests/Makefile)

@@ -1,4 +1,6 @@
-SUBDIRS=src tests
+SUBDIRS=gnulib/lib src gnulib/tests tests
+
+ACLOCAL_AMFLAGS = -I gnulib/m4
 
 xmldir=$(datadir)/netcf/xml
 
