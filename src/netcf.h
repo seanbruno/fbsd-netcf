@@ -41,7 +41,25 @@ struct netcf;
 /* An individual interface (connection) */
 struct netcf_if;
 
-struct netcf *ncf_init(void);
+/* The error codes returned by ncf_error */
+typedef enum {
+    NETCF_NOERROR = 0,   /* no error, everything ok */
+    NETCF_EINTERNAL,     /* internal error, aka bug */
+    NETCF_EOTHER,        /* other error, copout for being more specific */
+    NETCF_ENOMEM         /* allocation failed */
+} netcf_errcode_t;
+
+/*
+ * Initialize netcf. This function must be called before any other netcf
+ * function can be called.
+ *
+ * Use ROOT as the filesystem root. If ROOT is NULL, use "/".
+ *
+ * Return 0 on success, -2 if allocation of *NETCF failed, and -1 on any
+ * other failure. When -2 is returned, *NETCF is NULL.
+ */
+int ncf_init(struct netcf **netcf, const char *root);
+
 void ncf_close(struct netcf *);
 
 /* Number of known interfaces and list of them.
@@ -89,8 +107,18 @@ char *ncf_xml_desc(struct netcf_if *);
 /* Release any resources used by this NETCF_IF; the pointer is invalid
  * after this call
  */
-int ncf_free(struct netcf_if *);
+void ncf_free(struct netcf_if *);
 
+/* Return the error code when a previous call failed. The return value is
+ * one of NETCF_ERRCODE_T.
+ *
+ * ERRMSG is a human-readable explanation of the error. For some errors,
+ * DETAILS will contain additional information, for others it will be NULL.
+ *
+ * Both the ERRMSG pointer and the DETAILS pointer are only valid until the
+ * next call to another function in this API.
+ */
+int ncf_error(struct netcf *, const char **errmsg, const char **details);
 #endif
 
 
