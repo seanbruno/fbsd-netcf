@@ -77,6 +77,8 @@
  */
 #define ARRAY_CARDINALITY(array) (sizeof (array) / sizeof *(array))
 
+#define MEMZERO(ptr, n) memset((ptr), 0, (n) * sizeof(*(ptr)));
+
 #define ERR_COND(cond, ncf, err) \
     if (cond) (ncf)->errcode = (NETCF_##err)
 #define ERR_BAIL(ncf) if ((ncf)->errcode != NETCF_NOERROR) goto error;
@@ -103,7 +105,8 @@ struct netcf {
 int drv_init(struct netcf *netcf);
 void drv_close(struct netcf *netcf);
 int drv_num_of_interfaces(struct netcf *ncf);
-
+int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names);
+int drv_list_interfaces_uuid_string(struct netcf *, int maxuuid, char **uuids);
 #endif
 
 

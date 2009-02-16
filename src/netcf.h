@@ -62,16 +62,15 @@ int ncf_init(struct netcf **netcf, const char *root);
 
 void ncf_close(struct netcf *);
 
-/* Number of known interfaces and list of them.
- * For listing we identify the interfaces by UUID, since we don't want
- * to assume that each interface has a (device) name or a hwaddr.
- *
- * Maybe we should just list them as STRUCT NETCF_IF *
+/* Number of known interfaces and list of them. For listing, interfaces are
+ * either identified by name or by UUID.
  */
 int
 ncf_num_of_interfaces(struct netcf *);
 int
-ncf_list_interfaces(struct netcf *, int maxuuid, char **uuids);
+ncf_list_interfaces(struct netcf *, int maxnames, char **names);
+int
+ncf_list_interfaces_uuid_string(struct netcf *, int maxuuid, char **uuids);
 
 /* Look up interfaces by UUID, name and hwaddr (MAC-48) */
 struct netcf_if *

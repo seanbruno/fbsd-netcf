@@ -78,12 +78,32 @@ int ncf_num_of_interfaces(struct netcf *ncf) {
     return drv_num_of_interfaces(ncf);
 }
 
-#if 0
-int ncf_list_interfaces(struct netcf *ncf, int maxuuid, char **uuids) {
+int ncf_list_interfaces(struct netcf *ncf, int maxnames, char **names) {
+    int result;
+
     ERR_RESET(ncf);
-    return -1;
+    MEMZERO(names, maxnames);
+    result = drv_list_interfaces(ncf, maxnames, names);
+    if (result < 0)
+        for (int i=0; i < maxnames; i++)
+            FREE(names[i]);
+    return result;
 }
 
+int ncf_list_interfaces_uuid_string(struct netcf *ncf,
+                                    int maxuuid, char **uuids) {
+    int result;
+
+    ERR_RESET(ncf);
+    MEMZERO(uuids, maxuuid);
+    result = drv_list_interfaces_uuid_string(ncf, maxuuid, uuids);
+    if (result < 0)
+        for (int i=0; i < maxuuid; i++)
+            FREE(uuids[i]);
+    return result;
+}
+
+#if 0
 /* Look up interfaces by UUID, name and hwaddr (MAC-48) */
 struct netcf_if *
 ncf_lookup_by_uuid_string(struct netcf *ncf, const char *uuid) {
