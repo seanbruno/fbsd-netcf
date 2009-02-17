@@ -51,6 +51,8 @@ dnl Need to test if pkg-config exists
 PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES([LIBAUGEAS], [augeas])
 
+NETCF_CHECK_READLINE
+
 AC_OUTPUT(Makefile     \
           gnulib/lib/Makefile \
           gnulib/tests/Makefile \
