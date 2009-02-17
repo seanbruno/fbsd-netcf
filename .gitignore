@@ -29,6 +29,7 @@ TAGS
 libtool
 ylwrap
 src/datadir.h
+src/ncftool
 *.aux
 *.dvi
 *.log
