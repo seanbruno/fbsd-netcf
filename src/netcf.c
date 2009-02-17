@@ -54,11 +54,12 @@ static void free_netcf(struct netcf *ncf) {
     free(ncf);
 }
 
-static void free_netcf_if(struct netcf_if *nif) {
+void free_netcf_if(struct netcf_if *nif) {
     if (nif == NULL)
         return;
 
     assert(nif->ref == 0);
+    unref(nif->ncf, netcf);
     free(nif->path);
     free(nif);
 }
@@ -121,15 +122,15 @@ int ncf_list_interfaces_uuid_string(struct netcf *ncf,
     return result;
 }
 
+struct netcf_if * ncf_lookup_by_name(struct netcf *ncf, const char *name) {
+    ERR_RESET(ncf);
+    return drv_lookup_by_name(ncf, name);
+}
+
 #if 0
 /* Look up interfaces by UUID, name and hwaddr (MAC-48) */
 struct netcf_if *
 ncf_lookup_by_uuid_string(struct netcf *ncf, const char *uuid) {
-    ERR_RESET(ncf);
-    return NULL;
-}
-
-struct netcf_if * ncf_lookup_by_name(struct netcf *, const char *name) {
     ERR_RESET(ncf);
     return NULL;
 }

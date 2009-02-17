@@ -49,7 +49,7 @@ gl_WARN_ADD([-Werror])
 
 dnl Need to test if pkg-config exists
 PKG_PROG_PKG_CONFIG
-PKG_CHECK_MODULES([LIBAUGEAS], [augeas])
+PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.4.0])
 
 NETCF_CHECK_READLINE
 

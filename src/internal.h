@@ -23,7 +23,10 @@
 #ifndef INTERNAL_H_
 #define INTERNAL_H_
 
+#include <config.h>
 #include "netcf.h"
+
+#include <string.h>
 
 /*
  * Macros for gcc's attributes
@@ -118,6 +121,8 @@ struct netcf_if {
     char         *path;
 };
 
+void free_netcf_if(struct netcf_if *nif);
+
 /* The interface to the driver (backend). The appropriate driver is
  * selected at build time from the available drivers in drv_*
  */
@@ -126,6 +131,7 @@ void drv_close(struct netcf *netcf);
 int drv_num_of_interfaces(struct netcf *ncf);
 int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names);
 int drv_list_interfaces_uuid_string(struct netcf *, int maxuuid, char **uuids);
+struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name);
 
 #endif
 

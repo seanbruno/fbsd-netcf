@@ -29,6 +29,10 @@
 #include <stdio.h>
 #include <string.h>
 #include "safe-alloc.h"
+#include "ref.h"
+
+static const char *const ifcfg_path =
+    "/files/etc/sysconfig/network-scripts/*";
 
 struct driver {
     struct augeas *augeas;
@@ -88,6 +92,16 @@ static void free_matches(int nint, char ***intf) {
     }
 }
 
+static int is_slave(struct netcf *ncf, const char *intf) {
+    for (int s = 0; s < ARRAY_CARDINALITY(subif_paths); s++) {
+        int r;
+        r = aug_submatch(ncf, intf, subif_paths[s], NULL);
+        if (r != 0)
+            return r;
+    }
+    return 0;
+}
+
 static int list_interfaces(struct netcf *ncf, char ***intf) {
     int nint = 0, result = 0;
     struct augeas *aug = NULL;
@@ -96,23 +110,13 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
     ERR_BAIL(ncf);
 
     /* Look in augeas for all interfaces */
-    nint = aug_match(aug, "/files/etc/sysconfig/network-scripts/*", intf);
+    nint = aug_match(aug, ifcfg_path, intf);
     ERR_COND_BAIL(nint < 0, ncf, EOTHER);
     result = nint;
 
     /* Filter out the interfaces that are slaves/subordinate */
     for (int i = 0; i < result;) {
-        int slave = 0;
-        for (int s = 0; s < ARRAY_CARDINALITY(subif_paths); s++) {
-            int r;
-            r = aug_submatch(ncf, (*intf)[i], subif_paths[s], NULL);
-            ERR_BAIL(ncf);
-            if (r > 0) {
-                slave = 1;
-                break;
-            }
-        }
-        if (slave) {
+        if (is_slave(ncf, (*intf)[i])) {
             FREE((*intf)[i]);
             memmove(*intf + i, *intf + i + 1,
                     (nint - (i + 1))*sizeof((*intf)[0]));
@@ -182,9 +186,44 @@ int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names) {
 int drv_list_interfaces_uuid_string(struct netcf *ncf,
                                     int maxuuids, char **uuids) {
     /* FIXME: This is somewhat bogus. For interfaces we don't manage,
-       there's no guarantee that there is a NCF_UUID. I nthat case, we'd
+       there's no guarantee that there is a NCF_UUID. In that case, we'd
        have to generate one and save it in the interface file */
     return list_interface_ids(ncf, maxuuids, uuids, "NCF_UUID");
+}
+
+struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
+    struct netcf_if *nif = NULL;
+    char *pathx = NULL;
+    struct augeas *aug;
+    char **intf = NULL;
+    int nint;
+    int r;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    r = xasprintf(&pathx, "%s[DEVICE = '%s']", ifcfg_path, name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    nint = aug_match(aug, pathx, &intf);
+    ERR_COND_BAIL(nint < 0 || nint > 1, ncf, EOTHER);
+
+    if (nint == 0 || is_slave(ncf, intf[0]))
+        goto done;
+
+    if (make_ref(nif) < 0)
+        ERR_COND_BAIL(1, ncf, ENOMEM);
+    nif->ncf = ref(ncf);
+    nif->path = intf[0];
+    intf[0] = NULL;
+    goto done;
+
+ error:
+    unref(nif, netcf_if);
+ done:
+    FREE(pathx);
+    free_matches(nint, &intf);
+    return nif;
 }
 
 /*
