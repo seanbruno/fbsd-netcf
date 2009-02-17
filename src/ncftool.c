@@ -1,0 +1,388 @@
+/*
+ * ncftool.c: comand line interface for ncf
+ *
+ * Copyright (C) 2009 Red Hat Inc.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
+ *
+ * Author: David Lutterkort <lutter@redhat.com>
+ */
+
+#include <config.h>
+#include "netcf.h"
+#include "internal.h"
+#include "safe-alloc.h"
+#include "list.h"
+
+#include <assert.h>
+#include <stdio.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+#include <getopt.h>
+#include <limits.h>
+#include <stdbool.h>
+
+enum command_opt_tag {
+    CMD_OPT_NONE,
+    CMD_OPT_BOOL
+};
+
+struct command_opt_def {
+    enum command_opt_tag tag;
+    const char          *name;
+};
+
+#define CMD_OPT_DEF_LAST { .tag = CMD_OPT_NONE, .name = NULL }
+
+/* Handlers return one of these */
+enum command_result {
+    CMD_RES_OK,
+    CMD_RES_ERR,
+    CMD_RES_ENOMEM,
+    CMD_RES_QUIT
+};
+
+struct command {
+    const struct command_def *def;
+    struct command_opt *opt;
+};
+
+typedef int(*cmd_handler)(const struct command*);
+
+struct command_def {
+    const char             *name;
+    const struct command_opt_def *opts;
+    cmd_handler             handler;
+    const char             *synopsis;
+    const char             *help;
+};
+
+static const struct command_def cmd_def_last =
+    { .name = NULL, .opts = NULL, .handler = NULL,
+      .synopsis = NULL, .help = NULL };
+
+struct command_opt {
+    struct command_opt     *next;
+    const struct command_opt_def *def;
+    bool                    bvalue;
+};
+
+/* Global variables */
+
+static const struct command_def const *commands[];
+
+struct netcf *ncf;
+static const char *const progname = "ncftool";
+const char *root = NULL;
+
+static int opt_present(const struct command *cmd, const char *name) {
+    for (struct command_opt *o = cmd->opt; o != NULL; o = o->next) {
+        if (STREQ(o->def->name, name))
+            return 1;
+    }
+    return 0;
+}
+
+static int cmd_list(const struct command *cmd) {
+    int nint;
+    char **intf;
+
+    nint = ncf_num_of_interfaces(ncf);
+    if (nint < 0)
+        return CMD_RES_ERR;
+    if (ALLOC_N(intf, nint) < 0)
+        return CMD_RES_ENOMEM;
+    if (opt_present(cmd, "uuid")) {
+        nint = ncf_list_interfaces_uuid_string(ncf, nint, intf);
+    } else {
+        nint = ncf_list_interfaces(ncf, nint, intf);
+    }
+    if (nint < 0)
+        return CMD_RES_ERR;
+    for (int i=0; i < nint; i++) {
+        printf("%s\n", intf[i] == NULL ? "(none)" : intf[i]);
+        FREE(intf[i]);
+    }
+    FREE(intf);
+    return CMD_RES_OK;
+}
+
+static const struct command_opt_def cmd_list_opts[] = {
+    { .tag = CMD_OPT_BOOL, .name = "uuid" },
+    CMD_OPT_DEF_LAST
+};
+
+static const struct command_def cmd_list_def = {
+    .name = "list",
+    .opts = cmd_list_opts,
+    .handler = cmd_list,
+    .synopsis = "list network interfaces",
+    .help = "list all network interfaces"
+};
+
+static int cmd_quit(ATTRIBUTE_UNUSED const struct command *cmd) {
+    return CMD_RES_QUIT;
+}
+
+static const struct command_opt_def cmd_quit_opts[] = {
+    CMD_OPT_DEF_LAST
+};
+
+static const struct command_def cmd_quit_def = {
+    .name = "quit",
+    .opts = cmd_quit_opts,
+    .handler = cmd_quit,
+    .synopsis = "quit",
+    .help = "quit"
+};
+
+static char *nexttoken(char **line) {
+    char *r, *s;
+    char quot = '\0';
+
+    s = *line;
+
+    while (*s && isblank(*s)) s+= 1;
+    if (*s == '\'' || *s == '"') {
+        quot = *s;
+        s += 1;
+    }
+    r = s;
+    while (*s) {
+        if ((quot && *s == quot) || (!quot && isblank(*s)))
+            break;
+        s += 1;
+    }
+    if (*s)
+        *s++ = '\0';
+    *line = s;
+    return r;
+}
+
+static int parseline(struct command *cmd, char *line) {
+    char *tok;
+
+    MEMZERO(cmd, 1);
+    tok = nexttoken(&line);
+    for (int i = 0; commands[i]->name != NULL; i++) {
+        if (STREQ(tok, commands[i]->name)) {
+            cmd->def = commands[i];
+            break;
+        }
+    }
+    if (cmd->def == NULL) {
+        fprintf(stderr, "Unknown command '%s'\n", tok);
+        return -1;
+    }
+
+    while (*line != '\0') {
+        tok = nexttoken(&line);
+        if (tok[0] == '-') {
+            const struct command_opt_def *def;
+            char *opt = tok + 1;
+
+            if (*opt == '-') opt += 1;
+            for (def = cmd->def->opts; def->name != NULL; def++) {
+                if (STREQ(opt, def->name)) {
+                    struct command_opt *copt = NULL;
+                    if (ALLOC(copt) < 0) {
+                        fprintf(stderr, "Allocation failed\n");
+                        return -1;
+                    }
+                    list_append(cmd->opt, copt);
+                    if (def->tag == CMD_OPT_BOOL) {
+                        copt->def = def;
+                        copt->bvalue = 1;
+                    } else {
+                        assert(0);
+                    }
+                    break;
+                }
+            }
+            if (def->name == NULL) {
+                fprintf(stderr, "Illegal option %s\n", tok);
+            }
+        } else {
+            // We don't have any commands yet with nonoption arguments
+            fprintf(stderr, "Illegal argument %s\n", tok);
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static const struct command_def const *commands[] = {
+    &cmd_list_def,
+    &cmd_def_last
+};
+
+static char *readline_command_generator(const char *text, int state) {
+    static int current = 0;
+    const char *name;
+
+    if (state == 0)
+        current = 0;
+
+    rl_completion_append_character = ' ';
+    while ((name = commands[current]->name) != NULL) {
+        current += 1;
+        if (STREQLEN(text, name, strlen(text)))
+            return strdup(name);
+    }
+    return NULL;
+}
+
+static char **readline_completion(const char *text, int start,
+                                  ATTRIBUTE_UNUSED int end) {
+    if (start == 0)
+        return rl_completion_matches(text, readline_command_generator);
+
+    return NULL;
+}
+
+static void readline_init(void) {
+    rl_readline_name = "augtool";
+    rl_attempted_completion_function = readline_completion;
+}
+
+__attribute__((noreturn))
+static void usage(void) {
+    fprintf(stderr, "Usage: %s [OPTIONS] [COMMAND]\n", progname);
+    fprintf(stderr, "Load the Augeas tree and modify it. If no COMMAND is given, run interactively\n");
+    fprintf(stderr, "Run '%s help' to get a list of possible commands.\n",
+            progname);
+    fprintf(stderr, "\nOptions:\n\n");
+    fprintf(stderr, "  -c, --typecheck    typecheck lenses\n");
+    fprintf(stderr, "  -b, --backup       preserve originals of modified files with\n"
+                    "                     extension '.augsave'\n");
+    fprintf(stderr, "  -n, --new          save changes in files with extension '.augnew',\n"
+                    "                     leave original unchanged\n");
+    fprintf(stderr, "  -r, --root ROOT    use ROOT as the root of the filesystem\n");
+    fprintf(stderr, "  -I, --include DIR  search DIR for modules; can be given mutiple times\n");
+    fprintf(stderr, "  --nostdinc         do not search the builtin default directories for modules\n");
+
+    exit(EXIT_FAILURE);
+}
+
+static void parse_opts(int argc, char **argv) {
+    int opt;
+    struct option options[] = {
+        { "help",      0, 0, 'h' },
+        { "root",      1, 0, 'r' },
+        { 0, 0, 0, 0}
+    };
+    int idx;
+
+    while ((opt = getopt_long(argc, argv, "hr:", options, &idx)) != -1) {
+        switch(opt) {
+        case 'h':
+            usage();
+            break;
+        case 'r':
+            root = optarg;
+            break;
+        default:
+            usage();
+            break;
+        }
+    }
+}
+
+static void print_netcf_error(void) {
+    const char *errmsg, *details;
+    ncf_error(ncf, &errmsg, &details);
+    fprintf(stderr, "error: %s\n", errmsg);
+    if (details != NULL)
+        fprintf(stderr, "error: %s\n", details);
+}
+
+static int main_loop(void) {
+    struct command cmd;
+    char *line;
+    int ret = 0;
+
+    MEMZERO(&cmd, 1);
+    while(1) {
+        char *dup_line;
+
+        line = readline("ncftool> ");
+        if (line == NULL) {
+            printf("\n");
+            return ret;
+        }
+
+        dup_line = strdup(line);
+        if (dup_line == NULL) {
+            fprintf(stderr, "Out of memory\n");
+            return -1;
+        }
+
+        if (parseline(&cmd, dup_line) == 0) {
+            int r;
+            r = cmd.def->handler(&cmd);
+            switch (r) {
+            case CMD_RES_OK:
+                break;
+            case CMD_RES_ERR:
+                print_netcf_error();
+                ret = -1;
+                break;
+            case CMD_RES_ENOMEM:
+                fprintf(stderr, "error: allocation failed\n");
+                ret = -1;
+                break;
+            case CMD_RES_QUIT:
+                return ret;
+            }
+            add_history(line);
+        }
+        free(dup_line);
+        cmd.def = NULL;
+        while (cmd.opt != NULL) {
+            struct command_opt *del = cmd.opt;
+            cmd.opt = del->next;
+            free(del);
+        }
+    }
+}
+
+int main(int argc, char **argv) {
+    int r;
+
+    parse_opts(argc, argv);
+
+    if (ncf_init(&ncf, root) < 0) {
+        fprintf(stderr, "Failed to initialize netcf\n");
+        exit(EXIT_FAILURE);
+    }
+    readline_init();
+    if (optind < argc) {
+        fprintf(stderr, "warning: ignoring additional arguments\n");
+    } else {
+        r = main_loop();
+    }
+
+    return r == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+/*
+ * Local variables:
+ *  indent-tabs-mode: nil
+ *  c-indent-level: 4
+ *  c-basic-offset: 4
+ *  tab-width: 4
+ * End:
+ */
