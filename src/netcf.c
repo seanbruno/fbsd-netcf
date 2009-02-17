@@ -22,6 +22,7 @@
 
 #include <config.h>
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include "safe-alloc.h"
@@ -44,9 +45,27 @@ static const char *const errmsgs[] = {
     "allocation failed"                   /* ENOMEM    */
 };
 
+static void free_netcf(struct netcf *ncf) {
+    if (ncf == NULL)
+        return;
+
+    assert(ncf->ref == 0);
+    free(ncf->root);
+    free(ncf);
+}
+
+static void free_netcf_if(struct netcf_if *nif) {
+    if (nif == NULL)
+        return;
+
+    assert(nif->ref == 0);
+    free(nif->path);
+    free(nif);
+}
+
 int ncf_init(struct netcf **ncf, const char *root) {
     *ncf = NULL;
-    if (ALLOC(*ncf) < 0)
+    if (make_ref(*ncf) < 0)
         goto oom;
     if (root == NULL)
         root = "/";
@@ -60,13 +79,10 @@ int ncf_init(struct netcf **ncf, const char *root) {
 }
 
 void ncf_close(struct netcf *ncf) {
-    if (ncf == NULL)
-        return;
-
     ERR_RESET(ncf);
+
     drv_close(ncf);
-    free(ncf->root);
-    free(ncf);
+    unref(ncf, netcf);
 }
 
 /* Number of known interfaces and list of them.
@@ -161,15 +177,18 @@ char *ncf_xml_desc(struct netcf_if *) {
     ERR_RESET(ncf);
     return NULL;
 }
+#endif
 
 /* Release any resources used by this NETCF_IF; the pointer is invalid
  * after this call
  */
-void ncf_free(struct netcf_if *) {
-    ERR_RESET(ncf);
-    return;
+void ncf_free(struct netcf_if *nif) {
+    if (nif == NULL)
+        return;
+
+    ERR_RESET(nif->ncf);
+    unref(nif, netcf_if);
 }
-#endif
 
 int ncf_error(struct netcf *ncf, const char **errmsg, const char **details) {
     netcf_errcode_t errcode = ncf->errcode;

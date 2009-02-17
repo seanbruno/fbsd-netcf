@@ -72,6 +72,9 @@
 #define ATTRIBUTE_RETURN_CHECK
 #endif                                   /* __GNUC__ */
 
+/* This needs ATTRIBUTE_RETURN_CHECK */
+#include "ref.h"
+
 /*
  * various convenience macros
  */
@@ -102,10 +105,17 @@
  * netcf structures and internal API's
  */
 struct netcf {
+    ref_t            ref;
     char            *root;                /* The filesystem root */
     netcf_errcode_t  errcode;
     char            *errdetails;          /* Error details */
     struct driver   *driver;              /* Driver specific data */
+};
+
+struct netcf_if {
+    ref_t         ref;
+    struct netcf *ncf;
+    char         *path;
 };
 
 /* The interface to the driver (backend). The appropriate driver is
@@ -116,6 +126,7 @@ void drv_close(struct netcf *netcf);
 int drv_num_of_interfaces(struct netcf *ncf);
 int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names);
 int drv_list_interfaces_uuid_string(struct netcf *, int maxuuid, char **uuids);
+
 #endif
 
 
