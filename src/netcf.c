@@ -48,6 +48,8 @@ int ncf_init(struct netcf **ncf, const char *root) {
     *ncf = NULL;
     if (ALLOC(*ncf) < 0)
         goto oom;
+    if (root == NULL)
+        root = "/";
     (*ncf)->root = strdup(root);
     if ((*ncf)->root == NULL)
         goto oom;
