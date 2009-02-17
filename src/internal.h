@@ -79,6 +79,15 @@
 
 #define MEMZERO(ptr, n) memset((ptr), 0, (n) * sizeof(*(ptr)));
 
+/* String equality tests, suggested by Jim Meyering. */
+#define STREQ(a,b) (strcmp((a),(b)) == 0)
+#define STRCASEEQ(a,b) (strcasecmp((a),(b)) == 0)
+#define STRCASEEQLEN(a,b,n) (strncasecmp((a),(b),(n)) == 0)
+#define STRNEQ(a,b) (strcmp((a),(b)) != 0)
+#define STRCASENEQ(a,b) (strcasecmp((a),(b)) != 0)
+#define STREQLEN(a,b,n) (strncmp((a),(b),(n)) == 0)
+#define STRNEQLEN(a,b,n) (strncmp((a),(b),(n)) != 0)
+
 #define ERR_COND(cond, ncf, err) \
     if (cond) (ncf)->errcode = (NETCF_##err)
 #define ERR_BAIL(ncf) if ((ncf)->errcode != NETCF_NOERROR) goto error;
