@@ -1,5 +1,24 @@
 RNG=$(top_srcdir)/xml/interface.rng
 
+GNULIB= ../gnulib/lib/libgnu.la
+GNULIB_CFLAGS= -I $(top_srcdir)/gnulib/lib
+
+AM_CFLAGS = $(NETCF_CFLAGS) $(WARN_CFLAGS) $(GNULIB_CFLAGS) \
+	-I $(top_builddir)/src
+
+TESTS_ENVIRONMENT = \
+  PATH='$(abs_top_builddir)/src$(PATH_SEPARATOR)'"$$PATH" \
+  abs_top_builddir='$(abs_top_builddir)' \
+  abs_top_srcdir='$(abs_top_srcdir)'
+
+TESTS=test-initscripts
+
+# FIXME: Needs to be conditionalized
+check_PROGRAMS=test-initscripts
+
+test_initscripts_SOURCES = test-initscripts.c cutest.c cutest.h
+test_initscripts_LDADD = $(top_builddir)/src/libnetcf.la $(GNULIB)
+
 xmllint:
 	@(for f in interface/*.xml; do                       \
 	    if [ $$(basename $$f) != "schemas.xml" ] ; then  \
