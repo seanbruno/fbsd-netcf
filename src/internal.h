@@ -25,6 +25,7 @@
 
 #include <config.h>
 #include "netcf.h"
+#include "datadir.h"
 
 #include <string.h>
 
