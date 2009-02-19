@@ -36,7 +36,8 @@
 
 enum command_opt_tag {
     CMD_OPT_NONE,
-    CMD_OPT_BOOL
+    CMD_OPT_BOOL,
+    CMD_OPT_ARG
 };
 
 struct command_opt_def {
@@ -76,7 +77,11 @@ static const struct command_def cmd_def_last =
 struct command_opt {
     struct command_opt     *next;
     const struct command_opt_def *def;
-    bool                    bvalue;
+    /* Switched on def->tag */
+    union {
+        bool                    bvalue;  /* CMD_OPT_BOOL */
+        char                   *string;  /* CMD_OPT_ARG */
+    };
 };
 
 /* Global variables */
@@ -93,6 +98,14 @@ static int opt_present(const struct command *cmd, const char *name) {
             return 1;
     }
     return 0;
+}
+
+static const char *arg_value(const struct command *cmd, const char *name) {
+    for (struct command_opt *o = cmd->opt; o != NULL; o = o->next) {
+        if (STREQ(o->def->name, name))
+            return o->string;
+    }
+    assert(0);
 }
 
 static int cmd_list(const struct command *cmd) {
@@ -130,6 +143,38 @@ static const struct command_def cmd_list_def = {
     .handler = cmd_list,
     .synopsis = "list network interfaces",
     .help = "list all network interfaces"
+};
+
+static int cmd_dump_xml(const struct command *cmd) {
+    char *xml;
+    const char *name = arg_value(cmd, "iface");
+    struct netcf_if *nif = NULL;
+
+    nif = ncf_lookup_by_name(ncf, name);
+    if (nif == NULL)
+        return CMD_RES_ERR;
+
+    xml = ncf_xml_desc(nif);
+    if (xml == NULL)
+        return CMD_RES_ERR;
+
+    printf("%s\n", xml);
+    free(xml);
+    ncf_free(nif);
+    return CMD_RES_OK;
+}
+
+static const struct command_opt_def cmd_dump_xml_opts[] = {
+    { .tag = CMD_OPT_ARG, .name = "iface" },
+    CMD_OPT_DEF_LAST
+};
+
+static const struct command_def cmd_dump_xml_def = {
+    .name = "dumpxml",
+    .opts = cmd_dump_xml_opts,
+    .handler = cmd_dump_xml,
+    .synopsis = "dump the XML description of an interface",
+    .help = "dump the XML description of an interface"
 };
 
 static int cmd_quit(ATTRIBUTE_UNUSED const struct command *cmd) {
@@ -171,8 +216,22 @@ static char *nexttoken(char **line) {
     return r;
 }
 
+static struct command_opt *
+make_command_opt(struct command *cmd, const struct command_opt_def *def) {
+    struct command_opt *copt = NULL;
+    if (ALLOC(copt) < 0) {
+        fprintf(stderr, "Allocation failed\n");
+        return NULL;
+    }
+    copt->def = def;
+    list_append(cmd->opt, copt);
+    return copt;
+}
+
 static int parseline(struct command *cmd, char *line) {
     char *tok;
+    int narg;
+    const struct command_opt_def *def;
 
     MEMZERO(cmd, 1);
     tok = nexttoken(&line);
@@ -186,24 +245,23 @@ static int parseline(struct command *cmd, char *line) {
         fprintf(stderr, "Unknown command '%s'\n", tok);
         return -1;
     }
+    for (narg = 0, def = cmd->def->opts; def->name != NULL; def ++)
+        if (def->tag == CMD_OPT_ARG) narg++;
 
+    int curarg = 0;
     while (*line != '\0') {
         tok = nexttoken(&line);
         if (tok[0] == '-') {
-            const struct command_opt_def *def;
             char *opt = tok + 1;
 
             if (*opt == '-') opt += 1;
             for (def = cmd->def->opts; def->name != NULL; def++) {
                 if (STREQ(opt, def->name)) {
-                    struct command_opt *copt = NULL;
-                    if (ALLOC(copt) < 0) {
-                        fprintf(stderr, "Allocation failed\n");
+                    struct command_opt *copt =
+                        make_command_opt(cmd, def);
+                    if (copt == NULL)
                         return -1;
-                    }
-                    list_append(cmd->opt, copt);
                     if (def->tag == CMD_OPT_BOOL) {
-                        copt->def = def;
                         copt->bvalue = 1;
                     } else {
                         assert(0);
@@ -215,10 +273,27 @@ static int parseline(struct command *cmd, char *line) {
                 fprintf(stderr, "Illegal option %s\n", tok);
             }
         } else {
-            // We don't have any commands yet with nonoption arguments
-            fprintf(stderr, "Illegal argument %s\n", tok);
-            return -1;
+            if (curarg >= narg) {
+                fprintf(stderr,
+                 "Too many arguments. Command %s takes only %d arguments\n",
+                  cmd->def->name, narg);
+                return -1;
+            }
+            for (def = cmd->def->opts;
+                 def->name != NULL && def->tag != CMD_OPT_ARG;
+                 def++);
+            for (int i=0; i < curarg; i++)
+                for (; def->name != NULL && def->tag != CMD_OPT_ARG; def++);
+            struct command_opt *opt =
+                make_command_opt(cmd, def);
+            opt->string = tok;
+            curarg += 1;
         }
+    }
+
+    if (curarg < narg) {
+        fprintf(stderr, "Not enough arguments for %s\n", cmd->def->name);
+        return -1;
     }
 
     return 0;
@@ -226,6 +301,8 @@ static int parseline(struct command *cmd, char *line) {
 
 static const struct command_def const *commands[] = {
     &cmd_list_def,
+    &cmd_dump_xml_def,
+    &cmd_quit_def,
     &cmd_def_last
 };
 
