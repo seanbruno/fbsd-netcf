@@ -73,6 +73,9 @@ int ncf_init(struct netcf **ncf, const char *root) {
     (*ncf)->root = strdup(root);
     if ((*ncf)->root == NULL)
         goto oom;
+    (*ncf)->data_dir = getenv("NETCF_DATADIR");
+    if ((*ncf)->data_dir == NULL)
+        (*ncf)->data_dir = DATADIR "/netcf";
     return drv_init(*ncf);
  oom:
     ncf_close(*ncf);

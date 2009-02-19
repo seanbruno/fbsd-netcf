@@ -111,6 +111,7 @@
 struct netcf {
     ref_t            ref;
     char            *root;                /* The filesystem root */
+    const char      *data_dir;            /* Where to find stylesheets etc. */
     netcf_errcode_t  errcode;
     char            *errdetails;          /* Error details */
     struct driver   *driver;              /* Driver specific data */
