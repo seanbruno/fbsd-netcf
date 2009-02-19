@@ -134,6 +134,7 @@ int drv_num_of_interfaces(struct netcf *ncf);
 int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names);
 int drv_list_interfaces_uuid_string(struct netcf *, int maxuuid, char **uuids);
 struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name);
+char *drv_xml_desc(struct netcf_if *);
 
 #endif
 

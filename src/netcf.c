@@ -173,15 +173,15 @@ int ncf_undefine(struct netcf_if *) {
     ERR_RESET(ncf);
     return -1;
 }
+#endif
 
 /* Produce an XML description for the interface, in the same format that
  * NCF_DEFINE expects
  */
-char *ncf_xml_desc(struct netcf_if *) {
-    ERR_RESET(ncf);
-    return NULL;
+char *ncf_xml_desc(struct netcf_if *nif) {
+    ERR_RESET(nif->ncf);
+    return drv_xml_desc(nif);
 }
-#endif
 
 /* Release any resources used by this NETCF_IF; the pointer is invalid
  * after this call

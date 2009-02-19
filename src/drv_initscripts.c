@@ -31,11 +31,19 @@
 #include "safe-alloc.h"
 #include "ref.h"
 
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+#include <libxslt/xslt.h>
+#include <libxslt/xsltInternals.h>
+#include <libxslt/transform.h>
+
 static const char *const ifcfg_path =
     "/files/etc/sysconfig/network-scripts/*";
 
 struct driver {
-    struct augeas *augeas;
+    struct augeas     *augeas;
+    xsltStylesheetPtr  put;
+    xsltStylesheetPtr  get;
 };
 
 /* Entries in a ifcfg file that tell us that the interface
@@ -131,13 +139,34 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
     return -1;
 }
 
+static xsltStylesheetPtr parse_stylesheet(struct netcf *ncf,
+                                          const char *fname) {
+    xsltStylesheetPtr result = NULL;
+    char *path = NULL;
+    int r;
+
+    r = xasprintf(&path, "%s/xml/%s", ncf->data_dir, fname);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    // FIXME: Error checking ??
+    result = xsltParseStylesheetFile(BAD_CAST path);
+ error:
+    free(path);
+    return result;
+}
+
 int drv_init(struct netcf *ncf) {
     if (ALLOC(ncf->driver) < 0)
         return -1;
+    xsltInit();
+    ncf->driver->get = parse_stylesheet(ncf, "initscripts-get.xsl");
+    ncf->driver->put = parse_stylesheet(ncf, "initscripts-put.xsl");
     return 0;
 }
 
 void drv_close(struct netcf *ncf) {
+    xsltFreeStylesheet(ncf->driver->get);
+    xsltFreeStylesheet(ncf->driver->put);
     FREE(ncf->driver);
 }
 
@@ -224,6 +253,90 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
     FREE(pathx);
     free_matches(nint, &intf);
     return nif;
+}
+
+static xmlDocPtr dump_xml(struct netcf *ncf, int nint, char **intf) {
+    struct augeas *aug;
+    xmlDocPtr result = NULL;
+    xmlNodePtr root = NULL, tree = NULL;
+    char **matches = NULL;
+    int nmatches, r;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    result = xmlNewDoc(BAD_CAST "1.0");
+    root = xmlNewNode(NULL, BAD_CAST "forest");
+    xmlDocSetRootElement(result, root);
+
+    for (int i=0; i < nint; i++) {
+        tree = xmlNewChild(root, NULL, BAD_CAST "tree", NULL);
+        xmlNewProp(tree, BAD_CAST "path", BAD_CAST intf[i]);
+        nmatches = aug_submatch(ncf, intf[i], "*", &matches);
+        ERR_COND_BAIL(nint < 0, ncf, EOTHER);
+        for (int j = 0; j < nmatches; j++) {
+            xmlNodePtr node = xmlNewChild(tree, NULL, BAD_CAST "node", NULL);
+            const char *value;
+            xmlNewProp(node, BAD_CAST "label",
+                       BAD_CAST matches[j] + strlen(intf[i]) + 1);
+            r = aug_get(aug, matches[j], &value);
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+            xmlNewProp(node, BAD_CAST "value", BAD_CAST value);
+        }
+        free_matches(nmatches, &matches);
+    }
+
+    return result;
+
+ error:
+    free_matches(nmatches, &matches);
+    xmlFreeDoc(result);
+    return NULL;
+}
+
+char *drv_xml_desc(struct netcf_if *nif) {
+    const char *name;
+    char *path = NULL, *result = NULL;
+    struct augeas *aug;
+    struct netcf *ncf;
+    char **intf = NULL;
+    xmlDocPtr aug_xml = NULL, ncf_xml = NULL;
+    int nint;
+    int r;
+
+    ncf = nif->ncf;
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    r = xasprintf(&path, "%s/DEVICE", nif->path);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    r = aug_get(aug, path, &name);
+    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+    FREE(path);
+
+    r = xasprintf(&path,
+          "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
+          ifcfg_path, name, name, name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    nint = aug_match(aug, path, &intf);
+    ERR_COND_BAIL(nint < 0, ncf, EOTHER);
+    FREE(path);
+
+    aug_xml = dump_xml(ncf, nint, intf);
+    ncf_xml = xsltApplyStylesheet(ncf->driver->put, aug_xml, NULL);
+    xmlFreeDoc(aug_xml);
+
+    xmlDocDumpFormatMemory(ncf_xml, (xmlChar **) &result, NULL, 1);
+    xmlFreeDoc(ncf_xml);
+    return result;
+ error:
+    FREE(path);
+    free_matches(nint, &intf);
+    xmlFreeDoc(aug_xml);
+    xmlFreeDoc(ncf_xml);
+    return NULL;
 }
 
 /*
