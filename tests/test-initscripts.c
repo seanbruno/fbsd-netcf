@@ -51,7 +51,7 @@ static void teardown(ATTRIBUTE_UNUSED CuTest *tc) {
 static void testListInterfaces(CuTest *tc) {
     int nint;
     char **names;
-    static const char *const exp_names[] = { "br0", "lo" };
+    static const char *const exp_names[] = { "br0", "bond0", "lo" };
     static const int exp_nint = ARRAY_CARDINALITY(exp_names);
 
     nint = ncf_num_of_interfaces(ncf);
