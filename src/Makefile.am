@@ -2,7 +2,8 @@
 GNULIB= ../gnulib/lib/libgnu.la
 GNULIB_CFLAGS= -I $(top_srcdir)/gnulib/lib
 
-AM_CFLAGS = $(NETCF_CFLAGS) $(GNULIB_CFLAGS) $(WARN_CFLAGS)
+AM_CFLAGS = $(NETCF_CFLAGS) $(GNULIB_CFLAGS) $(WARN_CFLAGS) \
+  $(LIBXML_CFLAGS) $(LIBXSLT_CFLAGS)
 
 include_HEADERS = netcf.h
 
@@ -20,7 +21,7 @@ DISTCLEANFILES = datadir.h
 
 libnetcf_la_SOURCES = netcf.h netcf.c internal.h \
      $(DRIVER_SOURCES)
-libnetcf_la_LIBADD = $(LIBAUGEAS_LIBS) $(GNULIB)
+libnetcf_la_LIBADD = $(LIBAUGEAS_LIBS) $(LIBXML_LIBS) $(LIBXSLT_LIBS) $(GNULIB)
 
 ncftool_SOURCES = ncftool.c
 ncftool_LDADD = libnetcf.la $(READLINE_LIBS) $(GNULIB)
