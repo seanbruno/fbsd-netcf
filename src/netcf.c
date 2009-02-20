@@ -25,6 +25,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include "safe-alloc.h"
 
 #include "internal.h"
@@ -202,6 +204,27 @@ int ncf_error(struct netcf *ncf, const char **errmsg, const char **details) {
     *errmsg = errmsgs[errcode];
     *details = ncf->errdetails;
     return errcode;
+}
+
+/*
+ * Internal helpers
+ */
+void report_error(struct netcf *ncf, netcf_errcode_t errcode,
+                  const char *format, ...) {
+    va_list ap;
+
+    /* We only remember the first error */
+    if (ncf->errcode != NETCF_EINTERNAL)
+        return;
+    assert(ncf->errdetails == NULL);
+
+    ncf->errcode = errcode;
+    if (format != NULL) {
+        va_start(ap, format);
+        if (vasprintf(&(ncf->errdetails), format, ap) < 0)
+            ncf->errdetails = NULL;
+        va_end(ap);
+    }
 }
 
 /*

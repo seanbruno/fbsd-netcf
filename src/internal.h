@@ -125,6 +125,13 @@ struct netcf_if {
 
 void free_netcf_if(struct netcf_if *nif);
 
+/*
+ * Error reporting
+ */
+void report_error(struct netcf *ncf, netcf_errcode_t errcode,
+                  const char *format, ...)
+    ATTRIBUTE_FORMAT(printf, 3, 4);
+
 /* The interface to the driver (backend). The appropriate driver is
  * selected at build time from the available drivers in drv_*
  */
