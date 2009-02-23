@@ -62,10 +62,10 @@
     <xsl:for-each select='bond/interface'>
       <tree>
         <xsl:call-template name="bare-ethernet-interface"/>
-        <node name="MASTER">
+        <node label="MASTER">
           <xsl:attribute name="value"><xsl:value-of select="../../name"/></xsl:attribute>
         </node>
-        <node name="SLAVE" value="yes"/>
+        <node label="SLAVE" value="yes"/>
       </tree>
     </xsl:for-each>
   </xsl:template>
