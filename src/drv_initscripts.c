@@ -30,6 +30,7 @@
 #include <string.h>
 #include "safe-alloc.h"
 #include "ref.h"
+#include "list.h"
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -67,8 +68,10 @@ static int xasprintf(char **strp, const char *format, ...) {
 }
 
 static struct augeas *get_augeas(struct netcf *ncf) {
+    // FIXME: We should probably have a way for the user to influence
+    // the save mode for Augeas (or just settle on a good default)
     if (ncf->driver->augeas == NULL)
-        ncf->driver->augeas = aug_init(ncf->root, NULL, AUG_NONE);
+        ncf->driver->augeas = aug_init(ncf->root, NULL, AUG_SAVE_BACKUP);
     ERR_COND(ncf->driver->augeas == NULL, ncf, EOTHER);
     return ncf->driver->augeas;
 }
@@ -220,6 +223,21 @@ int drv_list_interfaces_uuid_string(struct netcf *ncf,
     return list_interface_ids(ncf, maxuuids, uuids, "NCF_UUID");
 }
 
+static struct netcf_if *make_netcf_if(struct netcf *ncf, char *path) {
+    int r;
+    struct netcf_if *result = NULL;
+
+    r = make_ref(result);
+    ERR_THROW(r < 0, ncf, ENOMEM, NULL);
+    result->ncf = ref(ncf);
+    result->path = path;
+    return result;
+
+ error:
+    unref(result, netcf_if);
+    return result;
+}
+
 struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
     struct netcf_if *nif = NULL;
     char *pathx = NULL;
@@ -240,10 +258,8 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
     if (nint == 0 || is_slave(ncf, intf[0]))
         goto done;
 
-    if (make_ref(nif) < 0)
-        ERR_COND_BAIL(1, ncf, ENOMEM);
-    nif->ncf = ref(ncf);
-    nif->path = intf[0];
+    nif = make_netcf_if(ncf, intf[0]);
+    ERR_BAIL(ncf);
     intf[0] = NULL;
     goto done;
 
@@ -294,6 +310,51 @@ static xmlDocPtr dump_xml(struct netcf *ncf, int nint, char **intf) {
     return NULL;
 }
 
+/* Called from SAX on parsing errors in the XML. */
+static void
+catch_xml_error(void *ctx, const char *msg ATTRIBUTE_UNUSED, ...) {
+    xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) ctx;
+
+    if (ctxt != NULL) {
+        struct netcf *ncf = ctxt->_private;
+
+        if (ctxt->lastError.level == XML_ERR_FATAL &&
+            ctxt->lastError.message != NULL) {
+            report_error(ncf, NETCF_EXMLPARSER,
+                         "at line %d: %s",
+                         ctxt->lastError.line,
+                         ctxt->lastError.message);
+        }
+    }
+}
+
+static xmlDocPtr parse_xml(struct netcf *ncf, const char *xml_str) {
+    xmlParserCtxtPtr pctxt;
+    xmlDocPtr xml = NULL;
+
+    /* Set up a parser context so we can catch the details of XML errors. */
+    pctxt = xmlNewParserCtxt();
+    ERR_COND_BAIL(pctxt == NULL || pctxt->sax == NULL, ncf, ENOMEM);
+
+    pctxt->sax->error = catch_xml_error;
+    pctxt->_private = ncf;
+
+    xml = xmlCtxtReadDoc (pctxt, BAD_CAST xml_str, "netcf.xml", NULL,
+                          XML_PARSE_NOENT | XML_PARSE_NONET |
+                          XML_PARSE_NOWARNING);
+    ERR_THROW(xml == NULL, ncf, EXMLPARSER,
+              "failed to parse xml document");
+    ERR_THROW(xmlDocGetRootElement(xml) == NULL, ncf, EINTERNAL,
+              "missing root element");
+
+    xmlFreeParserCtxt(pctxt);
+    return xml;
+error:
+    xmlFreeParserCtxt (pctxt);
+    xmlFreeDoc (xml);
+    return NULL;
+}
+
 char *drv_xml_desc(struct netcf_if *nif) {
     const char *name;
     char *path = NULL, *result = NULL;
@@ -321,7 +382,11 @@ char *drv_xml_desc(struct netcf_if *nif) {
     ERR_COND_BAIL(r < 0, ncf, ENOMEM);
 
     nint = aug_match(aug, path, &intf);
-    ERR_COND_BAIL(nint < 0, ncf, EOTHER);
+    if (nint < 0) {
+        aug_print(aug, stderr, "/augeas//error");
+    }
+    ERR_THROW(nint < 0, ncf, EINTERNAL,
+              "no nodes match '%s'", path);
     FREE(path);
 
     aug_xml = dump_xml(ncf, nint, intf);
@@ -337,6 +402,97 @@ char *drv_xml_desc(struct netcf_if *nif) {
     xmlFreeDoc(aug_xml);
     xmlFreeDoc(ncf_xml);
     return NULL;
+}
+
+static char *xml_prop(xmlNodePtr node, const char *name) {
+    return (char *) xmlGetProp(node, BAD_CAST name);
+}
+
+static int aug_save_xml(struct netcf *ncf, xmlDocPtr xml, char **top_path) {
+    xmlNodePtr forest;
+    char *lpath = NULL;
+    struct augeas *aug = NULL;
+    int r;
+
+    *top_path = NULL;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    forest = xmlDocGetRootElement(xml);
+    ERR_THROW(forest == NULL, ncf, EINTERNAL, "missing root element");
+    ERR_THROW(! xmlStrEqual(forest->name, BAD_CAST "forest"), ncf,
+              EINTERNAL, "expected root node labeled 'forest', not '%s'",
+              forest->name);
+    list_for_each(tree, forest->children) {
+        ERR_THROW(! xmlStrEqual(tree->name, BAD_CAST "tree"), ncf,
+                  EINTERNAL, "expected node labeled 'tree', not '%s'",
+                  tree->name);
+        char *path = xml_prop(tree, "path");
+        int toplevel = 1;
+        /* This is a little drastic, since it clears out the file entirely */
+        r = aug_rm(aug, path);
+        ERR_THROW(r < 0, ncf, EINTERNAL, "aug_rm of '%s' failed", path);
+        list_for_each(node, tree->children) {
+            char *label = xml_prop(node, "label");
+            char *value = xml_prop(node, "value");
+            /* We should mark the toplevel interface from the XSLT */
+            if (STREQ(label, "BRIDGE") || STREQ(label, "MASTER")) {
+                toplevel = 0;
+            }
+            r = xasprintf(&lpath, "%s/%s", path, label);
+            ERR_THROW(r < 0, ncf, ENOMEM, NULL);
+
+            r = aug_set(aug, lpath, value);
+            ERR_THROW(r < 0, ncf, EOTHER,
+                      "aug_set of '%s' failed", lpath);
+            FREE(lpath);
+        }
+        if (toplevel) {
+            ERR_THROW(*top_path != NULL, ncf, EINTERNAL,
+                      "multiple toplevel interfaces");
+            (*top_path) = strdup(path);
+            ERR_THROW(*top_path == NULL, ncf, ENOMEM, NULL);
+        }
+    }
+    ERR_THROW(*top_path == NULL, ncf, EXMLINVALID,
+              "no toplevel interface");
+
+    r = aug_save(aug);
+    ERR_THROW(r < 0, ncf, EOTHER, "aug_save failed");
+
+    return 0;
+ error:
+    FREE(lpath);
+    FREE(*top_path);
+    return -1;
+}
+
+struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
+    xmlDocPtr ncf_xml = NULL, aug_xml = NULL;
+    char *nif_path = NULL;
+    struct netcf_if *result = NULL;
+
+    ncf_xml = parse_xml(ncf, xml_str);
+    ERR_BAIL(ncf);
+    // FIXME: Validate against interface.rng
+
+    // FIXME: Check for errors from ApplyStylesheet
+    aug_xml = xsltApplyStylesheet(ncf->driver->get, ncf_xml, NULL);
+    aug_save_xml(ncf, aug_xml, &nif_path);
+    ERR_BAIL(ncf);
+
+    result = make_netcf_if(ncf, nif_path);
+    ERR_BAIL(ncf);
+
+ done:
+    xmlFreeDoc(ncf_xml);
+    xmlFreeDoc(aug_xml);
+    return result;
+ error:
+    FREE(nif_path);
+    unref(result, netcf_if);
+    goto done;
 }
 
 /*

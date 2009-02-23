@@ -36,7 +36,7 @@
 #define ERR_RESET(ncf)                          \
     do {                                        \
         (ncf)->errcode = NETCF_NOERROR;         \
-        free((ncf)->errdetails);                \
+        FREE((ncf)->errdetails);                \
     } while(0);
 
 /* Human-readable error messages. This array is indexed by NETCF_ERRCODE_T */
@@ -44,7 +44,10 @@ static const char *const errmsgs[] = {
     "no error",                           /* NOERROR   */
     "internal error",                     /* EINTERNAL */
     "unspecified error",                  /* EOTHER    */
-    "allocation failed"                   /* ENOMEM    */
+    "allocation failed",                  /* ENOMEM    */
+    "XML parser failed",                  /* EXMLPARSER */
+    "XML invalid",                        /* EXMLINVALID */
+    "required entry missing"              /* ENOENT */
 };
 
 static void free_netcf(struct netcf *ncf) {
@@ -146,6 +149,7 @@ ncf_lookup_by_mac(struct netcf *, const unsigned char *mac) {
     ERR_RESET(ncf);
     return NULL;
 }
+#endif
 
 /*
  * Define/start/stop/undefine interfaces
@@ -153,11 +157,12 @@ ncf_lookup_by_mac(struct netcf *, const unsigned char *mac) {
 
 /* Define a new interface */
 struct netcf_if *
-ncf_define(struct netcf *, const char *xml) {
+ncf_define(struct netcf *ncf, const char *xml) {
     ERR_RESET(ncf);
-    return NULL;
+    return drv_define(ncf, xml);
 }
 
+#if 0
 /* Bring the interface up */
 int ncf_up(struct netcf_if *) {
     ERR_RESET(ncf);
@@ -214,7 +219,7 @@ void report_error(struct netcf *ncf, netcf_errcode_t errcode,
     va_list ap;
 
     /* We only remember the first error */
-    if (ncf->errcode != NETCF_EINTERNAL)
+    if (ncf->errcode != NETCF_NOERROR)
         return;
     assert(ncf->errdetails == NULL);
 

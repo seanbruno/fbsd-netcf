@@ -25,6 +25,7 @@
 #include "internal.h"
 #include "safe-alloc.h"
 #include "list.h"
+#include "read-file.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -177,6 +178,38 @@ static const struct command_def cmd_dump_xml_def = {
     .help = "dump the XML description of an interface"
 };
 
+static int cmd_define(const struct command *cmd) {
+    const char *fname = arg_value(cmd, "xmlfile");
+    char *xml;
+    size_t length;
+    struct netcf_if *nif;
+
+    xml = read_file(fname, &length);
+    if (xml == NULL) {
+        fprintf(stderr, "Failed to read %s\n", fname);
+        return CMD_RES_ERR;
+    }
+    nif = ncf_define(ncf, xml);
+    if (nif == NULL)
+        return CMD_RES_ERR;
+    // FIXME: Would be nice to print "Defined foo"
+    // but we don't have a way to get the name from NIF
+    return CMD_RES_OK;
+}
+
+static const struct command_opt_def cmd_define_opts[] = {
+    { .tag = CMD_OPT_ARG, .name = "xmlfile" },
+    CMD_OPT_DEF_LAST
+};
+
+static const struct command_def cmd_define_def = {
+    .name = "define",
+    .opts = cmd_define_opts,
+    .handler = cmd_define,
+    .synopsis = "define an interface from an XML file",
+    .help = "define an interface from an XML file"
+};
+
 static int cmd_quit(ATTRIBUTE_UNUSED const struct command *cmd) {
     return CMD_RES_QUIT;
 }
@@ -302,6 +335,7 @@ static int parseline(struct command *cmd, char *line) {
 static const struct command_def const *commands[] = {
     &cmd_list_def,
     &cmd_dump_xml_def,
+    &cmd_define_def,
     &cmd_quit_def,
     &cmd_def_last
 };

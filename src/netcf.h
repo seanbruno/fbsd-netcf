@@ -46,7 +46,10 @@ typedef enum {
     NETCF_NOERROR = 0,   /* no error, everything ok */
     NETCF_EINTERNAL,     /* internal error, aka bug */
     NETCF_EOTHER,        /* other error, copout for being more specific */
-    NETCF_ENOMEM         /* allocation failed */
+    NETCF_ENOMEM,        /* allocation failed */
+    NETCF_EXMLPARSER,    /* XML parser choked */
+    NETCF_EXMLINVALID,   /* XML invalid in some form */
+    NETCF_ENOENT         /* Required entry in a tree is missing */
 } netcf_errcode_t;
 
 /*

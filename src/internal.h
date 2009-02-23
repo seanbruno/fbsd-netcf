@@ -105,6 +105,14 @@
     ERR_BAIL(ncf);                              \
     } while(0)
 
+#define ERR_THROW(cond, ncf, err, fmt ...)           \
+    do {                                             \
+        if (cond) {                                  \
+            report_error(ncf, NETCF_##err, ## fmt);  \
+            goto error;                              \
+        }                                            \
+    } while(0)
+
 /*
  * netcf structures and internal API's
  */
@@ -142,6 +150,7 @@ int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names);
 int drv_list_interfaces_uuid_string(struct netcf *, int maxuuid, char **uuids);
 struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name);
 char *drv_xml_desc(struct netcf_if *);
+struct netcf_if *drv_define(struct netcf *ncf, const char *xml);
 
 #endif
 
