@@ -158,6 +158,10 @@ static xsltStylesheetPtr parse_stylesheet(struct netcf *ncf,
     return result;
 }
 
+static char *xml_prop(xmlNodePtr node, const char *name) {
+    return (char *) xmlGetProp(node, BAD_CAST name);
+}
+
 int drv_init(struct netcf *ncf) {
     int r;
 
@@ -281,7 +285,11 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
     return nif;
 }
 
-static xmlDocPtr dump_xml(struct netcf *ncf, int nint, char **intf) {
+/* Get an XML desription of the interfaces (just paths, really) in INTF.
+ * The format is a very simple representation of the Augeas tree (see
+ * xml/augeas.rng)
+ */
+static xmlDocPtr aug_get_xml(struct netcf *ncf, int nint, char **intf) {
     struct augeas *aug;
     xmlDocPtr result = NULL;
     xmlNodePtr root = NULL, tree = NULL;
@@ -318,6 +326,64 @@ static xmlDocPtr dump_xml(struct netcf *ncf, int nint, char **intf) {
     free_matches(nmatches, &matches);
     xmlFreeDoc(result);
     return NULL;
+}
+
+/* Write the XML doc in the simple Augeas format into the Augeas tree */
+static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml, char **top_path) {
+    xmlNodePtr forest;
+    char *lpath = NULL;
+    struct augeas *aug = NULL;
+    int r;
+
+    *top_path = NULL;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    forest = xmlDocGetRootElement(xml);
+    ERR_THROW(forest == NULL, ncf, EINTERNAL, "missing root element");
+    ERR_THROW(! xmlStrEqual(forest->name, BAD_CAST "forest"), ncf,
+              EINTERNAL, "expected root node labeled 'forest', not '%s'",
+              forest->name);
+    list_for_each(tree, forest->children) {
+        ERR_THROW(! xmlStrEqual(tree->name, BAD_CAST "tree"), ncf,
+                  EINTERNAL, "expected node labeled 'tree', not '%s'",
+                  tree->name);
+        char *path = xml_prop(tree, "path");
+        int toplevel = 1;
+        /* This is a little drastic, since it clears out the file entirely */
+        r = aug_rm(aug, path);
+        ERR_THROW(r < 0, ncf, EINTERNAL, "aug_rm of '%s' failed", path);
+        list_for_each(node, tree->children) {
+            char *label = xml_prop(node, "label");
+            char *value = xml_prop(node, "value");
+            /* We should mark the toplevel interface from the XSLT */
+            if (STREQ(label, "BRIDGE") || STREQ(label, "MASTER")) {
+                toplevel = 0;
+            }
+            r = xasprintf(&lpath, "%s/%s", path, label);
+            ERR_THROW(r < 0, ncf, ENOMEM, NULL);
+
+            r = aug_set(aug, lpath, value);
+            ERR_THROW(r < 0, ncf, EOTHER,
+                      "aug_set of '%s' failed", lpath);
+            FREE(lpath);
+        }
+        if (toplevel) {
+            ERR_THROW(*top_path != NULL, ncf, EINTERNAL,
+                      "multiple toplevel interfaces");
+            (*top_path) = strdup(path);
+            ERR_THROW(*top_path == NULL, ncf, ENOMEM, NULL);
+        }
+    }
+    ERR_THROW(*top_path == NULL, ncf, EXMLINVALID,
+              "no toplevel interface");
+
+    return 0;
+ error:
+    FREE(lpath);
+    FREE(*top_path);
+    return -1;
 }
 
 /* Called from SAX on parsing errors in the XML. */
@@ -396,7 +462,7 @@ char *drv_xml_desc(struct netcf_if *nif) {
               "no nodes match '%s'", path);
     FREE(path);
 
-    aug_xml = dump_xml(ncf, nint, intf);
+    aug_xml = aug_get_xml(ncf, nint, intf);
     ncf_xml = xsltApplyStylesheet(ncf->driver->put, aug_xml, NULL);
     xmlFreeDoc(aug_xml);
 
@@ -411,74 +477,12 @@ char *drv_xml_desc(struct netcf_if *nif) {
     return NULL;
 }
 
-static char *xml_prop(xmlNodePtr node, const char *name) {
-    return (char *) xmlGetProp(node, BAD_CAST name);
-}
-
-static int aug_save_xml(struct netcf *ncf, xmlDocPtr xml, char **top_path) {
-    xmlNodePtr forest;
-    char *lpath = NULL;
-    struct augeas *aug = NULL;
-    int r;
-
-    *top_path = NULL;
-
-    aug = get_augeas(ncf);
-    ERR_BAIL(ncf);
-
-    forest = xmlDocGetRootElement(xml);
-    ERR_THROW(forest == NULL, ncf, EINTERNAL, "missing root element");
-    ERR_THROW(! xmlStrEqual(forest->name, BAD_CAST "forest"), ncf,
-              EINTERNAL, "expected root node labeled 'forest', not '%s'",
-              forest->name);
-    list_for_each(tree, forest->children) {
-        ERR_THROW(! xmlStrEqual(tree->name, BAD_CAST "tree"), ncf,
-                  EINTERNAL, "expected node labeled 'tree', not '%s'",
-                  tree->name);
-        char *path = xml_prop(tree, "path");
-        int toplevel = 1;
-        /* This is a little drastic, since it clears out the file entirely */
-        r = aug_rm(aug, path);
-        ERR_THROW(r < 0, ncf, EINTERNAL, "aug_rm of '%s' failed", path);
-        list_for_each(node, tree->children) {
-            char *label = xml_prop(node, "label");
-            char *value = xml_prop(node, "value");
-            /* We should mark the toplevel interface from the XSLT */
-            if (STREQ(label, "BRIDGE") || STREQ(label, "MASTER")) {
-                toplevel = 0;
-            }
-            r = xasprintf(&lpath, "%s/%s", path, label);
-            ERR_THROW(r < 0, ncf, ENOMEM, NULL);
-
-            r = aug_set(aug, lpath, value);
-            ERR_THROW(r < 0, ncf, EOTHER,
-                      "aug_set of '%s' failed", lpath);
-            FREE(lpath);
-        }
-        if (toplevel) {
-            ERR_THROW(*top_path != NULL, ncf, EINTERNAL,
-                      "multiple toplevel interfaces");
-            (*top_path) = strdup(path);
-            ERR_THROW(*top_path == NULL, ncf, ENOMEM, NULL);
-        }
-    }
-    ERR_THROW(*top_path == NULL, ncf, EXMLINVALID,
-              "no toplevel interface");
-
-    r = aug_save(aug);
-    ERR_THROW(r < 0, ncf, EOTHER, "aug_save failed");
-
-    return 0;
- error:
-    FREE(lpath);
-    FREE(*top_path);
-    return -1;
-}
-
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     xmlDocPtr ncf_xml = NULL, aug_xml = NULL;
     char *nif_path = NULL;
     struct netcf_if *result = NULL;
+    int r;
+    struct augeas *aug = get_augeas(ncf);
 
     ncf_xml = parse_xml(ncf, xml_str);
     ERR_BAIL(ncf);
@@ -486,8 +490,11 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
 
     // FIXME: Check for errors from ApplyStylesheet
     aug_xml = xsltApplyStylesheet(ncf->driver->get, ncf_xml, NULL);
-    aug_save_xml(ncf, aug_xml, &nif_path);
+    aug_put_xml(ncf, aug_xml, &nif_path);
     ERR_BAIL(ncf);
+
+    r = aug_save(aug);
+    ERR_THROW(r < 0, ncf, EOTHER, "aug_save failed");
 
     result = make_netcf_if(ncf, nif_path);
     ERR_BAIL(ncf);
