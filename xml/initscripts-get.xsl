@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                xmlns:ipcalc = "http://redhat.com/xslt/netcf/ipcalc/1.0"
+                extension-element-prefixes="ipcalc"
                 version="1.0">
 
   <xsl:output method="xml" indent="yes"/>
@@ -55,8 +57,7 @@
       <xsl:call-template name="startmode"/>
       <xsl:call-template name="interface-addressing"/>
       <node label="BONDING_OPTS">
-        <xsl:attribute name="value"><xsl:if test="bond/@mode">mode=<xsl:value-of select='bond/@mode'/></xsl:if><xsl:if test="bond/@primary"> primary=<xsl:value-of select='bond/@primary'/></xsl:if>
-        </xsl:attribute>
+        <xsl:attribute name="value">'<xsl:if test="bond/@mode">mode=<xsl:value-of select='bond/@mode'/></xsl:if><xsl:if test="bond/@primary"> primary=<xsl:value-of select='bond/@primary'/></xsl:if>'</xsl:attribute>
       </node>
     </tree>
     <xsl:for-each select='bond/interface'>
@@ -126,17 +127,11 @@
       </xsl:when>
       <xsl:when test="ip">
         <node label="BOOTPROTO" value="none"/>
-        <!-- We need to compute IPADDR and NETMASK from an IP/PREFIX.
-             That will simply be done by amending the input tree. It would
-             be cleaner to do that with extension functions.
-
-             Augeas will reject the '$( .. )' constructs
-        -->
         <node label="IPADDR">
-          <xsl:attribute name="value">$(echo '<xsl:value-of select="ip/@address"/>' | sed -e 's@/.*$@@')</xsl:attribute>
+          <xsl:attribute name="value"><xsl:value-of select="ipcalc:address(ip/@address)"/></xsl:attribute>
         </node>
         <node label="NETMASK">
-          <xsl:attribute name="value">$(ipcalc -m '<xsl:value-of select="ip/@address"/>'| sed -e 's/NETMASK=//')</xsl:attribute>
+          <xsl:attribute name="value"><xsl:value-of select="ipcalc:netmask(ip/@address)"/></xsl:attribute>
         </node>
         <xsl:if test="route">
           <node label="GATEWAY">

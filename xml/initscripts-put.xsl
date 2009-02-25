@@ -1,5 +1,9 @@
 <?xml version="1.0"?>
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                xmlns:ipcalc = "http://redhat.com/xslt/netcf/ipcalc/1.0"
+                xmlns:bond = "http://redhat.com/xslt/netcf/bond/1.0"
+                extension-element-prefixes="bond ipcalc"
+                version="1.0">
 
   <xsl:output method="xml" indent="yes"/>
   <xsl:strip-space elements="*"/>
@@ -51,13 +55,20 @@
       <xsl:call-template name="startmode"/>
       <xsl:variable name="iface" select="node[@label= 'DEVICE']/@value"/>
       <xsl:call-template name="basic-attrs"/>
+      <xsl:call-template name="interface-addressing"/>
       <bond>
-        <!--
-            FIXME: We can't take BONDING_OPTS apart in XSL, or can we ?
-            Maybe EXSLT ? Otherwise, we'll annotate the BONDING_OPTS
-            node in C with a mode and primary attribute
-        -->
-        <xsl:attribute name="opts">FIXME:<xsl:value-of select="node[@label = 'BONDING_OPTS']/@value"/></xsl:attribute>
+        <xsl:variable name="mode" select="bond:option(node[@label = 'BONDING_OPTS']/@value, 'mode')"/>
+        <xsl:variable name="primary" select="bond:option(node[@label = 'BONDING_OPTS']/@value, 'primary')"/>
+        <xsl:if test="string-length($mode) > 0">
+          <xsl:attribute name="mode">
+            <xsl:value-of select="$mode"/>
+          </xsl:attribute>
+        </xsl:if>
+        <xsl:if test="string-length($primary) > 0">
+          <xsl:attribute name="primary">
+            <xsl:value-of select="$primary"/>
+          </xsl:attribute>
+        </xsl:if>
         <xsl:for-each select="/descendant-or-self::*[node[@label = 'MASTER' and @value = $iface]]">
           <xsl:call-template name='bare-ethernet-interface'/>
         </xsl:for-each>
@@ -102,9 +113,8 @@
         </dhcp>
       </xsl:when>
       <xsl:when test="node[@label = 'BOOTPROTO']/@value = 'none'">
-        <!-- FIXME: Need to munge this into address/prefixlen -->
         <ip>
-          <xsl:attribute name="address">FIXME:<xsl:value-of select="node[@label = 'IPADDR']/@value"/>/<xsl:value-of select="node[@label = 'NETMASK']/@value"/></xsl:attribute>
+          <xsl:attribute name="address"><xsl:value-of select="node[@label = 'IPADDR']/@value"/><xsl:value-of select="ipcalc:prefix(node[@label = 'NETMASK']/@value)"/></xsl:attribute>
         </ip>
         <xsl:if test="node[@label = 'GATEWAY']">
           <route>
