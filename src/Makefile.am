@@ -20,7 +20,7 @@ BUILT_SOURCES = datadir.h
 DISTCLEANFILES = datadir.h
 
 libnetcf_la_SOURCES = netcf.h netcf.c internal.h \
-     $(DRIVER_SOURCES)
+     xslt_ext.c $(DRIVER_SOURCES)
 libnetcf_la_LIBADD = $(LIBAUGEAS_LIBS) $(LIBXML_LIBS) $(LIBXSLT_LIBS) $(GNULIB)
 
 ncftool_SOURCES = ncftool.c

@@ -152,6 +152,11 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name);
 char *drv_xml_desc(struct netcf_if *);
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml);
 
+/*
+ * XSLT extension functions in xslt_ext.c
+ */
+int xslt_ext_register(void);
+void xslt_ext_unregister(void);
 #endif
 
 

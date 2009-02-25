@@ -159,17 +159,27 @@ static xsltStylesheetPtr parse_stylesheet(struct netcf *ncf,
 }
 
 int drv_init(struct netcf *ncf) {
+    int r;
+
     if (ALLOC(ncf->driver) < 0)
         return -1;
+    // FIXME: Check for errors
     xsltInit();
+    r = xslt_ext_register();
+    ERR_THROW(r < 0, ncf, EINTERNAL, "xsltRegisterExtModule failed");
     ncf->driver->get = parse_stylesheet(ncf, "initscripts-get.xsl");
     ncf->driver->put = parse_stylesheet(ncf, "initscripts-put.xsl");
     return 0;
+ error:
+    FREE(ncf->driver);
+    return -1;
 }
 
 void drv_close(struct netcf *ncf) {
     xsltFreeStylesheet(ncf->driver->get);
     xsltFreeStylesheet(ncf->driver->put);
+    xslt_ext_unregister();
+    xsltCleanupGlobals();
     FREE(ncf->driver);
 }
 
@@ -382,9 +392,6 @@ char *drv_xml_desc(struct netcf_if *nif) {
     ERR_COND_BAIL(r < 0, ncf, ENOMEM);
 
     nint = aug_match(aug, path, &intf);
-    if (nint < 0) {
-        aug_print(aug, stderr, "/augeas//error");
-    }
     ERR_THROW(nint < 0, ncf, EINTERNAL,
               "no nodes match '%s'", path);
     FREE(path);
