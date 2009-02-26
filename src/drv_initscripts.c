@@ -494,16 +494,44 @@ char *drv_xml_desc(struct netcf_if *nif) {
     return NULL;
 }
 
+/* Get the content of /interface/name */
+static xmlChar *device_name_from_xml(xmlDocPtr xml) {
+    xmlNodePtr iface, name;
+
+    iface = xmlDocGetRootElement(xml);
+    if (iface == NULL) return NULL;
+
+    for (name = iface->children; name != NULL; name = name->next)
+        if (xmlStrcmp(name->name, BAD_CAST "name") == 0)
+            break;
+    if (name == NULL) return NULL;
+
+    return xmlNodeListGetString(xml, name->children, 1);
+}
+
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     xmlDocPtr ncf_xml = NULL, aug_xml = NULL;
     char *nif_path = NULL;
+    char *name = NULL, *path = NULL;
     struct netcf_if *result = NULL;
     int r;
     struct augeas *aug = get_augeas(ncf);
 
     ncf_xml = parse_xml(ncf, xml_str);
     ERR_BAIL(ncf);
+
     // FIXME: Validate against interface.rng
+    name = (char *) device_name_from_xml(ncf_xml);
+    ERR_COND_BAIL(name == NULL, ncf, EINTERNAL);
+
+    /* Clean out existing definitions */
+    r = xasprintf(&path,
+          "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
+          ifcfg_path, name, name, name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    r = aug_rm(aug, path);
+    ERR_COND_BAIL(r < 0, ncf, EOTHER);
 
     // FIXME: Check for errors from ApplyStylesheet
     aug_xml = xsltApplyStylesheet(ncf->driver->get, ncf_xml, NULL);
@@ -517,6 +545,8 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     ERR_BAIL(ncf);
 
  done:
+    free(path);
+    xmlFree(name);
     xmlFreeDoc(ncf_xml);
     xmlFreeDoc(aug_xml);
     return result;
