@@ -151,6 +151,7 @@ int drv_list_interfaces_uuid_string(struct netcf *, int maxuuid, char **uuids);
 struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name);
 char *drv_xml_desc(struct netcf_if *);
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml);
+int drv_undefine(struct netcf_if *nif);
 
 /*
  * XSLT extension functions in xslt_ext.c

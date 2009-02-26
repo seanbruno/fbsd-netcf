@@ -162,6 +162,27 @@ static char *xml_prop(xmlNodePtr node, const char *name) {
     return (char *) xmlGetProp(node, BAD_CAST name);
 }
 
+static const char *device_name(struct netcf_if *nif) {
+    struct augeas *aug = NULL;
+    char *path = NULL;
+    const char *name;
+    int r;
+
+    aug = get_augeas(nif->ncf);
+    ERR_BAIL(nif->ncf);
+
+    r = xasprintf(&path, "%s/DEVICE", nif->path);
+    ERR_COND_BAIL(r < 0, nif->ncf, ENOMEM);
+
+    r = aug_get(aug, path, &name);
+    ERR_COND_BAIL(r < 0, nif->ncf, EOTHER);
+    FREE(path);
+    return name;
+ error:
+    FREE(path);
+    return NULL;
+}
+
 int drv_init(struct netcf *ncf) {
     int r;
 
@@ -445,12 +466,8 @@ char *drv_xml_desc(struct netcf_if *nif) {
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
-    r = xasprintf(&path, "%s/DEVICE", nif->path);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-    r = aug_get(aug, path, &name);
-    ERR_COND_BAIL(r < 0, ncf, EOTHER);
-    FREE(path);
+    name = device_name(nif);
+    ERR_BAIL(ncf);
 
     r = xasprintf(&path,
           "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
@@ -507,6 +524,37 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     FREE(nif_path);
     unref(result, netcf_if);
     goto done;
+}
+
+int drv_undefine(struct netcf_if *nif) {
+    struct augeas *aug = NULL;
+    struct netcf *ncf = nif->ncf;
+    const char *name;
+    int r;
+    char *path = NULL;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    name = device_name(nif);
+    ERR_BAIL(ncf);
+
+    r = xasprintf(&path,
+          "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
+          ifcfg_path, name, name, name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    r = aug_rm(aug, path);
+    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+
+    r = aug_save(aug);
+    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+
+    FREE(path);
+    return 0;
+ error:
+    FREE(path);
+    return -1;
 }
 
 /*

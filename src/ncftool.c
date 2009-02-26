@@ -210,6 +210,37 @@ static const struct command_def cmd_define_def = {
     .help = "define an interface from an XML file"
 };
 
+static int cmd_undefine(const struct command *cmd) {
+    int r;
+    const char *name = arg_value(cmd, "iface");
+    struct netcf_if *nif = NULL;
+
+    nif = ncf_lookup_by_name(ncf, name);
+    if (nif == NULL)
+        return CMD_RES_ERR;
+
+    r = ncf_undefine(nif);
+    if (r < 0)
+        return CMD_RES_ERR;
+
+    printf("%s undefined\n", name);
+    ncf_free(nif);
+    return CMD_RES_OK;
+}
+
+static const struct command_opt_def cmd_undefine_opts[] = {
+    { .tag = CMD_OPT_ARG, .name = "iface" },
+    CMD_OPT_DEF_LAST
+};
+
+static const struct command_def cmd_undefine_def = {
+    .name = "undefine",
+    .opts = cmd_undefine_opts,
+    .handler = cmd_undefine,
+    .synopsis = "undefine an interface",
+    .help = "undefine an interface"
+};
+
 static int cmd_quit(ATTRIBUTE_UNUSED const struct command *cmd) {
     return CMD_RES_QUIT;
 }
@@ -336,6 +367,7 @@ static const struct command_def const *commands[] = {
     &cmd_list_def,
     &cmd_dump_xml_def,
     &cmd_define_def,
+    &cmd_undefine_def,
     &cmd_quit_def,
     &cmd_def_last
 };

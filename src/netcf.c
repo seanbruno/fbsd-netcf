@@ -162,6 +162,12 @@ ncf_define(struct netcf *ncf, const char *xml) {
     return drv_define(ncf, xml);
 }
 
+/* Delete the definition */
+int ncf_undefine(struct netcf_if *nif) {
+    ERR_RESET(nif->ncf);
+    return drv_undefine(nif);
+}
+
 #if 0
 /* Bring the interface up */
 int ncf_up(struct netcf_if *) {
@@ -171,12 +177,6 @@ int ncf_up(struct netcf_if *) {
 
 /* Take it down */
 int ncf_down(struct netcf_if *) {
-    ERR_RESET(ncf);
-    return -1;
-}
-
-/* Delete the definition */
-int ncf_undefine(struct netcf_if *) {
     ERR_RESET(ncf);
     return -1;
 }
