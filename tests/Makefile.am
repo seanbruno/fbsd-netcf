@@ -6,12 +6,16 @@ GNULIB_CFLAGS= -I $(top_srcdir)/gnulib/lib
 AM_CFLAGS = $(NETCF_CFLAGS) $(WARN_CFLAGS) $(GNULIB_CFLAGS) \
 	-I $(top_builddir)/src
 
+EXTRA_DIST = interface initscripts root
+
 TESTS_ENVIRONMENT = \
   PATH='$(abs_top_builddir)/src$(PATH_SEPARATOR)'"$$PATH" \
   abs_top_builddir='$(abs_top_builddir)' \
   abs_top_srcdir='$(abs_top_srcdir)'
 
 TESTS=test-initscripts
+
+INCLUDES = -I$(top_srcdir)/src
 
 # FIXME: Needs to be conditionalized
 check_PROGRAMS=test-initscripts
