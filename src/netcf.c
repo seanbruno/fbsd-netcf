@@ -65,7 +65,7 @@ void free_netcf_if(struct netcf_if *nif) {
 
     assert(nif->ref == 0);
     unref(nif->ncf, netcf);
-    free(nif->path);
+    free(nif->name);
     free(nif);
 }
 

@@ -209,27 +209,6 @@ static char *xml_prop(xmlNodePtr node, const char *name) {
     return (char *) xmlGetProp(node, BAD_CAST name);
 }
 
-static const char *device_name(struct netcf_if *nif) {
-    struct augeas *aug = NULL;
-    char *path = NULL;
-    const char *name;
-    int r;
-
-    aug = get_augeas(nif->ncf);
-    ERR_BAIL(nif->ncf);
-
-    r = xasprintf(&path, "%s/DEVICE", nif->path);
-    ERR_COND_BAIL(r < 0, nif->ncf, ENOMEM);
-
-    r = aug_get(aug, path, &name);
-    ERR_COND_BAIL(r < 0, nif->ncf, EOTHER);
-    FREE(path);
-    return name;
- error:
-    FREE(path);
-    return NULL;
-}
-
 int drv_init(struct netcf *ncf) {
     int r;
 
@@ -306,14 +285,14 @@ int drv_list_interfaces_uuid_string(struct netcf *ncf,
     return list_interface_ids(ncf, maxuuids, uuids, "NCF_UUID");
 }
 
-static struct netcf_if *make_netcf_if(struct netcf *ncf, char *path) {
+static struct netcf_if *make_netcf_if(struct netcf *ncf, char *name) {
     int r;
     struct netcf_if *result = NULL;
 
     r = make_ref(result);
     ERR_THROW(r < 0, ncf, ENOMEM, NULL);
     result->ncf = ref(ncf);
-    result->path = path;
+    result->name = name;
     return result;
 
  error:
@@ -324,8 +303,8 @@ static struct netcf_if *make_netcf_if(struct netcf *ncf, char *path) {
 struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
     struct netcf_if *nif = NULL;
     char *pathx = NULL;
+    char *name_dup = NULL;
     struct augeas *aug;
-    char **intf = NULL;
     int nint;
     int r;
 
@@ -335,22 +314,24 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
     r = xasprintf(&pathx, "%s[DEVICE = '%s']", ifcfg_path, name);
     ERR_COND_BAIL(r < 0, ncf, ENOMEM);
 
-    nint = aug_match(aug, pathx, &intf);
-    ERR_COND_BAIL(nint < 0 || nint > 1, ncf, EOTHER);
+    nint = aug_get(aug, pathx, NULL);
+    ERR_COND_BAIL(nint < 0, ncf, EOTHER);
 
-    if (nint == 0 || is_slave(ncf, intf[0]))
+    if (nint == 0 || is_slave(ncf, pathx))
         goto done;
 
-    nif = make_netcf_if(ncf, intf[0]);
+    name_dup = strdup(name);
+    ERR_COND_BAIL(name_dup == NULL, ncf, ENOMEM);
+
+    nif = make_netcf_if(ncf, name_dup);
     ERR_BAIL(ncf);
-    intf[0] = NULL;
     goto done;
 
  error:
     unref(nif, netcf_if);
+    FREE(name_dup);
  done:
     FREE(pathx);
-    free_matches(nint, &intf);
     return nif;
 }
 
@@ -398,13 +379,11 @@ static xmlDocPtr aug_get_xml(struct netcf *ncf, int nint, char **intf) {
 }
 
 /* Write the XML doc in the simple Augeas format into the Augeas tree */
-static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml, char **top_path) {
+static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml) {
     xmlNodePtr forest;
     char *lpath = NULL;
     struct augeas *aug = NULL;
     int r;
-
-    *top_path = NULL;
 
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
@@ -438,20 +417,10 @@ static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml, char **top_path) {
                       "aug_set of '%s' failed", lpath);
             FREE(lpath);
         }
-        if (toplevel) {
-            ERR_THROW(*top_path != NULL, ncf, EINTERNAL,
-                      "multiple toplevel interfaces");
-            (*top_path) = strdup(path);
-            ERR_THROW(*top_path == NULL, ncf, ENOMEM, NULL);
-        }
     }
-    ERR_THROW(*top_path == NULL, ncf, EXMLINVALID,
-              "no toplevel interface");
-
     return 0;
  error:
     FREE(lpath);
-    FREE(*top_path);
     return -1;
 }
 
@@ -501,7 +470,6 @@ error:
 }
 
 char *drv_xml_desc(struct netcf_if *nif) {
-    const char *name;
     char *path = NULL, *result = NULL;
     struct augeas *aug;
     struct netcf *ncf;
@@ -514,12 +482,9 @@ char *drv_xml_desc(struct netcf_if *nif) {
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
-    name = device_name(nif);
-    ERR_BAIL(ncf);
-
     r = xasprintf(&path,
           "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
-          ifcfg_path, name, name, name);
+          ifcfg_path, nif->name, nif->name, nif->name);
     ERR_COND_BAIL(r < 0, ncf, ENOMEM);
 
     nint = aug_match(aug, path, &intf);
@@ -542,9 +507,11 @@ char *drv_xml_desc(struct netcf_if *nif) {
     return NULL;
 }
 
-/* Get the content of /interface/name */
-static xmlChar *device_name_from_xml(xmlDocPtr xml) {
+/* Get the content of /interface/name. Result must be freed with free() */
+static char *device_name_from_xml(xmlDocPtr xml) {
     xmlNodePtr iface, name;
+    xmlChar *xml_result;
+    char *result;
 
     iface = xmlDocGetRootElement(xml);
     if (iface == NULL) return NULL;
@@ -554,12 +521,16 @@ static xmlChar *device_name_from_xml(xmlDocPtr xml) {
             break;
     if (name == NULL) return NULL;
 
-    return xmlNodeListGetString(xml, name->children, 1);
+    xml_result = xmlNodeListGetString(xml, name->children, 1);
+    if (xml_result == NULL)
+        return NULL;
+    result = strdup((char *) xml_result);
+    xmlFree(xml_result);
+    return result;
 }
 
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     xmlDocPtr ncf_xml = NULL, aug_xml = NULL;
-    char *nif_path = NULL;
     char *name = NULL, *path = NULL;
     struct netcf_if *result = NULL;
     int r;
@@ -571,7 +542,7 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     rng_validate(ncf, ncf_xml);
     ERR_BAIL(ncf);
 
-    name = (char *) device_name_from_xml(ncf_xml);
+    name = device_name_from_xml(ncf_xml);
     ERR_COND_BAIL(name == NULL, ncf, EINTERNAL);
 
     /* Clean out existing definitions */
@@ -585,23 +556,21 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
 
     // FIXME: Check for errors from ApplyStylesheet
     aug_xml = xsltApplyStylesheet(ncf->driver->get, ncf_xml, NULL);
-    aug_put_xml(ncf, aug_xml, &nif_path);
+    aug_put_xml(ncf, aug_xml);
     ERR_BAIL(ncf);
 
     r = aug_save(aug);
     ERR_THROW(r < 0, ncf, EOTHER, "aug_save failed");
 
-    result = make_netcf_if(ncf, nif_path);
+    result = make_netcf_if(ncf, name);
     ERR_BAIL(ncf);
 
  done:
     free(path);
-    xmlFree(name);
     xmlFreeDoc(ncf_xml);
     xmlFreeDoc(aug_xml);
     return result;
  error:
-    FREE(nif_path);
     unref(result, netcf_if);
     goto done;
 }
@@ -609,19 +578,15 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
 int drv_undefine(struct netcf_if *nif) {
     struct augeas *aug = NULL;
     struct netcf *ncf = nif->ncf;
-    const char *name;
     int r;
     char *path = NULL;
 
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
-    name = device_name(nif);
-    ERR_BAIL(ncf);
-
     r = xasprintf(&path,
           "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
-          ifcfg_path, name, name, name);
+          ifcfg_path, nif->name, nif->name, nif->name);
     ERR_COND_BAIL(r < 0, ncf, ENOMEM);
 
     r = aug_rm(aug, path);

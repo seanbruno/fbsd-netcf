@@ -129,7 +129,7 @@ struct netcf {
 struct netcf_if {
     ref_t         ref;
     struct netcf *ncf;
-    char         *path;
+    char         *name;                   /* The device name */
 };
 
 void free_netcf_if(struct netcf_if *nif);
