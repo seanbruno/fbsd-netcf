@@ -92,6 +92,11 @@ ncf_lookup_by_mac(struct netcf *, const unsigned char *mac);
 struct netcf_if *
 ncf_define(struct netcf *, const char *xml);
 
+/* Return the name of the interface. The string can be used up until the
+ * next call to a function that takes this NETCF_IF as argument
+ */
+const char *ncf_if_name(struct netcf_if *);
+
 /* Bring the interface up */
 int ncf_if_up(struct netcf_if *);
 

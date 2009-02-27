@@ -162,6 +162,11 @@ ncf_define(struct netcf *ncf, const char *xml) {
     return drv_define(ncf, xml);
 }
 
+const char *ncf_if_name(struct netcf_if *nif) {
+    ERR_RESET(nif->ncf);
+    return nif->name;
+}
+
 /* Delete the definition */
 int ncf_if_undefine(struct netcf_if *nif) {
     ERR_RESET(nif->ncf);

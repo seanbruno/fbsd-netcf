@@ -197,8 +197,7 @@ static int cmd_define(const struct command *cmd) {
     nif = ncf_define(ncf, xml);
     if (nif == NULL)
         return CMD_RES_ERR;
-    // FIXME: Would be nice to print "Defined foo"
-    // but we don't have a way to get the name from NIF
+    printf("Defined interface %s\n", ncf_if_name(nif));
     return CMD_RES_OK;
 }
 
