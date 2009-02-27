@@ -34,6 +34,7 @@
 #include <getopt.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <locale.h>
 
 enum command_opt_tag {
     CMD_OPT_NONE,
@@ -504,6 +505,8 @@ static int main_loop(void) {
 
 int main(int argc, char **argv) {
     int r;
+
+    setlocale(LC_ALL, "");
 
     parse_opts(argc, argv);
 
