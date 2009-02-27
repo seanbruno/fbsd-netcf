@@ -153,8 +153,12 @@ static int cmd_dump_xml(const struct command *cmd) {
     struct netcf_if *nif = NULL;
 
     nif = ncf_lookup_by_name(ncf, name);
-    if (nif == NULL)
+    if (nif == NULL) {
+        fprintf(stderr,
+            "Interface %s does not exist or is not a toplevel interface\n",
+            name);
         return CMD_RES_ERR;
+    }
 
     xml = ncf_if_xml_desc(nif);
     if (xml == NULL)
@@ -446,11 +450,14 @@ static void parse_opts(int argc, char **argv) {
 }
 
 static void print_netcf_error(void) {
+    int errcode;
     const char *errmsg, *details;
-    ncf_error(ncf, &errmsg, &details);
-    fprintf(stderr, "error: %s\n", errmsg);
-    if (details != NULL)
-        fprintf(stderr, "error: %s\n", details);
+    errcode = ncf_error(ncf, &errmsg, &details);
+    if (errcode != NETCF_NOERROR) {
+        fprintf(stderr, "error: %s\n", errmsg);
+        if (details != NULL)
+            fprintf(stderr, "error: %s\n", details);
+    }
 }
 
 static int main_loop(void) {
