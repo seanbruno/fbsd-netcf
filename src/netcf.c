@@ -163,20 +163,20 @@ ncf_define(struct netcf *ncf, const char *xml) {
 }
 
 /* Delete the definition */
-int ncf_undefine(struct netcf_if *nif) {
+int ncf_if_undefine(struct netcf_if *nif) {
     ERR_RESET(nif->ncf);
     return drv_undefine(nif);
 }
 
 #if 0
 /* Bring the interface up */
-int ncf_up(struct netcf_if *) {
+int ncf_if_up(struct netcf_if *) {
     ERR_RESET(ncf);
     return -1;
 }
 
 /* Take it down */
-int ncf_down(struct netcf_if *) {
+int ncf_if_down(struct netcf_if *) {
     ERR_RESET(ncf);
     return -1;
 }
@@ -185,7 +185,7 @@ int ncf_down(struct netcf_if *) {
 /* Produce an XML description for the interface, in the same format that
  * NCF_DEFINE expects
  */
-char *ncf_xml_desc(struct netcf_if *nif) {
+char *ncf_if_xml_desc(struct netcf_if *nif) {
     ERR_RESET(nif->ncf);
     return drv_xml_desc(nif);
 }
@@ -193,7 +193,7 @@ char *ncf_xml_desc(struct netcf_if *nif) {
 /* Release any resources used by this NETCF_IF; the pointer is invalid
  * after this call
  */
-void ncf_free(struct netcf_if *nif) {
+void ncf_if_free(struct netcf_if *nif) {
     if (nif == NULL)
         return;
 

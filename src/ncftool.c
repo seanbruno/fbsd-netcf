@@ -156,13 +156,13 @@ static int cmd_dump_xml(const struct command *cmd) {
     if (nif == NULL)
         return CMD_RES_ERR;
 
-    xml = ncf_xml_desc(nif);
+    xml = ncf_if_xml_desc(nif);
     if (xml == NULL)
         return CMD_RES_ERR;
 
     printf("%s\n", xml);
     free(xml);
-    ncf_free(nif);
+    ncf_if_free(nif);
     return CMD_RES_OK;
 }
 
@@ -220,12 +220,12 @@ static int cmd_undefine(const struct command *cmd) {
     if (nif == NULL)
         return CMD_RES_ERR;
 
-    r = ncf_undefine(nif);
+    r = ncf_if_undefine(nif);
     if (r < 0)
         return CMD_RES_ERR;
 
     printf("%s undefined\n", name);
-    ncf_free(nif);
+    ncf_if_free(nif);
     return CMD_RES_OK;
 }
 

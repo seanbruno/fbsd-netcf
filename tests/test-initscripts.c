@@ -77,7 +77,7 @@ static void testLookupByName(CuTest *tc) {
     CuAssertPtrNotNull(tc, nif);
     CuAssertStrEquals(tc, "/files/etc/sysconfig/network-scripts/ifcfg-br0",
                       nif->path);
-    ncf_free(nif);
+    ncf_if_free(nif);
     CuAssertIntEquals(tc, 1, ncf->ref);
 }
 
