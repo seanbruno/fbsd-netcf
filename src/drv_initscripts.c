@@ -484,7 +484,7 @@ char *drv_xml_desc(struct netcf_if *nif) {
     struct netcf *ncf;
     char **intf = NULL;
     xmlDocPtr aug_xml = NULL, ncf_xml = NULL;
-    int nint;
+    int nint = 0;
     int r;
 
     ncf = nif->ncf;

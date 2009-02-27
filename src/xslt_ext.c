@@ -41,7 +41,7 @@
  * netmask "255.255.255.0"
  */
 static void ipcalc_netmask(xmlXPathParserContextPtr ctxt, int nargs) {
-    xmlChar *ip_str;
+    xmlChar *ip_str = NULL;
     unsigned long prefix = 0;
     struct in_addr ip;
     int r;
@@ -142,7 +142,7 @@ static void ipcalc_address(xmlXPathParserContextPtr ctxt, int nargs) {
  * If the netmask is the empty string, return the empty string.
  */
 static void ipcalc_prefix(xmlXPathParserContextPtr ctxt, int nargs) {
-    xmlChar *netmask_str;
+    xmlChar *netmask_str = NULL;
     char *prefix_str = NULL;
     struct in_addr netmask;
     unsigned int prefix = 8*sizeof(netmask.s_addr);

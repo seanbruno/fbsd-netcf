@@ -520,7 +520,7 @@ static int main_loop(void) {
 }
 
 int main(int argc, char **argv) {
-    int r;
+    int r = 0;
 
     setlocale(LC_ALL, "");
 
