@@ -218,6 +218,13 @@ void report_error(struct netcf *ncf, netcf_errcode_t errcode,
                   const char *format, ...) {
     va_list ap;
 
+    va_start(ap, format);
+    vreport_error(ncf, errcode, format, ap);
+    va_end(ap);
+}
+
+void vreport_error(struct netcf *ncf, netcf_errcode_t errcode,
+                   const char *format, va_list ap) {
     /* We only remember the first error */
     if (ncf->errcode != NETCF_NOERROR)
         return;
@@ -225,10 +232,8 @@ void report_error(struct netcf *ncf, netcf_errcode_t errcode,
 
     ncf->errcode = errcode;
     if (format != NULL) {
-        va_start(ap, format);
         if (vasprintf(&(ncf->errdetails), format, ap) < 0)
             ncf->errdetails = NULL;
-        va_end(ap);
     }
 }
 

@@ -28,6 +28,7 @@
 #include "datadir.h"
 
 #include <string.h>
+#include <stdarg.h>
 
 /*
  * Macros for gcc's attributes
@@ -139,6 +140,10 @@ void free_netcf_if(struct netcf_if *nif);
 void report_error(struct netcf *ncf, netcf_errcode_t errcode,
                   const char *format, ...)
     ATTRIBUTE_FORMAT(printf, 3, 4);
+
+void vreport_error(struct netcf *ncf, netcf_errcode_t errcode,
+                   const char *format, va_list ap)
+    ATTRIBUTE_FORMAT(printf, 3, 0);
 
 /* The interface to the driver (backend). The appropriate driver is
  * selected at build time from the available drivers in drv_*
