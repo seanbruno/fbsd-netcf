@@ -33,6 +33,7 @@
 #include "list.h"
 
 #include <libxml/parser.h>
+#include <libxml/relaxng.h>
 #include <libxml/tree.h>
 #include <libxslt/xslt.h>
 #include <libxslt/xsltInternals.h>
@@ -45,6 +46,7 @@ struct driver {
     struct augeas     *augeas;
     xsltStylesheetPtr  put;
     xsltStylesheetPtr  get;
+    xmlRelaxNGPtr      rng;
 };
 
 /* Entries in a ifcfg file that tell us that the interface
@@ -158,6 +160,51 @@ static xsltStylesheetPtr parse_stylesheet(struct netcf *ncf,
     return result;
 }
 
+/* Callback for reporting RelaxNG errors */
+static void rng_error(void *ctx, const char *format, ...) {
+    struct netcf *ncf = ctx;
+    va_list ap;
+
+    va_start(ap, format);
+    vreport_error(ncf, NETCF_EXMLINVALID, format, ap);
+    va_end(ap);
+}
+
+static xmlRelaxNGPtr rng_parse(struct netcf *ncf, const char *fname) {
+    char *path = NULL;
+    xmlRelaxNGPtr result = NULL;
+    xmlRelaxNGParserCtxtPtr ctxt = NULL;
+    int r;
+
+    r = xasprintf(&path, "%s/xml/%s", ncf->data_dir, fname);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    ctxt = xmlRelaxNGNewParserCtxt(path);
+    xmlRelaxNGSetParserErrors(ctxt, rng_error, rng_error, ncf);
+
+    result = xmlRelaxNGParse(ctxt);
+
+ error:
+    xmlRelaxNGFreeParserCtxt(ctxt);
+    free(path);
+    return result;
+}
+
+static void rng_validate(struct netcf *ncf, xmlDocPtr doc) {
+	xmlRelaxNGValidCtxtPtr ctxt;
+	int r;
+
+	ctxt = xmlRelaxNGNewValidCtxt(ncf->driver->rng);
+	xmlRelaxNGSetValidErrors(ctxt, rng_error, rng_error, ncf);
+
+    r = xmlRelaxNGValidateDoc(ctxt, doc);
+    if (r != 0 && ncf->errcode == NETCF_NOERROR)
+        report_error(ncf, NETCF_EXMLINVALID,
+           "Interface definition fails to validate");
+
+	xmlRelaxNGFreeValidCtxt(ctxt);
+}
+
 static char *xml_prop(xmlNodePtr node, const char *name) {
     return (char *) xmlGetProp(node, BAD_CAST name);
 }
@@ -194,6 +241,7 @@ int drv_init(struct netcf *ncf) {
     ERR_THROW(r < 0, ncf, EINTERNAL, "xsltRegisterExtModule failed");
     ncf->driver->get = parse_stylesheet(ncf, "initscripts-get.xsl");
     ncf->driver->put = parse_stylesheet(ncf, "initscripts-put.xsl");
+    ncf->driver->rng = rng_parse(ncf, "interface.rng");
     return 0;
  error:
     FREE(ncf->driver);
@@ -520,7 +568,9 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     ncf_xml = parse_xml(ncf, xml_str);
     ERR_BAIL(ncf);
 
-    // FIXME: Validate against interface.rng
+    rng_validate(ncf, ncf_xml);
+    ERR_BAIL(ncf);
+
     name = (char *) device_name_from_xml(ncf_xml);
     ERR_COND_BAIL(name == NULL, ncf, EINTERNAL);
 
