@@ -381,8 +381,9 @@ static xmlDocPtr aug_get_xml(struct netcf *ncf, int nint, char **intf) {
 /* Write the XML doc in the simple Augeas format into the Augeas tree */
 static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml) {
     xmlNodePtr forest;
-    char *lpath = NULL;
+    char *path = NULL, *lpath = NULL, *label = NULL, *value = NULL;
     struct augeas *aug = NULL;
+    int result = -1;
     int r;
 
     aug = get_augeas(ncf);
@@ -397,14 +398,14 @@ static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml) {
         ERR_THROW(! xmlStrEqual(tree->name, BAD_CAST "tree"), ncf,
                   EINTERNAL, "expected node labeled 'tree', not '%s'",
                   tree->name);
-        char *path = xml_prop(tree, "path");
+        path = xml_prop(tree, "path");
         int toplevel = 1;
         /* This is a little drastic, since it clears out the file entirely */
         r = aug_rm(aug, path);
         ERR_THROW(r < 0, ncf, EINTERNAL, "aug_rm of '%s' failed", path);
         list_for_each(node, tree->children) {
-            char *label = xml_prop(node, "label");
-            char *value = xml_prop(node, "value");
+            label = xml_prop(node, "label");
+            value = xml_prop(node, "value");
             /* We should mark the toplevel interface from the XSLT */
             if (STREQ(label, "BRIDGE") || STREQ(label, "MASTER")) {
                 toplevel = 0;
@@ -416,12 +417,20 @@ static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml) {
             ERR_THROW(r < 0, ncf, EOTHER,
                       "aug_set of '%s' failed", lpath);
             FREE(lpath);
+            xmlFree(label);
+            xmlFree(value);
+            label = value = NULL;
         }
+        xmlFree(path);
+        path = NULL;
     }
-    return 0;
+    result = 0;
  error:
+    xmlFree(label);
+    xmlFree(value);
+    xmlFree(path);
     FREE(lpath);
-    return -1;
+    return result;
 }
 
 /* Called from SAX on parsing errors in the XML. */
@@ -494,17 +503,18 @@ char *drv_xml_desc(struct netcf_if *nif) {
 
     aug_xml = aug_get_xml(ncf, nint, intf);
     ncf_xml = xsltApplyStylesheet(ncf->driver->put, aug_xml, NULL);
-    xmlFreeDoc(aug_xml);
 
     xmlDocDumpFormatMemory(ncf_xml, (xmlChar **) &result, NULL, 1);
-    xmlFreeDoc(ncf_xml);
-    return result;
- error:
+
+ done:
     FREE(path);
     free_matches(nint, &intf);
     xmlFreeDoc(aug_xml);
     xmlFreeDoc(ncf_xml);
-    return NULL;
+    return result;
+ error:
+    FREE(result);
+    goto done;
 }
 
 /* Get the content of /interface/name. Result must be freed with free() */

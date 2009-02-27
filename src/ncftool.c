@@ -148,26 +148,30 @@ static const struct command_def cmd_list_def = {
 };
 
 static int cmd_dump_xml(const struct command *cmd) {
-    char *xml;
+    char *xml = NULL;
     const char *name = arg_value(cmd, "iface");
     struct netcf_if *nif = NULL;
+    int result = CMD_RES_ERR;
 
     nif = ncf_lookup_by_name(ncf, name);
     if (nif == NULL) {
         fprintf(stderr,
             "Interface %s does not exist or is not a toplevel interface\n",
             name);
-        return CMD_RES_ERR;
+        goto done;
     }
 
     xml = ncf_if_xml_desc(nif);
     if (xml == NULL)
-        return CMD_RES_ERR;
+        goto done;
 
     printf("%s\n", xml);
+    result= CMD_RES_OK;
+
+ done:
     free(xml);
     ncf_if_free(nif);
-    return CMD_RES_OK;
+    return result;
 }
 
 static const struct command_opt_def cmd_dump_xml_opts[] = {
@@ -187,18 +191,24 @@ static int cmd_define(const struct command *cmd) {
     const char *fname = arg_value(cmd, "xmlfile");
     char *xml;
     size_t length;
-    struct netcf_if *nif;
+    struct netcf_if *nif = NULL;
+    int result = CMD_RES_ERR;
 
     xml = read_file(fname, &length);
     if (xml == NULL) {
         fprintf(stderr, "Failed to read %s\n", fname);
-        return CMD_RES_ERR;
+        goto done;
     }
     nif = ncf_define(ncf, xml);
     if (nif == NULL)
-        return CMD_RES_ERR;
+        goto done;
     printf("Defined interface %s\n", ncf_if_name(nif));
-    return CMD_RES_OK;
+    result = CMD_RES_OK;
+
+ done:
+    free(xml);
+    ncf_if_free(nif);
+    return result;
 }
 
 static const struct command_opt_def cmd_define_opts[] = {

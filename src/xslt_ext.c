@@ -51,7 +51,7 @@ static void ipcalc_netmask(xmlXPathParserContextPtr ctxt, int nargs) {
         goto error;
     }
 
-    ip_str = xmlStrdup(xmlXPathPopString(ctxt));
+    ip_str = xmlXPathPopString(ctxt);
     if (ip_str == NULL) {
         xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
                     "ipcalc:netmask: internal error: allocation failed");
@@ -112,14 +112,14 @@ static void ipcalc_netmask(xmlXPathParserContextPtr ctxt, int nargs) {
 /* Given an IP address with prefix like "192.168.0.24/24", return the address
  */
 static void ipcalc_address(xmlXPathParserContextPtr ctxt, int nargs) {
-    xmlChar *str;
+    xmlChar *str = NULL;
 
     if (nargs != 1) {
         xmlXPathSetArityError(ctxt);
         goto error;
     }
 
-    str = xmlStrdup(xmlXPathPopString(ctxt));
+    str = xmlXPathPopString(ctxt);
     if (str == NULL) {
         xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
                     "ipcalc:address: internal error: allocation failed");
@@ -132,7 +132,9 @@ static void ipcalc_address(xmlXPathParserContextPtr ctxt, int nargs) {
     }
 
     xmlXPathReturnString(ctxt, str);
+    str = NULL;
  error:
+    xmlFree(str);
     return;
 }
 
@@ -176,8 +178,9 @@ static void ipcalc_prefix(xmlXPathParserContextPtr ctxt, int nargs) {
     }
 
     xmlXPathReturnString(ctxt, BAD_CAST prefix_str);
-    return;
+    prefix_str = NULL;
  error:
+    xmlFree(netmask_str);
     free(prefix_str);
     return;
 }
@@ -185,8 +188,8 @@ static void ipcalc_prefix(xmlXPathParserContextPtr ctxt, int nargs) {
 /* Given BONDING_OPTS, fish out the 'mode=FOO' token and return 'FOO'
  */
 static void bond_option(xmlXPathParserContextPtr ctxt, int nargs) {
-    xmlChar *bond_opts;
-    xmlChar *name;
+    xmlChar *bond_opts = NULL;
+    xmlChar *name = NULL;
     const xmlChar *val, *val_end;
 
     if (nargs != 2) {
@@ -199,13 +202,13 @@ static void bond_option(xmlXPathParserContextPtr ctxt, int nargs) {
     val = xmlStrstr(bond_opts, name);
     if (val == NULL) {
         xmlXPathReturnEmptyString(ctxt);
-        return;
+        goto done;
     }
     val += xmlStrlen(name);
     if (*val != '=') {
         // FIXME: We should really go look for the next occurrence of name
         xmlXPathReturnEmptyString(ctxt);
-        return;
+        goto done;
     }
     val += 1;
     for (val_end = val;
@@ -214,6 +217,9 @@ static void bond_option(xmlXPathParserContextPtr ctxt, int nargs) {
 
     int len = xmlStrlen(val) - xmlStrlen(val_end);
     xmlXPathReturnString(ctxt, xmlStrndup(val, len));
+ done:
+    xmlFree(name);
+    xmlFree(bond_opts);
 }
 
 static void *xslt_ipcalc_init(ATTRIBUTE_UNUSED xsltTransformContextPtr ctxt,
