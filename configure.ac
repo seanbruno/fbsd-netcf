@@ -5,7 +5,7 @@ AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([-Wno-portability])
 
 
-AC_SUBST([LIBNETCF_VERSION_INFO], [0:0:1])
+AC_SUBST([LIBNETCF_VERSION_INFO], [0:0:0])
 
 AC_GNU_SOURCE
 
@@ -55,8 +55,9 @@ PKG_CHECK_MODULES([LIBXSLT], [libxslt])
 
 NETCF_CHECK_READLINE
 
-AC_OUTPUT(Makefile     \
-          gnulib/lib/Makefile \
-          gnulib/tests/Makefile \
-          src/Makefile \
-          tests/Makefile)
+AC_OUTPUT(Makefile                                          \
+          gnulib/lib/Makefile                               \
+          gnulib/tests/Makefile                             \
+          src/Makefile                                      \
+          tests/Makefile                                    \
+          netcf.pc netcf.spec)

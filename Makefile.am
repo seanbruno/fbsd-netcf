@@ -2,6 +2,11 @@ SUBDIRS=gnulib/lib src gnulib/tests tests
 
 ACLOCAL_AMFLAGS = -I gnulib/m4
 
+EXTRA_DIST=netcf.spec build/aux/move-if-change
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = netcf.pc
+
 xmldir=$(datadir)/netcf/xml
 
 dist_xml_DATA=xml/augeas.rng xml/interface.rng xml/initscripts-get.xsl \
