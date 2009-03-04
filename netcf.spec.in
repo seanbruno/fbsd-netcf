@@ -9,7 +9,7 @@ URL:            http://people.redhat.com/dlutter/netcf/
 Source0:        http://people.redhat.com/download/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-BuildRequires:  readline-devel
+BuildRequires:  readline-devel augeas-devel >= 0.5.0
 Requires:       %{name}-libs = %{version}-%{release}
 
 %description
@@ -31,6 +31,7 @@ developing applications that use %{name}.
 %package        libs
 Summary:        Libraries for %{name}
 Group:          System Environment/Libraries
+Requires:       augeas-libs >= 0.5.0
 
 %description    libs
 The libraries for %{name}.
