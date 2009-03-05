@@ -29,6 +29,6 @@ tag-release:
 
 # This is how I run autogen locally. YMMV
 autogen:
-	./autogen.sh CFLAGS=-g --prefix=/tmp/netcf-inst/ --gnulib-srcdir=${HOME}/code/gnulib/ --enable-compile-warnings=error
+	./autogen.sh CFLAGS='-g -Werror' --prefix=/tmp/netcf-inst/ --gnulib-srcdir=${HOME}/code/gnulib/
 
 .PHONY: build-rpm
