@@ -89,28 +89,21 @@
       <ref name="basic-attrs"/>
       <ref name="interface-addressing"/>
       <element name="bond">
-        <interleave>
-          <optional>
-            <attribute name="mode">
-              <choice>
-                <value>balance-rr</value>
-                <value>active-backup</value>
-                <value>balance-xor</value>
-                <value>broadcast</value>
-                <value>802.3ad</value>
-                <value>balance-tlb</value>
-                <value>balance-alb</value>
-              </choice>
-            </attribute>
-          </optional>
-          <!-- FIXME: Add the 32k other options for bonding as needed -->
-          <optional>
-            <!-- Only for active-backup mode -->
-            <attribute name="primary">
-              <ref name="device-name"/>
-            </attribute>
-          </optional>
-        </interleave>
+        <optional>
+          <attribute name="mode">
+            <choice>
+              <value>balance-rr</value>
+              <!-- The primary interface is the first interface child
+                   of the bond element -->
+              <value>active-backup</value>
+              <value>balance-xor</value>
+              <value>broadcast</value>
+              <value>802.3ad</value>
+              <value>balance-tlb</value>
+              <value>balance-alb</value>
+            </choice>
+          </attribute>
+        </optional>
         <oneOrMore>
           <!-- The slave interfaces -->
           <ref name="bare-ethernet-interface"/>

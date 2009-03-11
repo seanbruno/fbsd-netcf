@@ -64,12 +64,10 @@
             <xsl:value-of select="$mode"/>
           </xsl:attribute>
         </xsl:if>
-        <xsl:if test="string-length($primary) > 0">
-          <xsl:attribute name="primary">
-            <xsl:value-of select="$primary"/>
-          </xsl:attribute>
-        </xsl:if>
-        <xsl:for-each select="/descendant-or-self::*[node[@label = 'MASTER' and @value = $iface]]">
+        <xsl:for-each select="/descendant-or-self::*[node[@label = 'MASTER' and @value = $iface]][node[@label = 'DEVICE' and @value = $primary]]">
+          <xsl:call-template name='bare-ethernet-interface'/>
+        </xsl:for-each>
+        <xsl:for-each select="/descendant-or-self::*[node[@label = 'MASTER' and @value = $iface]][node[@label = 'DEVICE' and @value != $primary]]">
           <xsl:call-template name='bare-ethernet-interface'/>
         </xsl:for-each>
       </bond>

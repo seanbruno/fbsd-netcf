@@ -57,7 +57,7 @@
       <xsl:call-template name="startmode"/>
       <xsl:call-template name="interface-addressing"/>
       <node label="BONDING_OPTS">
-        <xsl:attribute name="value">'<xsl:if test="bond/@mode">mode=<xsl:value-of select='bond/@mode'/></xsl:if><xsl:if test="bond/@primary"> primary=<xsl:value-of select='bond/@primary'/></xsl:if>'</xsl:attribute>
+        <xsl:attribute name="value">'<xsl:if test="bond/@mode">mode=<xsl:value-of select='bond/@mode'/></xsl:if><xsl:if test="bond/@mode = 'active-backup'"> primary=<xsl:value-of select='bond/interface[1]/name'/></xsl:if>'</xsl:attribute>
       </node>
     </tree>
     <xsl:for-each select='bond/interface'>
