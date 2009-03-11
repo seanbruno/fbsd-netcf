@@ -159,6 +159,12 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml);
 int drv_undefine(struct netcf_if *nif);
 
 /*
+ * Internally used utilities
+ */
+int run_program(struct netcf *ncf, const char *const *argv);
+char *argv_to_string(const char *const *argv);
+
+/*
  * XSLT extension functions in xslt_ext.c
  */
 int xslt_ext_register(void);

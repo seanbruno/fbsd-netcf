@@ -47,7 +47,8 @@ static const char *const errmsgs[] = {
     "allocation failed",                  /* ENOMEM    */
     "XML parser failed",                  /* EXMLPARSER */
     "XML invalid",                        /* EXMLINVALID */
-    "required entry missing"              /* ENOENT */
+    "required entry missing",             /* ENOENT */
+    "failed to execute external program"  /* EEXEC */
 };
 
 static void free_netcf(struct netcf *ncf) {
@@ -173,19 +174,27 @@ int ncf_if_undefine(struct netcf_if *nif) {
     return drv_undefine(nif);
 }
 
-#if 0
 /* Bring the interface up */
-int ncf_if_up(struct netcf_if *) {
-    ERR_RESET(ncf);
-    return -1;
+int ncf_if_up(struct netcf_if *nif) {
+    const char *const if_up_argv[] = {
+        "ifup", nif->name, NULL
+    };
+
+    /* I'm a bit concerned that this assumes nif (and nif->ncf) is non-NULL) */
+    ERR_RESET(nif->ncf);
+    return run_program(nif->ncf, if_up_argv);
 }
 
 /* Take it down */
-int ncf_if_down(struct netcf_if *) {
-    ERR_RESET(ncf);
-    return -1;
+int ncf_if_down(struct netcf_if *nif) {
+    const char *const if_down_argv[] = {
+        "ifdown", nif->name, NULL
+    };
+
+    /* I'm a bit concerned that this assumes nif (and nif->ncf) is non-NULL) */
+    ERR_RESET(nif->ncf);
+    return run_program(nif->ncf, if_down_argv);
 }
-#endif
 
 /* Produce an XML description for the interface, in the same format that
  * NCF_DEFINE expects
@@ -219,6 +228,61 @@ int ncf_error(struct netcf *ncf, const char **errmsg, const char **details) {
 /*
  * Internal helpers
  */
+
+int run_program(struct netcf *ncf, const char *const *argv) {
+
+    int command_return;
+    char *argv_str = argv_to_string(argv);
+    int ret = -1;
+
+    ERR_COND_BAIL(argv_str == NULL, ncf, ENOMEM);
+
+    /* BIG FIXME!!!  Before any general release, this *must* be
+     * replaced with a call to a function similar to libVirt's
+     * virRun(), and if there is an error returned, anything the
+     * program produced on stderr or stdout should be placed in
+     * ncf->errdetails.
+     */
+    command_return = system(argv_str);
+
+    ERR_COND_BAIL(command_return != WEXITSTATUS (0), ncf, EEXEC);
+
+    ret = 0;
+error:
+    FREE(argv_str);
+    return ret;
+}
+
+/*
+ * argv_to_string() is borrowed from libvirt's
+ * src/util.c:virArgvToString()
+ */
+char *
+argv_to_string(const char *const *argv) {
+    int i;
+    size_t len;
+    char *ret, *p;
+
+    for (len = 1, i = 0; argv[i]; i++)
+        len += strlen(argv[i]) + 1;
+
+    if (ALLOC_N(ret, len) < 0)
+        return NULL;
+    p = ret;
+
+    for (i = 0; argv[i]; i++) {
+        if (i != 0)
+            *(p++) = ' ';
+
+        strcpy(p, argv[i]);
+        p += strlen(argv[i]);
+    }
+
+    *p = '\0';
+
+    return ret;
+}
+
 void report_error(struct netcf *ncf, netcf_errcode_t errcode,
                   const char *format, ...) {
     va_list ap;

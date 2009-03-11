@@ -49,7 +49,8 @@ typedef enum {
     NETCF_ENOMEM,        /* allocation failed */
     NETCF_EXMLPARSER,    /* XML parser choked */
     NETCF_EXMLINVALID,   /* XML invalid in some form */
-    NETCF_ENOENT         /* Required entry in a tree is missing */
+    NETCF_ENOENT,        /* Required entry in a tree is missing */
+    NETCF_EEXEC          /* external program execution failed or returned non-0 */
 } netcf_errcode_t;
 
 /*

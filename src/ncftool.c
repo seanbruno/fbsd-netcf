@@ -187,6 +187,82 @@ static const struct command_def cmd_dump_xml_def = {
     .help = "dump the XML description of an interface"
 };
 
+static int cmd_if_up(const struct command *cmd) {
+    const char *name = arg_value(cmd, "iface");
+    struct netcf_if *nif = NULL;
+    int result = CMD_RES_ERR;
+
+    nif = ncf_lookup_by_name(ncf, name);
+    if (nif == NULL) {
+        fprintf(stderr,
+            "Interface %s does not exist or is not a toplevel interface\n",
+            name);
+        goto done;
+    }
+
+    if (ncf_if_up(nif) == 0) {
+        fprintf(stderr, "Interface %s successfully brought up\n", name);
+        result= CMD_RES_OK;
+    } else {
+        fprintf(stderr, "Interface %s bring-up failed!\n", name);
+    }
+
+ done:
+    ncf_if_free(nif);
+    return result;
+}
+
+static const struct command_opt_def cmd_if_up_opts[] = {
+    { .tag = CMD_OPT_ARG, .name = "iface" },
+    CMD_OPT_DEF_LAST
+};
+
+static const struct command_def cmd_if_up_def = {
+    .name = "ifup",
+    .opts = cmd_if_up_opts,
+    .handler = cmd_if_up,
+    .synopsis = "bring up an interface",
+    .help = "bring up an interface"
+};
+
+static int cmd_if_down(const struct command *cmd) {
+    const char *name = arg_value(cmd, "iface");
+    struct netcf_if *nif = NULL;
+    int result = CMD_RES_ERR;
+
+    nif = ncf_lookup_by_name(ncf, name);
+    if (nif == NULL) {
+        fprintf(stderr,
+            "Interface %s does not exist or is not a toplevel interface\n",
+            name);
+        goto done;
+    }
+
+    if (ncf_if_down(nif) == 0) {
+        fprintf(stderr, "Interface %s successfully brought down\n", name);
+        result= CMD_RES_OK;
+    } else {
+        fprintf(stderr, "Interface %s bring-down failed!\n", name);
+    }
+
+ done:
+    ncf_if_free(nif);
+    return result;
+}
+
+static const struct command_opt_def cmd_if_down_opts[] = {
+    { .tag = CMD_OPT_ARG, .name = "iface" },
+    CMD_OPT_DEF_LAST
+};
+
+static const struct command_def cmd_if_down_def = {
+    .name = "ifdown",
+    .opts = cmd_if_down_opts,
+    .handler = cmd_if_down,
+    .synopsis = "bring down an interface",
+    .help = "bring down an interface"
+};
+
 static int cmd_define(const struct command *cmd) {
     const char *fname = arg_value(cmd, "xmlfile");
     char *xml;
@@ -382,6 +458,8 @@ static const struct command_def const *commands[] = {
     &cmd_dump_xml_def,
     &cmd_define_def,
     &cmd_undefine_def,
+    &cmd_if_up_def,
+    &cmd_if_down_def,
     &cmd_quit_def,
     &cmd_def_last
 };
