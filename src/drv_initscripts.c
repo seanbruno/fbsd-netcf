@@ -676,6 +676,11 @@ int drv_undefine(struct netcf_if *nif) {
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
+    if (is_bond(ncf, nif->name)) {
+        modprobe_unalias_bond(ncf, nif->name);
+        ERR_BAIL(ncf);
+    }
+
     r = xasprintf(&path,
           "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
           ifcfg_path, nif->name, nif->name, nif->name);
@@ -683,11 +688,6 @@ int drv_undefine(struct netcf_if *nif) {
 
     r = aug_rm(aug, path);
     ERR_COND_BAIL(r < 0, ncf, EOTHER);
-
-    if (is_bond(ncf, nif->name)) {
-        modprobe_unalias_bond(ncf, nif->name);
-        ERR_BAIL(ncf);
-    }
 
     r = aug_save(aug);
     ERR_COND_BAIL(r < 0, ncf, EOTHER);
