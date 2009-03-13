@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include "safe-alloc.h"
 #include "ref.h"
@@ -539,6 +540,82 @@ static char *device_name_from_xml(xmlDocPtr xml) {
     return result;
 }
 
+/* The device NAME is a bond if it is mentioned as the MASTER in sopme
+ * other devices config file
+ */
+static bool is_bond(struct netcf *ncf, const char *name) {
+    char *path = NULL;
+    struct augeas *aug = get_augeas(ncf);
+    int r, nmatches = 0;
+
+    r = xasprintf(&path, "%s[ MASTER = '%s']", ifcfg_path, name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    nmatches = aug_match(aug, path, NULL);
+    free(path);
+ error:
+    return nmatches > 0;
+}
+
+/* Add an 'alias NAME bonding' to an appropriate file in /etc/modprobe.d,
+ * if none exists yet. If we need to create a new one, it goes into the
+ * file netcf.conf.
+ */
+static void modprobe_alias_bond(struct netcf *ncf, const char *name) {
+    char *path = NULL;
+    struct augeas *aug = get_augeas(ncf);
+    int r, nmatches;
+
+    r = xasprintf(&path, "/files/etc/modprobe.d/*/alias[ . = '%s']", name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    nmatches = aug_match(aug, path, NULL);
+    ERR_COND_BAIL(nmatches < 0, ncf, EOTHER);
+
+    FREE(path);
+    if (nmatches == 0) {
+        /* Add a new alias node; this probably deserves better API support
+           in Augeas, it's too convoluted */
+        r = xasprintf(&path,
+                      "/files/etc/modprobe.d/netcf.conf/alias[last()]", name);
+        ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+        nmatches = aug_match(aug, path, NULL);
+        if (nmatches > 0) {
+            r = aug_insert(aug, path, "alias", 0);
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+        }
+        r = aug_set(aug, path, name);
+        FREE(path);
+    }
+
+    r = xasprintf(&path,
+                  "/files/etc/modprobe.d/*/alias[ . = '%s']/modulename",
+                  name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    r = aug_set(aug, path, "bonding");
+    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+
+ error:
+    FREE(path);
+}
+
+/* Remove the alias for NAME to the bonding module */
+static void modprobe_unalias_bond(struct netcf *ncf, const char *name) {
+    char *path = NULL;
+    struct augeas *aug = get_augeas(ncf);
+    int r;
+
+    r = xasprintf(&path,
+         "/files/etc/modprobe.d/*/alias[ . = '%s'][modulename = 'bonding']",
+                  name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    r = aug_rm(aug, path);
+    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+ error:
+    FREE(path);
+}
+
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     xmlDocPtr ncf_xml = NULL, aug_xml = NULL;
     char *name = NULL, *path = NULL;
@@ -568,6 +645,11 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     aug_xml = xsltApplyStylesheet(ncf->driver->get, ncf_xml, NULL);
     aug_put_xml(ncf, aug_xml);
     ERR_BAIL(ncf);
+
+    if (is_bond(ncf, name)) {
+        modprobe_alias_bond(ncf, name);
+        ERR_BAIL(ncf);
+    }
 
     r = aug_save(aug);
     ERR_THROW(r < 0, ncf, EOTHER, "aug_save failed");
@@ -601,6 +683,11 @@ int drv_undefine(struct netcf_if *nif) {
 
     r = aug_rm(aug, path);
     ERR_COND_BAIL(r < 0, ncf, EOTHER);
+
+    if (is_bond(ncf, nif->name)) {
+        modprobe_unalias_bond(ncf, nif->name);
+        ERR_BAIL(ncf);
+    }
 
     r = aug_save(aug);
     ERR_COND_BAIL(r < 0, ncf, EOTHER);
