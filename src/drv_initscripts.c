@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
 #include "safe-alloc.h"
 #include "ref.h"
 #include "list.h"
@@ -53,6 +54,12 @@ static const char *const augeas_xfm[][2] = {
     { "/augeas/load/Netcf_ifcfg/excl[4]", "*.rpmnew" },
     { "/augeas/load/Netcf_ifcfg/excl[5]", "*~" }
 };
+
+static const char *const prog_lokkit = "/usr/sbin/lokkit";
+static const char *const lokkit_custom_rules =
+    "--custom-rules=ipv4:filter:" DATADIR "/netcf/iptables-forward-bridged";
+
+static const char *const prog_rc_d_iptables = "/etc/init.d/iptables";
 
 struct driver {
     struct augeas     *augeas;
@@ -90,7 +97,7 @@ static struct augeas *get_augeas(struct netcf *ncf) {
         ncf->driver->augeas = aug;
         /* Only look at a few config files */
         r = aug_rm(aug,
-          "/augeas/load/*[ label() != 'Iptables' and label() != 'Modprobe' ]");
+          "/augeas/load/*[ label() != 'Iptables' and label() != 'Modprobe' and label() != 'Lokkit']");
         ERR_THROW(r < 0, ncf, EOTHER, "aug_rm failed in get_augeas");
 
         for (int i=0; i < ARRAY_CARDINALITY(augeas_xfm); i++) {
@@ -175,6 +182,128 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
     return -1;
 }
 
+/* Ensure we have an iptables rule to bridge physdevs. We take care of both
+ * systems using iptables directly, and systems using lokkit (even if it's
+ * only installed, but not used)
+ */
+static void bridge_physdevs(struct netcf *ncf) {
+    struct augeas *aug = NULL;
+    char *path = NULL, *p = NULL;
+    const char *argv[5];
+    int have_lokkit, use_lokkit;
+    int r, nmatches;
+
+    MEMZERO(argv, ARRAY_CARDINALITY(argv));
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    nmatches = aug_match(aug,
+      "/files/etc/sysconfig/iptables/table[ . = 'filter']/*[. = 'FORWARD'][match = 'physdev']", NULL);
+    ERR_THROW(nmatches < 0, ncf, EOTHER, "failed to look for bridge");
+    if (nmatches > 0)
+        return;
+
+    have_lokkit = access(prog_lokkit, X_OK) == 0;
+    use_lokkit = aug_match(aug,
+      "/files/etc/sysconfig/iptables/#comment[. = 'Firewall configuration written by system-config-firewall']", NULL);
+    ERR_THROW(use_lokkit < 0, ncf, EOTHER, "failed to look for lokkit");
+
+    if (have_lokkit) {
+        const char *rules_file = strrchr(lokkit_custom_rules, ':') + 1;
+
+        aug_print(aug, stdout,
+                  "/files/etc/sysconfig/system-config-firewall");
+        printf("-----\n");
+        r = xasprintf(&path,
+                      "/files/etc/sysconfig/system-config-firewall/custom-rules[. = '%s']", rules_file);
+        ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+        nmatches = aug_match(aug, path, NULL);
+        ERR_THROW(nmatches < 0, ncf, EOTHER,
+                  "failed to look for custom-rules");
+
+        if (nmatches == 0) {
+            r = aug_set(aug, path, rules_file);
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+
+            r = xasprintf(&p, "%s/type", path);
+            ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+            r = aug_set(aug, p, "ipv4");
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+            FREE(p);
+
+            r = xasprintf(&p, "%s/table", path);
+            ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+            r = aug_set(aug, p, "filter");
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+
+            FREE(p);
+
+            aug_print(aug, stdout,
+                      "/files/etc/sysconfig/system-config-firewall");
+            r = aug_save(aug);
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+        }
+        FREE(path);
+
+        if (use_lokkit) {
+            argv[0] = prog_lokkit;
+            argv[1] = "--update";
+            r = run_program(ncf, argv);
+            ERR_BAIL(ncf);
+        }
+    }
+
+    if (! use_lokkit) {
+#define IPTABLE "/files/etc/sysconfig/iptables/table[. = 'filter']"
+        nmatches = aug_match(aug, IPTABLE, NULL);
+        ERR_COND_BAIL(nmatches < 0, ncf, EOTHER);
+        if (nmatches == 0) {
+            r = aug_set(aug, "/files/etc/sysconfig/iptables/table",
+                        "filter");
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+            r = aug_set(aug, IPTABLE "/chain[1]", "INPUT");
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+            r = aug_set(aug, IPTABLE "/chain[1]/policy", "ACCEPT");
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+            r = aug_set(aug, IPTABLE "/chain[2]", "FORWARD");
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+            r = aug_set(aug, IPTABLE "/chain[2]/policy", "ACCEPT");
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+            r = aug_set(aug, IPTABLE "/chain[3]", "OUTPUT");
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+            r = aug_set(aug, IPTABLE "/chain[3]/policy", "ACCEPT");
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+        } else {
+            r = aug_insert(aug, IPTABLE "/chain[last()]", "append", 0);
+            ERR_COND_BAIL(r < 0, ncf, EOTHER);
+        }
+        r = aug_set(aug, IPTABLE "/append[1]", "FORWARD");
+        r = aug_set(aug, IPTABLE "/append[1]/match", "physdev");
+        ERR_COND_BAIL(r < 0, ncf, EOTHER);
+        r = aug_set(aug, IPTABLE "/append[1]/physdev-is-bridged", NULL);
+        ERR_COND_BAIL(r < 0, ncf, EOTHER);
+        r = aug_set(aug, IPTABLE "/append[1]/jump", "ACCEPT");
+        ERR_COND_BAIL(r < 0, ncf, EOTHER);
+
+        r = aug_save(aug);
+        ERR_COND_BAIL(r < 0, ncf, EOTHER);
+#undef IPTABLE
+
+        argv[0] = prog_rc_d_iptables;
+        argv[1] = "condrestart";
+        r = run_program(ncf, argv);
+        ERR_BAIL(ncf);
+    }
+ error:
+    free(path);
+    free(p);
+    return;
+}
+
 static xsltStylesheetPtr parse_stylesheet(struct netcf *ncf,
                                           const char *fname) {
     xsltStylesheetPtr result = NULL;
@@ -252,6 +381,8 @@ int drv_init(struct netcf *ncf) {
     ncf->driver->get = parse_stylesheet(ncf, "initscripts-get.xsl");
     ncf->driver->put = parse_stylesheet(ncf, "initscripts-put.xsl");
     ncf->driver->rng = rng_parse(ncf, "interface.rng");
+    /* We undconditionally bridge physdevs; could be more discriminating */
+    bridge_physdevs(ncf);
     return 0;
  error:
     FREE(ncf->driver);

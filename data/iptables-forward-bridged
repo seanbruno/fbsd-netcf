@@ -1,0 +1,1 @@
+-I FORWARD -m physdev --physdev-is-bridged -j ACCEPT
