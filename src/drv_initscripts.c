@@ -43,6 +43,17 @@
 static const char *const ifcfg_path =
     "/files/etc/sysconfig/network-scripts/*";
 
+static const char *const augeas_xfm[][2] = {
+    { "/augeas/load/Netcf_ifcfg/lens", "Shellvars.lns" },
+    { "/augeas/load/Netcf_ifcfg/incl",
+      "/etc/sysconfig/network-scripts/*" },
+    { "/augeas/load/Netcf_ifcfg/excl[1]", "*.augnew" },
+    { "/augeas/load/Netcf_ifcfg/excl[2]", "*.augsave" },
+    { "/augeas/load/Netcf_ifcfg/excl[3]", "*.rpmsave" },
+    { "/augeas/load/Netcf_ifcfg/excl[4]", "*.rpmnew" },
+    { "/augeas/load/Netcf_ifcfg/excl[5]", "*~" }
+};
+
 struct driver {
     struct augeas     *augeas;
     xsltStylesheetPtr  put;
@@ -71,12 +82,31 @@ static int xasprintf(char **strp, const char *format, ...) {
 }
 
 static struct augeas *get_augeas(struct netcf *ncf) {
-    // FIXME: We should probably have a way for the user to influence
-    // the save mode for Augeas (or just settle on a good default)
-    if (ncf->driver->augeas == NULL)
-        ncf->driver->augeas = aug_init(ncf->root, NULL, AUG_SAVE_BACKUP);
-    ERR_COND(ncf->driver->augeas == NULL, ncf, EOTHER);
+    if (ncf->driver->augeas == NULL) {
+        struct augeas *aug;
+        int r;
+        aug = aug_init(ncf->root, NULL, AUG_NO_LOAD);
+        ERR_THROW(aug == NULL, ncf, EOTHER, "aug_init failed");
+        ncf->driver->augeas = aug;
+        /* Only look at a few config files */
+        r = aug_rm(aug,
+          "/augeas/load/*[ label() != 'Iptables' and label() != 'Modprobe' ]");
+        ERR_THROW(r < 0, ncf, EOTHER, "aug_rm failed in get_augeas");
+
+        for (int i=0; i < ARRAY_CARDINALITY(augeas_xfm); i++) {
+            r = aug_set(aug, augeas_xfm[i][0], augeas_xfm[i][1]);
+            ERR_THROW(r < 0, ncf, EOTHER,
+                      "transform setup failed to set %s",
+                      augeas_xfm[i][0]);
+        }
+        r = aug_load(aug);
+        ERR_THROW(r < 0, ncf, EOTHER, "failed to load config files");
+    }
     return ncf->driver->augeas;
+ error:
+    aug_close(ncf->driver->augeas);
+    ncf->driver->augeas = NULL;
+    return NULL;
 }
 
 static int aug_submatch(struct netcf *ncf, const char *p1,
