@@ -9,8 +9,8 @@ pkgconfig_DATA = netcf.pc
 
 xmldir=$(datadir)/netcf/xml
 
-dist_xml_DATA=xml/augeas.rng xml/interface.rng xml/initscripts-get.xsl \
-  xml/initscripts-put.xsl
+dist_xml_DATA=data/xml/augeas.rng data/xml/interface.rng \
+	data/xml/initscripts-get.xsl data/xml/initscripts-put.xsl
 
 # This requires that trang is installed, but we don't want to require
 # that, even for building, since the .rnc files are only a convenience
