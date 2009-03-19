@@ -35,4 +35,4 @@ tests/test-initscripts
 *.dvi
 *.log
 *.pdf
-xml/*.rnc
+data/xml/*.rnc
