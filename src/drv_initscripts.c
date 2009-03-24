@@ -116,6 +116,30 @@ static struct augeas *get_augeas(struct netcf *ncf) {
     return NULL;
 }
 
+ATTRIBUTE_FORMAT(printf, 4, 5)
+static int defnode(struct netcf *ncf, const char *name, const char *value,
+                   const char *format, ...) {
+    struct augeas *aug = get_augeas(ncf);
+    va_list ap;
+    char *expr = NULL;
+    int r, created;
+
+    va_start(ap, format);
+    r = vasprintf (&expr, format, ap);
+    va_end (ap);
+    if (r < 0)
+        expr = NULL;
+    ERR_THROW(r < 0, ncf, ENOMEM, "failed to format node expression");
+
+    r = aug_defnode(aug, name, expr, value, &created);
+    ERR_THROW(r < 0, ncf, EOTHER, "failed to define node %s", name);
+
+    /* Fallthrough intentional */
+ error:
+    free(expr);
+    return (r < 0) ? -1 : created;
+}
+
 static int aug_submatch(struct netcf *ncf, const char *p1,
                         const char *p2, char ***matches) {
     struct augeas *aug = get_augeas(ncf);
@@ -198,52 +222,44 @@ static void bridge_physdevs(struct netcf *ncf) {
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
+    defnode(ncf, "iptables", NULL, "/files/etc/sysconfig/iptables");
+    ERR_BAIL(ncf);
+
     nmatches = aug_match(aug,
-      "/files/etc/sysconfig/iptables/table[ . = 'filter']/*[. = 'FORWARD'][match = 'physdev']", NULL);
+      "$iptables/table[ . = 'filter']/*[. = 'FORWARD'][match = 'physdev']", NULL);
     ERR_THROW(nmatches < 0, ncf, EOTHER, "failed to look for bridge");
     if (nmatches > 0)
         return;
 
     have_lokkit = access(prog_lokkit, X_OK) == 0;
     use_lokkit = aug_match(aug,
-      "/files/etc/sysconfig/iptables/#comment[. = 'Firewall configuration written by system-config-firewall']", NULL);
+      "$iptables/#comment[. = 'Firewall configuration written by system-config-firewall']", NULL);
     ERR_THROW(use_lokkit < 0, ncf, EOTHER, "failed to look for lokkit");
 
     if (have_lokkit) {
         const char *rules_file = strrchr(lokkit_custom_rules, ':') + 1;
+        int created;
 
-        aug_print(aug, stdout,
-                  "/files/etc/sysconfig/system-config-firewall");
-        printf("-----\n");
-        r = xasprintf(&path,
-                      "/files/etc/sysconfig/system-config-firewall/custom-rules[. = '%s']", rules_file);
-        ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+        defnode(ncf, "fw", NULL, "/files/etc/sysconfig/system-config-firewall");
+        ERR_BAIL(ncf);
 
-        nmatches = aug_match(aug, path, NULL);
-        ERR_THROW(nmatches < 0, ncf, EOTHER,
-                  "failed to look for custom-rules");
+        created = defnode(ncf, "fw_custom", rules_file,
+                          "$fw/custom-rules[. = '%s']", rules_file);
+        ERR_BAIL(ncf);
 
-        if (nmatches == 0) {
-            r = aug_set(aug, path, rules_file);
+        if (created) {
+            r = aug_set(aug, "$fw_custom", rules_file);
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
 
-            r = xasprintf(&p, "%s/type", path);
-            ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-            r = aug_set(aug, p, "ipv4");
+            r = aug_set(aug, "$fw_custom/type", "ipv4");
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
             FREE(p);
 
-            r = xasprintf(&p, "%s/table", path);
-            ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-            r = aug_set(aug, p, "filter");
+            r = aug_set(aug, "$fw_custom/table", "filter");
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
 
             FREE(p);
 
-            aug_print(aug, stdout,
-                      "/files/etc/sysconfig/system-config-firewall");
             r = aug_save(aug);
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
         }
@@ -258,40 +274,40 @@ static void bridge_physdevs(struct netcf *ncf) {
     }
 
     if (! use_lokkit) {
-#define IPTABLE "/files/etc/sysconfig/iptables/table[. = 'filter']"
-        nmatches = aug_match(aug, IPTABLE, NULL);
+        defnode(ncf, "ipt_filter", NULL, "$iptables/table[. = 'filter']");
+        ERR_BAIL(ncf);
+
+        nmatches = aug_match(aug, "$ipt_filter", NULL);
         ERR_COND_BAIL(nmatches < 0, ncf, EOTHER);
         if (nmatches == 0) {
-            r = aug_set(aug, "/files/etc/sysconfig/iptables/table",
-                        "filter");
+            r = aug_set(aug, "$ipt_filter", "filter");
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, IPTABLE "/chain[1]", "INPUT");
+            r = aug_set(aug, "$ipt_filter/chain[1]", "INPUT");
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, IPTABLE "/chain[1]/policy", "ACCEPT");
+            r = aug_set(aug, "$ipt_filter/chain[1]/policy", "ACCEPT");
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, IPTABLE "/chain[2]", "FORWARD");
+            r = aug_set(aug, "$ipt_filter/chain[2]", "FORWARD");
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, IPTABLE "/chain[2]/policy", "ACCEPT");
+            r = aug_set(aug, "$ipt_filter/chain[2]/policy", "ACCEPT");
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, IPTABLE "/chain[3]", "OUTPUT");
+            r = aug_set(aug, "$ipt_filter/chain[3]", "OUTPUT");
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, IPTABLE "/chain[3]/policy", "ACCEPT");
+            r = aug_set(aug, "$ipt_filter/chain[3]/policy", "ACCEPT");
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
         } else {
-            r = aug_insert(aug, IPTABLE "/chain[last()]", "append", 0);
+            r = aug_insert(aug, "$ipt_filter/chain[last()]", "append", 0);
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
         }
-        r = aug_set(aug, IPTABLE "/append[1]", "FORWARD");
-        r = aug_set(aug, IPTABLE "/append[1]/match", "physdev");
+        r = aug_set(aug, "$ipt_filter/append[1]", "FORWARD");
+        r = aug_set(aug, "$ipt_filter/append[1]/match", "physdev");
         ERR_COND_BAIL(r < 0, ncf, EOTHER);
-        r = aug_set(aug, IPTABLE "/append[1]/physdev-is-bridged", NULL);
+        r = aug_set(aug, "$ipt_filter/append[1]/physdev-is-bridged", NULL);
         ERR_COND_BAIL(r < 0, ncf, EOTHER);
-        r = aug_set(aug, IPTABLE "/append[1]/jump", "ACCEPT");
+        r = aug_set(aug, "$ipt_filter/append[1]/jump", "ACCEPT");
         ERR_COND_BAIL(r < 0, ncf, EOTHER);
 
         r = aug_save(aug);
         ERR_COND_BAIL(r < 0, ncf, EOTHER);
-#undef IPTABLE
 
         argv[0] = prog_rc_d_iptables;
         argv[1] = "condrestart";
@@ -804,6 +820,7 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
 
     // FIXME: Check for errors from ApplyStylesheet
     aug_xml = xsltApplyStylesheet(ncf->driver->get, ncf_xml, NULL);
+
     aug_put_xml(ncf, aug_xml);
     ERR_BAIL(ncf);
 
