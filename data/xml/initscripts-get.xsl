@@ -41,7 +41,7 @@
     <xsl:for-each select='bridge/interface'>
       <tree>
         <xsl:call-template name="bare-ethernet-interface"/>
-        <node name="BRIDGE">
+        <node label="BRIDGE">
           <xsl:attribute name="value"><xsl:value-of select="../../name"/></xsl:attribute>
         </node>
       </tree>
