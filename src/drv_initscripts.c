@@ -44,7 +44,9 @@
 static const char *const ifcfg_path =
     "/files/etc/sysconfig/network-scripts/*";
 
+/* Augeas should only load the files we are interested in */
 static const char *const augeas_xfm[][2] = {
+    /* Ifcfg files */
     { "/augeas/load/Netcf_ifcfg/lens", "Shellvars.lns" },
     { "/augeas/load/Netcf_ifcfg/incl",
       "/etc/sysconfig/network-scripts/*" },
@@ -52,7 +54,22 @@ static const char *const augeas_xfm[][2] = {
     { "/augeas/load/Netcf_ifcfg/excl[2]", "*.augsave" },
     { "/augeas/load/Netcf_ifcfg/excl[3]", "*.rpmsave" },
     { "/augeas/load/Netcf_ifcfg/excl[4]", "*.rpmnew" },
-    { "/augeas/load/Netcf_ifcfg/excl[5]", "*~" }
+    { "/augeas/load/Netcf_ifcfg/excl[5]", "*~" },
+    /* iptables config */
+    { "/augeas/load/Iptables/lens", "Iptables.lns" },
+    { "/augeas/load/Iptables/incl", "/etc/sysconfig/iptables" },
+    /* modprobe config */
+    { "/augeas/load/Modprobe/lens", "Modprobe.lns" },
+    { "/augeas/load/Modprobe/incl[1]", "/etc/modprobe.d/*" },
+    { "/augeas/load/Modprobe/incl[2]", "/etc/modprobe.conf" },
+    { "/augeas/load/Modprobe/excl[1]", "*.augnew" },
+    { "/augeas/load/Modprobe/excl[2]", "*.augsave" },
+    { "/augeas/load/Modprobe/excl[3]", "*.rpmsave" },
+    { "/augeas/load/Modprobe/excl[4]", "*.rpmnew" },
+    { "/augeas/load/Modprobe/excl[5]", "*~" },
+    /* lokkit */
+    { "/augeas/load/Lokkit/lens", "Lokkit.lns" },
+    { "/augeas/load/Lokkit/incl", "/etc/sysconfig/system-config-firewall" }
 };
 
 static const char *const prog_lokkit = "/usr/sbin/lokkit";
@@ -96,8 +113,7 @@ static struct augeas *get_augeas(struct netcf *ncf) {
         ERR_THROW(aug == NULL, ncf, EOTHER, "aug_init failed");
         ncf->driver->augeas = aug;
         /* Only look at a few config files */
-        r = aug_rm(aug,
-          "/augeas/load/*[ label() != 'Iptables' and label() != 'Modprobe' and label() != 'Lokkit']");
+        r = aug_rm(aug, "/augeas/load/*");
         ERR_THROW(r < 0, ncf, EOTHER, "aug_rm failed in get_augeas");
 
         for (int i=0; i < ARRAY_CARDINALITY(augeas_xfm); i++) {
