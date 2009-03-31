@@ -133,6 +133,11 @@ static struct augeas *get_augeas(struct netcf *ncf) {
         }
         r = aug_load(aug);
         ERR_THROW(r < 0, ncf, EOTHER, "failed to load config files");
+
+        /* FIXME: we need to produce _much_ better diagnostics here - need
+           to analyze what came back in /augeas//error */
+        r = aug_match(aug, "/augeas//error", NULL);
+        ERR_THROW(r != 0, ncf, EINTERNAL, "augeas setup failed");
     }
     return ncf->driver->augeas;
  error:
