@@ -69,7 +69,10 @@ static const char *const augeas_xfm[][2] = {
     { "/augeas/load/Modprobe/excl[5]", "*~" },
     /* lokkit */
     { "/augeas/load/Lokkit/lens", "Lokkit.lns" },
-    { "/augeas/load/Lokkit/incl", "/etc/sysconfig/system-config-firewall" }
+    { "/augeas/load/Lokkit/incl", "/etc/sysconfig/system-config-firewall" },
+    /* sysfs (choice entries from /class/net) */
+    { "/augeas/load/Sysfs/lens", "Netcf.id" },
+    { "/augeas/load/Sysfs/incl", "/sys/class/net/*/address" }
 };
 
 static const char *const prog_lokkit = "/usr/sbin/lokkit";
@@ -108,8 +111,14 @@ static int xasprintf(char **strp, const char *format, ...) {
 static struct augeas *get_augeas(struct netcf *ncf) {
     if (ncf->driver->augeas == NULL) {
         struct augeas *aug;
+        char *path;
         int r;
-        aug = aug_init(ncf->root, NULL, AUG_NO_LOAD);
+
+        r = xasprintf(&path, "%s/lenses", ncf->data_dir);
+        ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+        aug = aug_init(ncf->root, path, AUG_NO_LOAD);
+        FREE(path);
         ERR_THROW(aug == NULL, ncf, EOTHER, "aug_init failed");
         ncf->driver->augeas = aug;
         /* Only look at a few config files */
@@ -124,6 +133,7 @@ static struct augeas *get_augeas(struct netcf *ncf) {
         }
         r = aug_load(aug);
         ERR_THROW(r < 0, ncf, EOTHER, "failed to load config files");
+        aug_print(aug, stdout, "/augeas//error");
     }
     return ncf->driver->augeas;
  error:
