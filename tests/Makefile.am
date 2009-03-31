@@ -1,4 +1,4 @@
-RNG=$(top_srcdir)/xml/interface.rng
+RNG=$(top_srcdir)/data/xml/interface.rng
 
 GNULIB= ../gnulib/lib/libgnu.la
 GNULIB_CFLAGS= -I $(top_srcdir)/gnulib/lib
