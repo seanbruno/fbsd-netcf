@@ -903,7 +903,7 @@ struct netcf_if *
 drv_lookup_by_mac_string(struct netcf *ncf, const char *mac)
 {
     struct augeas *aug = NULL;
-    char *path = NULL, *name = NULL;
+    char *path = NULL, *name = NULL, *ifcfg = NULL;
     int nmatches;
     char **matches = NULL;
     int r;
@@ -918,17 +918,30 @@ drv_lookup_by_mac_string(struct netcf *ncf, const char *mac)
 
     nmatches = aug_match(aug, path, &matches);
     ERR_THROW(nmatches < 0, ncf, EOTHER, "looking up %s failed", mac);
-    ERR_THROW(nmatches > 1, ncf, EOTHER,
-              "multiple devices with MAC address '%s'", mac);
     if (nmatches == 0)
         /* Should we flag that as an actual error ? */
         goto error;
 
-    const char *n = strrchr(matches[0], '/');
-    ERR_THROW(n == NULL, ncf, EINTERNAL, "missing / in sysfs path");
+    for (int i = 0; i < nmatches; i++) {
+        const char *n = strrchr(matches[i], '/');
+        ERR_THROW(n == NULL, ncf, EINTERNAL, "missing / in sysfs path");
+        n += 1;
 
-    name = strdup(n+1);
-    ERR_COND_BAIL(name == NULL, ncf, ENOMEM);
+        r = xasprintf(&ifcfg, "%s[DEVICE = '%s']", ifcfg_path, n);
+        ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+        if (! is_slave(ncf, ifcfg)) {
+            ERR_THROW(name != NULL, ncf, EOTHER,
+                      "toplevel devices %s and %s with MAC address '%s'",
+                      name, n, mac);
+
+            name = strdup(n);
+            ERR_COND_BAIL(name == NULL, ncf, ENOMEM);
+        }
+        FREE(ifcfg);
+    }
+    ERR_THROW(name == NULL, ncf, EOTHER,
+              "no toplevel interface has MAC address '%s'", mac);
 
     result = make_netcf_if(ncf, name);
     ERR_BAIL(ncf);
@@ -936,6 +949,7 @@ drv_lookup_by_mac_string(struct netcf *ncf, const char *mac)
 
     /* fallthrough intentional */
  error:
+    free(ifcfg);
     free(name);
     free(path);
     free_matches(nmatches, &matches);
