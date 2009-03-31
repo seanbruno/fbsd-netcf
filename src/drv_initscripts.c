@@ -47,14 +47,14 @@ static const char *const ifcfg_path =
 /* Augeas should only load the files we are interested in */
 static const char *const augeas_xfm[][2] = {
     /* Ifcfg files */
-    { "/augeas/load/Netcf_ifcfg/lens", "Shellvars.lns" },
-    { "/augeas/load/Netcf_ifcfg/incl",
-      "/etc/sysconfig/network-scripts/*" },
-    { "/augeas/load/Netcf_ifcfg/excl[1]", "*.augnew" },
-    { "/augeas/load/Netcf_ifcfg/excl[2]", "*.augsave" },
-    { "/augeas/load/Netcf_ifcfg/excl[3]", "*.rpmsave" },
-    { "/augeas/load/Netcf_ifcfg/excl[4]", "*.rpmnew" },
-    { "/augeas/load/Netcf_ifcfg/excl[5]", "*~" },
+    { "/augeas/load/Ifcfg/lens", "Shellvars.lns" },
+    { "/augeas/load/Ifcfg/incl",
+      "/etc/sysconfig/network-scripts/ifcfg-*" },
+    { "/augeas/load/Ifcfg/excl[1]", "*.augnew" },
+    { "/augeas/load/Ifcfg/excl[2]", "*.augsave" },
+    { "/augeas/load/Ifcfg/excl[3]", "*.rpmsave" },
+    { "/augeas/load/Ifcfg/excl[4]", "*.rpmnew" },
+    { "/augeas/load/Ifcfg/excl[5]", "*~" },
     /* iptables config */
     { "/augeas/load/Iptables/lens", "Iptables.lns" },
     { "/augeas/load/Iptables/incl", "/etc/sysconfig/iptables" },
@@ -133,7 +133,6 @@ static struct augeas *get_augeas(struct netcf *ncf) {
         }
         r = aug_load(aug);
         ERR_THROW(r < 0, ncf, EOTHER, "failed to load config files");
-        aug_print(aug, stdout, "/augeas//error");
     }
     return ncf->driver->augeas;
  error:
