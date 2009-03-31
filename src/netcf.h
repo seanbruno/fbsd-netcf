@@ -77,9 +77,9 @@ ncf_list_interfaces(struct netcf *, int maxnames, char **names);
 /* Look up interfaces by UUID, name and hwaddr (MAC-48) */
 struct netcf_if *
 ncf_lookup_by_name(struct netcf *, const char *name);
-/* MAC is 48 bit (6 byte) array */
+/* MAC in hex notation aa:bb:cc:dd:ee:ff */
 struct netcf_if *
-ncf_lookup_by_mac(struct netcf *, const unsigned char *mac);
+ncf_lookup_by_mac_string(struct netcf *, const char *mac);
 
 /*
  * Define/start/stop/undefine interfaces

@@ -94,7 +94,6 @@ struct netcf *ncf;
 static const char *const progname = "ncftool";
 const char *root = NULL;
 
-ATTRIBUTE_UNUSED
 static int opt_present(const struct command *cmd, const char *name) {
     for (struct command_opt *o = cmd->opt; o != NULL; o = o->next) {
         if (STREQ(o->def->name, name))
@@ -149,7 +148,11 @@ static int cmd_dump_xml(const struct command *cmd) {
     struct netcf_if *nif = NULL;
     int result = CMD_RES_ERR;
 
-    nif = ncf_lookup_by_name(ncf, name);
+    if (opt_present(cmd, "mac"))
+        nif = ncf_lookup_by_mac_string(ncf, name);
+    else
+        nif = ncf_lookup_by_name(ncf, name);
+
     if (nif == NULL) {
         fprintf(stderr,
             "Interface %s does not exist or is not a toplevel interface\n",
@@ -172,6 +175,7 @@ static int cmd_dump_xml(const struct command *cmd) {
 
 static const struct command_opt_def cmd_dump_xml_opts[] = {
     { .tag = CMD_OPT_ARG, .name = "iface" },
+    { .tag = CMD_OPT_BOOL, .name = "mac" },
     CMD_OPT_DEF_LAST
 };
 

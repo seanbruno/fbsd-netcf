@@ -899,6 +899,49 @@ int drv_undefine(struct netcf_if *nif) {
     return -1;
 }
 
+struct netcf_if *
+drv_lookup_by_mac_string(struct netcf *ncf, const char *mac)
+{
+    struct augeas *aug = NULL;
+    char *path = NULL, *name = NULL;
+    int nmatches;
+    char **matches = NULL;
+    int r;
+    struct netcf_if *result = NULL;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    r = xasprintf(&path,
+                  "/files/sys/class/net/*[address/content = '%s']", mac);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    nmatches = aug_match(aug, path, &matches);
+    ERR_THROW(nmatches < 0, ncf, EOTHER, "looking up %s failed", mac);
+    ERR_THROW(nmatches > 1, ncf, EOTHER,
+              "multiple devices with MAC address '%s'", mac);
+    if (nmatches == 0)
+        /* Should we flag that as an actual error ? */
+        goto error;
+
+    const char *n = strrchr(matches[0], '/');
+    ERR_THROW(n == NULL, ncf, EINTERNAL, "missing / in sysfs path");
+
+    name = strdup(n+1);
+    ERR_COND_BAIL(name == NULL, ncf, ENOMEM);
+
+    result = make_netcf_if(ncf, name);
+    ERR_BAIL(ncf);
+    name = NULL;
+
+    /* fallthrough intentional */
+ error:
+    free(name);
+    free(path);
+    free_matches(nmatches, &matches);
+    return result;
+}
+
 /*
  * Local variables:
  *  indent-tabs-mode: nil

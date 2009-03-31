@@ -80,6 +80,18 @@ static void testLookupByName(CuTest *tc) {
     CuAssertIntEquals(tc, 1, ncf->ref);
 }
 
+static void testLookupByMAC(CuTest *tc) {
+    struct netcf_if *nif;
+
+    nif = ncf_lookup_by_mac_string(ncf, "00:00:00:00:00:00");
+    CuAssertPtrEquals(tc, NULL, nif);
+    nif = ncf_lookup_by_mac_string(ncf, "aa:bb:cc:dd:ee:ff");
+    CuAssertPtrNotNull(tc, nif);
+    CuAssertStrEquals(tc, "br0", nif->name);
+    ncf_if_free(nif);
+    CuAssertIntEquals(tc, 1, ncf->ref);
+}
+
 int main(void) {
     char *output = NULL;
     CuSuite* suite = CuSuiteNew();
@@ -95,6 +107,7 @@ int main(void) {
 
     SUITE_ADD_TEST(suite, testListInterfaces);
     SUITE_ADD_TEST(suite, testLookupByName);
+    SUITE_ADD_TEST(suite, testLookupByMAC);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, &output);

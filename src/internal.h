@@ -153,6 +153,7 @@ void drv_close(struct netcf *netcf);
 int drv_num_of_interfaces(struct netcf *ncf);
 int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names);
 struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name);
+struct netcf_if *drv_lookup_by_mac_string(struct netcf *ncf, const char *mac);
 char *drv_xml_desc(struct netcf_if *);
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml);
 int drv_undefine(struct netcf_if *nif);

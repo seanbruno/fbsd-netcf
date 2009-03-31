@@ -123,14 +123,11 @@ struct netcf_if * ncf_lookup_by_name(struct netcf *ncf, const char *name) {
     return drv_lookup_by_name(ncf, name);
 }
 
-#if 0
-/* MAC is 48 bit (6 byte) array */
 struct netcf_if *
-ncf_lookup_by_mac(struct netcf *, const unsigned char *mac) {
+ncf_lookup_by_mac_string(struct netcf *ncf, const char *mac) {
     ERR_RESET(ncf);
-    return NULL;
+    return drv_lookup_by_mac_string(ncf, mac);
 }
-#endif
 
 /*
  * Define/start/stop/undefine interfaces
