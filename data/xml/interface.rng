@@ -116,18 +116,6 @@
   <define name="basic-attrs">
     <!-- The device name, like eth0 or br2 -->
     <element name="name"><ref name="device-name"/></element>
-    <!-- UUID is optional when creating an interface. If none is provided
-         in the original definition of the interface, one will be
-         created.
-
-         FIXME: Where are we goingto store the UUID ? For ifcfg, we can
-         store it in dummy variables, like NETCF_UUID in the ifcfg
-         script. No idea where to put it on debian - will probably need to
-         store it in some specially formatted comment.
-    -->
-    <optional>
-      <element name="uuid"><ref name="UUID"/></element>
-    </optional>
     <optional>
       <element name="mtu">
         <attribute name="size"><ref name="unsigned-int"/></attribute>

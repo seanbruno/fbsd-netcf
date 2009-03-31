@@ -118,32 +118,12 @@ int ncf_list_interfaces(struct netcf *ncf, int maxnames, char **names) {
     return result;
 }
 
-int ncf_list_interfaces_uuid_string(struct netcf *ncf,
-                                    int maxuuid, char **uuids) {
-    int result;
-
-    ERR_RESET(ncf);
-    MEMZERO(uuids, maxuuid);
-    result = drv_list_interfaces_uuid_string(ncf, maxuuid, uuids);
-    if (result < 0)
-        for (int i=0; i < maxuuid; i++)
-            FREE(uuids[i]);
-    return result;
-}
-
 struct netcf_if * ncf_lookup_by_name(struct netcf *ncf, const char *name) {
     ERR_RESET(ncf);
     return drv_lookup_by_name(ncf, name);
 }
 
 #if 0
-/* Look up interfaces by UUID, name and hwaddr (MAC-48) */
-struct netcf_if *
-ncf_lookup_by_uuid_string(struct netcf *ncf, const char *uuid) {
-    ERR_RESET(ncf);
-    return NULL;
-}
-
 /* MAC is 48 bit (6 byte) array */
 struct netcf_if *
 ncf_lookup_by_mac(struct netcf *, const unsigned char *mac) {

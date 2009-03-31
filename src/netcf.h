@@ -67,18 +67,14 @@ int ncf_init(struct netcf **netcf, const char *root);
 void ncf_close(struct netcf *);
 
 /* Number of known interfaces and list of them. For listing, interfaces are
- * either identified by name or by UUID.
+ * identified by their name.
  */
 int
 ncf_num_of_interfaces(struct netcf *);
 int
 ncf_list_interfaces(struct netcf *, int maxnames, char **names);
-int
-ncf_list_interfaces_uuid_string(struct netcf *, int maxuuid, char **uuids);
 
 /* Look up interfaces by UUID, name and hwaddr (MAC-48) */
-struct netcf_if *
-ncf_lookup_by_uuid_string(struct netcf *, const char *uuid);
 struct netcf_if *
 ncf_lookup_by_name(struct netcf *, const char *name);
 /* MAC is 48 bit (6 byte) array */

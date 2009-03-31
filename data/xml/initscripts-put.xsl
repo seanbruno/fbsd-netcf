@@ -93,9 +93,6 @@
 
   <xsl:template name="basic-attrs">
     <name><xsl:value-of select="node[@label= 'DEVICE']/@value"/></name>
-    <xsl:if test="node[@label='NETCF_UUID']">
-      <uuid><xsl:value-of select="node[@label='NETCF_UUID']/@value"/></uuid>
-    </xsl:if>
     <xsl:if test="node[@label='MTU']">
       <mtu><xsl:attribute name="size"><xsl:value-of select="node[@label='MTU']/@value"/></xsl:attribute></mtu>
     </xsl:if>

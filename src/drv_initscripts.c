@@ -455,14 +455,6 @@ int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names) {
     return list_interface_ids(ncf, maxnames, names, "DEVICE");
 }
 
-int drv_list_interfaces_uuid_string(struct netcf *ncf,
-                                    int maxuuids, char **uuids) {
-    /* FIXME: This is somewhat bogus. For interfaces we don't manage,
-       there's no guarantee that there is a NCF_UUID. In that case, we'd
-       have to generate one and save it in the interface file */
-    return list_interface_ids(ncf, maxuuids, uuids, "NCF_UUID");
-}
-
 static struct netcf_if *make_netcf_if(struct netcf *ncf, char *name) {
     int r;
     struct netcf_if *result = NULL;

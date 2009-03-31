@@ -1,6 +1,5 @@
 <interface type="ethernet" startmode="onboot">
   <name>eth1</name>
-  <!-- No uuid - will generate one -->
   <ip address="192.168.0.5/24"/>
   <route gateway="192.168.0.1"/>
 </interface>

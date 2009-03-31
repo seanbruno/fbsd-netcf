@@ -79,11 +79,6 @@
     <node label="DEVICE">
       <xsl:attribute name="value"><xsl:value-of select="name"/></xsl:attribute>
     </node>
-    <xsl:if test="uuid">
-      <node label="NCF_UUID">
-        <xsl:attribute name="value"><xsl:value-of select="uuid"/></xsl:attribute>
-      </node>
-    </xsl:if>
     <xsl:if test="mtu">
       <node label="MTU">
         <xsl:attribute name="value"><xsl:value-of select="mtu/@size"/></xsl:attribute>

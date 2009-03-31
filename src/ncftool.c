@@ -94,6 +94,7 @@ struct netcf *ncf;
 static const char *const progname = "ncftool";
 const char *root = NULL;
 
+ATTRIBUTE_UNUSED
 static int opt_present(const struct command *cmd, const char *name) {
     for (struct command_opt *o = cmd->opt; o != NULL; o = o->next) {
         if (STREQ(o->def->name, name))
@@ -110,7 +111,7 @@ static const char *arg_value(const struct command *cmd, const char *name) {
     assert(0);
 }
 
-static int cmd_list(const struct command *cmd) {
+static int cmd_list(ATTRIBUTE_UNUSED const struct command *cmd) {
     int nint;
     char **intf;
 
@@ -119,11 +120,7 @@ static int cmd_list(const struct command *cmd) {
         return CMD_RES_ERR;
     if (ALLOC_N(intf, nint) < 0)
         return CMD_RES_ENOMEM;
-    if (opt_present(cmd, "uuid")) {
-        nint = ncf_list_interfaces_uuid_string(ncf, nint, intf);
-    } else {
-        nint = ncf_list_interfaces(ncf, nint, intf);
-    }
+    nint = ncf_list_interfaces(ncf, nint, intf);
     if (nint < 0)
         return CMD_RES_ERR;
     for (int i=0; i < nint; i++) {
@@ -135,7 +132,6 @@ static int cmd_list(const struct command *cmd) {
 }
 
 static const struct command_opt_def cmd_list_opts[] = {
-    { .tag = CMD_OPT_BOOL, .name = "uuid" },
     CMD_OPT_DEF_LAST
 };
 
