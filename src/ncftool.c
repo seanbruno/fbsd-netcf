@@ -123,7 +123,25 @@ static int cmd_list(ATTRIBUTE_UNUSED const struct command *cmd) {
     if (nint < 0)
         return CMD_RES_ERR;
     for (int i=0; i < nint; i++) {
-        printf("%s\n", intf[i] == NULL ? "(none)" : intf[i]);
+        if (opt_present(cmd, "macs")) {
+            struct netcf_if *nif = NULL;
+            const char *mac = NULL;
+            nif = ncf_lookup_by_name(ncf, intf[i]);
+            if (nif == NULL) {
+                printf("%-8s lookup failed\n", intf[i]);
+                continue;
+            }
+            mac = ncf_if_mac_string(nif);
+            if (mac == NULL) {
+                printf("%-8s could not get MAC\n", intf[i]);
+                ncf_if_free(nif);
+                continue;
+            }
+            printf("%-8s %s\n", intf[i], mac);
+            ncf_if_free(nif);
+        } else {
+            printf("%s\n", intf[i] == NULL ? "(none)" : intf[i]);
+        }
         FREE(intf[i]);
     }
     FREE(intf);
@@ -131,6 +149,7 @@ static int cmd_list(ATTRIBUTE_UNUSED const struct command *cmd) {
 }
 
 static const struct command_opt_def cmd_list_opts[] = {
+    { .tag = CMD_OPT_BOOL, .name = "macs" },
     CMD_OPT_DEF_LAST
 };
 
