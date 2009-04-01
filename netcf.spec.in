@@ -1,6 +1,6 @@
 Name:           netcf
 Version:        @VERSION@
-Release:        0%{?dist}%{?extra_release}
+Release:        1%{?dist}%{?extra_release}
 Summary:        A library for managing network configuration
 
 Group:          System Environment/Libraries
