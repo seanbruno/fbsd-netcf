@@ -13,13 +13,13 @@ tarball=$(PACKAGE_NAME)-$(PACKAGE_VERSION).tar.gz
 
 # For Release: 0..., set _ovirt_dev=1 so that we get extra_release.GIT-
 # annotated rpm version strings.
-_ovirt_dev = \
+_netcf_dev = \
  $(shell grep -q '^[[:space:]]*Release:[[:space:]]*0' \
    $(srcdir)/*.spec.in && echo 1 || :)
 
 git_head	= $$(git log -1 --pretty=format:%h)
 git_release	= $$(date --utc +%Y%m%d%H%M%S)git$(git_head)
-rpm_flags += --define "extra_release .$(git_release)"
+rpm_flags += $(if $(_netcf_dev),--define "extra_release .$(git_release)")
 
 # This only works with the way I have set up my .rpmmacros
 build-rpm:
