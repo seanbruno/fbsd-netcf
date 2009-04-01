@@ -130,6 +130,8 @@ struct netcf_if {
     ref_t         ref;
     struct netcf *ncf;
     char         *name;                   /* The device name */
+    char         *mac;                    /* The MAC address, filled by
+                                             drv_mac_string */
 };
 
 void free_netcf_if(struct netcf_if *nif);
@@ -155,6 +157,7 @@ int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names);
 struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name);
 struct netcf_if *drv_lookup_by_mac_string(struct netcf *ncf, const char *mac);
 char *drv_xml_desc(struct netcf_if *);
+const char *drv_mac_string(struct netcf_if *nif);
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml);
 int drv_undefine(struct netcf_if *nif);
 

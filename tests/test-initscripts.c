@@ -81,13 +81,15 @@ static void testLookupByName(CuTest *tc) {
 }
 
 static void testLookupByMAC(CuTest *tc) {
+    static const char *const good_mac = "aa:bb:cc:dd:ee:ff";
     struct netcf_if *nif;
 
     nif = ncf_lookup_by_mac_string(ncf, "00:00:00:00:00:00");
     CuAssertPtrEquals(tc, NULL, nif);
-    nif = ncf_lookup_by_mac_string(ncf, "aa:bb:cc:dd:ee:ff");
+    nif = ncf_lookup_by_mac_string(ncf, good_mac);
     CuAssertPtrNotNull(tc, nif);
     CuAssertStrEquals(tc, "br0", nif->name);
+    CuAssertStrEquals(tc, good_mac, ncf_if_mac_string(nif));
     ncf_if_free(nif);
     CuAssertIntEquals(tc, 1, ncf->ref);
 }

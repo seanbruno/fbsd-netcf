@@ -963,6 +963,34 @@ drv_lookup_by_mac_string(struct netcf *ncf, const char *mac)
     return result;
 }
 
+const char *drv_mac_string(struct netcf_if *nif) {
+    struct netcf *ncf = nif->ncf;
+    struct augeas *aug = NULL;
+    const char *mac;
+    char *path = NULL;
+    int r;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    r = xasprintf(&path, "/files/sys/class/net/%s/address/content",
+                  nif->name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    r = aug_get(aug, path, &mac);
+    ERR_THROW(r <= 0, ncf, EOTHER, "could not lookup MAC of %s", nif->name);
+
+    if (nif->mac == NULL || STRNEQ(nif->mac, mac)) {
+        FREE(nif->mac);
+        nif->mac = strdup(mac);
+        ERR_COND_BAIL(nif->mac == NULL, ncf, ENOMEM);
+    }
+    /* fallthrough intentional */
+ error:
+    FREE(path);
+    return nif->mac;
+}
+
 /*
  * Local variables:
  *  indent-tabs-mode: nil

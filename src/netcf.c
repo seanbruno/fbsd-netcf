@@ -67,6 +67,7 @@ void free_netcf_if(struct netcf_if *nif) {
     assert(nif->ref == 0);
     unref(nif->ncf, netcf);
     free(nif->name);
+    free(nif->mac);
     free(nif);
 }
 
@@ -143,6 +144,11 @@ ncf_define(struct netcf *ncf, const char *xml) {
 const char *ncf_if_name(struct netcf_if *nif) {
     ERR_RESET(nif->ncf);
     return nif->name;
+}
+
+const char *ncf_if_mac_string(struct netcf_if *nif) {
+    ERR_RESET(nif->ncf);
+    return drv_mac_string(nif);
 }
 
 /* Delete the definition */

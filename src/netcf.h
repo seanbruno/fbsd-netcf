@@ -94,6 +94,10 @@ ncf_define(struct netcf *, const char *xml);
  */
 const char *ncf_if_name(struct netcf_if *);
 
+/* Return the MAC address of an interface.
+ */
+const char *ncf_if_mac_string(struct netcf_if *);
+
 /* Bring the interface up */
 int ncf_if_up(struct netcf_if *);
 
