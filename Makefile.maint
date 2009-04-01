@@ -39,6 +39,6 @@ tag-release:
 
 # This is how I run autogen locally. YMMV
 autogen:
-	./autogen.sh CFLAGS='-g -Werror -I/data/share/include' LDFLAGS='-L/data/share/lib' --prefix=/data/share --gnulib-srcdir=${HOME}/code/gnulib/
+	./autogen.sh CFLAGS='-g -Werror' --prefix=/data/share --gnulib-srcdir=${HOME}/code/gnulib/
 
 .PHONY: build-rpm
