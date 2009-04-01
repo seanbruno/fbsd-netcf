@@ -11,6 +11,8 @@ lib_LTLIBRARIES = libnetcf.la
 
 bin_PROGRAMS = ncftool
 
+EXTRA_DIST=netcf_sym.version
+
 if NETCF_DRIVER_INITSCRIPTS
 DRIVER_SOURCES = drv_initscripts.c
 endif
@@ -22,6 +24,8 @@ DISTCLEANFILES = datadir.h
 libnetcf_la_SOURCES = netcf.h netcf.c internal.h \
      ref.h list.h \
      xslt_ext.c $(DRIVER_SOURCES)
+libnetcf_la_LDFLAGS = -Wl,--version-script=$(srcdir)/netcf_sym.version \
+     -version-info $(LIBNETCF_VERSION_INFO)
 libnetcf_la_LIBADD = $(LIBAUGEAS_LIBS) $(LIBXML_LIBS) $(LIBXSLT_LIBS) $(GNULIB)
 
 ncftool_SOURCES = ncftool.c
