@@ -173,7 +173,8 @@ static int cmd_list(ATTRIBUTE_UNUSED const struct command *cmd) {
 }
 
 static const struct command_opt_def cmd_list_opts[] = {
-    { .tag = CMD_OPT_BOOL, .name = "macs" },
+    { .tag = CMD_OPT_BOOL, .name = "macs",
+      .help = "show MAC addresses" },
     CMD_OPT_DEF_LAST
 };
 
@@ -182,12 +183,12 @@ static const struct command_def cmd_list_def = {
     .opts = cmd_list_opts,
     .handler = cmd_list,
     .synopsis = "list network interfaces",
-    .help = "list all network interfaces"
+    .help = "list the currently configured toplevel network interfaces"
 };
 
 static int cmd_dump_xml(const struct command *cmd) {
     char *xml = NULL;
-    const char *name = arg_value(cmd, "iface");
+    const char *name = arg_value(cmd, "name");
     struct netcf_if *nif = NULL;
     int result = CMD_RES_ERR;
 
@@ -217,8 +218,10 @@ static int cmd_dump_xml(const struct command *cmd) {
 }
 
 static const struct command_opt_def cmd_dump_xml_opts[] = {
-    { .tag = CMD_OPT_ARG, .name = "iface" },
-    { .tag = CMD_OPT_BOOL, .name = "mac" },
+    { .tag = CMD_OPT_BOOL, .name = "mac",
+      .help = "interpret the name as a MAC address" },
+    { .tag = CMD_OPT_ARG, .name = "name",
+      .help = "the name of the interface" },
     CMD_OPT_DEF_LAST
 };
 
@@ -256,7 +259,8 @@ static int cmd_if_up(const struct command *cmd) {
 }
 
 static const struct command_opt_def cmd_if_up_opts[] = {
-    { .tag = CMD_OPT_ARG, .name = "iface" },
+    { .tag = CMD_OPT_ARG, .name = "iface",
+      .help = "the name of the interface" },
     CMD_OPT_DEF_LAST
 };
 
@@ -294,7 +298,8 @@ static int cmd_if_down(const struct command *cmd) {
 }
 
 static const struct command_opt_def cmd_if_down_opts[] = {
-    { .tag = CMD_OPT_ARG, .name = "iface" },
+    { .tag = CMD_OPT_ARG, .name = "iface",
+      .help = "the name of the interface" },
     CMD_OPT_DEF_LAST
 };
 
@@ -331,7 +336,8 @@ static int cmd_define(const struct command *cmd) {
 }
 
 static const struct command_opt_def cmd_define_opts[] = {
-    { .tag = CMD_OPT_ARG, .name = "xmlfile" },
+    { .tag = CMD_OPT_ARG, .name = "xmlfile",
+      .help = "file containing the XML description of the interface" },
     CMD_OPT_DEF_LAST
 };
 
@@ -362,7 +368,8 @@ static int cmd_undefine(const struct command *cmd) {
 }
 
 static const struct command_opt_def cmd_undefine_opts[] = {
-    { .tag = CMD_OPT_ARG, .name = "iface" },
+    { .tag = CMD_OPT_ARG, .name = "iface",
+      .help = "the name of the interface" },
     CMD_OPT_DEF_LAST
 };
 
@@ -371,7 +378,7 @@ static const struct command_def cmd_undefine_def = {
     .opts = cmd_undefine_opts,
     .handler = cmd_undefine,
     .synopsis = "undefine an interface",
-    .help = "undefine an interface"
+    .help = "remove the configuration of an interface"
 };
 
 static int cmd_help(const struct command *cmd) {
@@ -441,8 +448,8 @@ static const struct command_def cmd_help_def = {
     .name = "help",
     .opts = cmd_help_opts,
     .handler = cmd_help,
-    .synopsis = "help",
-    .help = "help"
+    .synopsis = "print help",
+    .help = "list all commands or print details about one command"
 };
 
 static int cmd_quit(ATTRIBUTE_UNUSED const struct command *cmd) {
@@ -457,8 +464,8 @@ static const struct command_def cmd_quit_def = {
     .name = "quit",
     .opts = cmd_quit_opts,
     .handler = cmd_quit,
-    .synopsis = "quit",
-    .help = "quit"
+    .synopsis = "exit the program",
+    .help = "exit this interactive program"
 };
 
 static char *nexttoken(char **line) {
