@@ -39,12 +39,14 @@
 enum command_opt_tag {
     CMD_OPT_NONE,
     CMD_OPT_BOOL,
-    CMD_OPT_ARG
+    CMD_OPT_ARG,       /* Mandatory argument */
+    CMD_OPT_PARAM      /* Optional argument  */
 };
 
 struct command_opt_def {
     enum command_opt_tag tag;
     const char          *name;
+    const char          *help;
 };
 
 #define CMD_OPT_DEF_LAST { .tag = CMD_OPT_NONE, .name = NULL }
@@ -94,6 +96,18 @@ struct netcf *ncf;
 static const char *const progname = "ncftool";
 const char *root = NULL;
 
+static bool opt_def_is_arg(const struct command_opt_def *def) {
+    return def->tag == CMD_OPT_ARG || def->tag == CMD_OPT_PARAM;
+}
+
+static const struct command_def *lookup_cmd_def(const char *name) {
+    for (int i = 0; commands[i]->name != NULL; i++) {
+        if (STREQ(name, commands[i]->name))
+            return commands[i];
+    }
+    return NULL;
+}
+
 static int opt_present(const struct command *cmd, const char *name) {
     for (struct command_opt *o = cmd->opt; o != NULL; o = o->next) {
         if (STREQ(o->def->name, name))
@@ -102,12 +116,22 @@ static int opt_present(const struct command *cmd, const char *name) {
     return 0;
 }
 
-static const char *arg_value(const struct command *cmd, const char *name) {
+static const char *param_value(const struct command *cmd, const char *name) {
     for (struct command_opt *o = cmd->opt; o != NULL; o = o->next) {
         if (STREQ(o->def->name, name))
             return o->string;
     }
-    assert(0);
+    return NULL;
+}
+
+
+static const char *arg_value(const struct command *cmd, const char *name) {
+    const char *result = param_value(cmd, name);
+    if (result == NULL) {
+        fprintf(stderr, "internal error: argument without value\n");
+        exit(2);
+    }
+    return result;
 }
 
 static int cmd_list(ATTRIBUTE_UNUSED const struct command *cmd) {
@@ -350,6 +374,77 @@ static const struct command_def cmd_undefine_def = {
     .help = "undefine an interface"
 };
 
+static int cmd_help(const struct command *cmd) {
+    const char *name = param_value(cmd, "command");
+    if (name == NULL) {
+        printf("Commands:\n\n");
+        for (int i=0; commands[i]->name != NULL; i++) {
+            const struct command_def *def = commands[i];
+            printf("    %-10s - %s\n", def->name, def->synopsis);
+        }
+        printf("\nType 'help <command>' for more information on a command\n\n");
+    } else {
+        const struct command_def *def = lookup_cmd_def(name);
+        const struct command_opt_def *odef = NULL;
+        if (def == NULL) {
+            fprintf(stderr, "unknown command %s\n", name);
+            return CMD_RES_ERR;
+        }
+        printf("  COMMAND\n");
+        printf("    %s - %s\n\n", name, def->synopsis);
+        printf("  SYNOPSIS\n");
+        printf("    %s", name);
+        for (odef = def->opts; odef->name != NULL; odef++) {
+            switch(odef->tag) {
+            case CMD_OPT_BOOL:
+                printf(" [--%s]", odef->name);
+                break;
+            case CMD_OPT_ARG:
+                printf(" <%s>", odef->name);
+                break;
+            case CMD_OPT_PARAM:
+                printf(" [<%s>]", odef->name);
+                break;
+            default:
+                fprintf(stderr,
+                        "\ninternal error: illegal option definition %d\n",
+                        odef->tag);
+                break;
+            }
+        }
+        printf("\n\n");
+        printf("  DESCRIPTION\n    %s\n\n", def->help);
+        printf("  OPTIONS\n");
+        for (odef = def->opts; odef->name != NULL; odef++) {
+            const char *help = odef->help;
+            if (help == NULL)
+                help = "";
+            if (odef->tag == CMD_OPT_BOOL) {
+                printf("    --%-8s %s\n", odef->name, help);
+            } else {
+                char buf[100];
+                snprintf(buf, sizeof(buf), "<%s>", odef->name);
+                printf("    %-10s %s\n", buf, help);
+            }
+        }
+        printf("\n");
+    }
+    return CMD_RES_OK;
+}
+
+static const struct command_opt_def cmd_help_opts[] = {
+    { .tag = CMD_OPT_PARAM, .name = "command" },
+    CMD_OPT_DEF_LAST
+};
+
+static const struct command_def cmd_help_def = {
+    .name = "help",
+    .opts = cmd_help_opts,
+    .handler = cmd_help,
+    .synopsis = "help",
+    .help = "help"
+};
+
 static int cmd_quit(ATTRIBUTE_UNUSED const struct command *cmd) {
     return CMD_RES_QUIT;
 }
@@ -403,23 +498,27 @@ make_command_opt(struct command *cmd, const struct command_opt_def *def) {
 
 static int parseline(struct command *cmd, char *line) {
     char *tok;
-    int narg;
+    int narg = 0, nparam = 0;
     const struct command_opt_def *def;
 
     MEMZERO(cmd, 1);
     tok = nexttoken(&line);
-    for (int i = 0; commands[i]->name != NULL; i++) {
-        if (STREQ(tok, commands[i]->name)) {
-            cmd->def = commands[i];
-            break;
-        }
-    }
+    cmd->def = lookup_cmd_def(tok);
     if (cmd->def == NULL) {
         fprintf(stderr, "Unknown command '%s'\n", tok);
         return -1;
     }
-    for (narg = 0, def = cmd->def->opts; def->name != NULL; def ++)
-        if (def->tag == CMD_OPT_ARG) narg++;
+    for (def = cmd->def->opts; def->name != NULL; def ++) {
+        if (def->tag == CMD_OPT_ARG) {
+            if (nparam > 0) {
+                fprintf(stderr,
+                    "internal error: mandatory argument after optional one\n");
+                exit(2);
+            }
+            narg++;
+        }
+        if (def->tag == CMD_OPT_PARAM) nparam++;
+    }
 
     int curarg = 0;
     while (*line != '\0') {
@@ -446,17 +545,17 @@ static int parseline(struct command *cmd, char *line) {
                 fprintf(stderr, "Illegal option %s\n", tok);
             }
         } else {
-            if (curarg >= narg) {
+            if (curarg >= narg + nparam) {
                 fprintf(stderr,
                  "Too many arguments. Command %s takes only %d arguments\n",
-                  cmd->def->name, narg);
+                  cmd->def->name, narg + nparam);
                 return -1;
             }
             for (def = cmd->def->opts;
-                 def->name != NULL && def->tag != CMD_OPT_ARG;
+                 def->name != NULL && !opt_def_is_arg(def);
                  def++);
             for (int i=0; i < curarg; i++)
-                for (; def->name != NULL && def->tag != CMD_OPT_ARG; def++);
+                for (; def->name != NULL && !opt_def_is_arg(def); def++);
             struct command_opt *opt =
                 make_command_opt(cmd, def);
             opt->string = tok;
@@ -479,6 +578,7 @@ static const struct command_def const *commands[] = {
     &cmd_undefine_def,
     &cmd_if_up_def,
     &cmd_if_down_def,
+    &cmd_help_def,
     &cmd_quit_def,
     &cmd_def_last
 };
