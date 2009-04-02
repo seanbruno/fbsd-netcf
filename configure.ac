@@ -41,7 +41,7 @@ gl_WARN_ADD([-Wno-sign-compare])
 
 dnl Need to test if pkg-config exists
 PKG_PROG_PKG_CONFIG
-PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.4.0])
+PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.5.0])
 PKG_CHECK_MODULES([LIBXML], [libxml-2.0])
 PKG_CHECK_MODULES([LIBXSLT], [libxslt])
 
