@@ -621,19 +621,11 @@ static void readline_init(void) {
 
 __attribute__((noreturn))
 static void usage(void) {
-    fprintf(stderr, "Usage: %s [OPTIONS] [COMMAND]\n", progname);
-    fprintf(stderr, "Load the Augeas tree and modify it. If no COMMAND is given, run interactively\n");
-    fprintf(stderr, "Run '%s help' to get a list of possible commands.\n",
-            progname);
+    fprintf(stderr, "Usage: %s [OPTIONS]\n", progname);
+    fprintf(stderr, "Interactive shell for netcf\n\n");
+    fprintf(stderr, "Type 'help' at the prompt to get a list of commands\n");
     fprintf(stderr, "\nOptions:\n\n");
-    fprintf(stderr, "  -c, --typecheck    typecheck lenses\n");
-    fprintf(stderr, "  -b, --backup       preserve originals of modified files with\n"
-                    "                     extension '.augsave'\n");
-    fprintf(stderr, "  -n, --new          save changes in files with extension '.augnew',\n"
-                    "                     leave original unchanged\n");
     fprintf(stderr, "  -r, --root ROOT    use ROOT as the root of the filesystem\n");
-    fprintf(stderr, "  -I, --include DIR  search DIR for modules; can be given mutiple times\n");
-    fprintf(stderr, "  --nostdinc         do not search the builtin default directories for modules\n");
 
     exit(EXIT_FAILURE);
 }
