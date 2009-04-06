@@ -7,5 +7,5 @@ Name: netcf
 Version: @VERSION@
 Description: Network configuration library
 Requires:
-Libs: -L${libdir} -laugeas @LIBS@
+Libs: -L${libdir} -lnetcf @NETCF_LIBDEPS@
 Cflags: -I${includedir}

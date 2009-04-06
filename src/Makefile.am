@@ -26,7 +26,7 @@ libnetcf_la_SOURCES = netcf.h netcf.c internal.h \
      xslt_ext.c $(DRIVER_SOURCES)
 libnetcf_la_LDFLAGS = -Wl,--version-script=$(srcdir)/netcf_sym.version \
      -version-info $(LIBNETCF_VERSION_INFO)
-libnetcf_la_LIBADD = $(LIBAUGEAS_LIBS) $(LIBXML_LIBS) $(LIBXSLT_LIBS) $(GNULIB)
+libnetcf_la_LIBADD = $(NETCF_LIBDEPS) $(GNULIB)
 
 ncftool_SOURCES = ncftool.c
 ncftool_LDADD = libnetcf.la $(READLINE_LIBS) $(GNULIB)

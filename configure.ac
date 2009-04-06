@@ -47,6 +47,9 @@ PKG_CHECK_MODULES([LIBXSLT], [libxslt])
 
 NETCF_CHECK_READLINE
 
+NETCF_LIBDEPS=$(echo $LIBAUGEAS_LIBS $LIBXSLT_LIBS $LIBXML_LIBS)
+AC_SUBST([NETCF_LIBDEPS])
+
 AC_OUTPUT(Makefile                                          \
           gnulib/lib/Makefile                               \
           gnulib/tests/Makefile                             \
