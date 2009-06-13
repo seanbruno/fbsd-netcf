@@ -104,6 +104,60 @@
             </choice>
           </attribute>
         </optional>
+
+        <!-- FIXME: add more attributes
+
+             mode == 802.3ad
+               ad_select
+               lacp_rate
+               xmit_hash_policy
+
+             mode == active-backup
+               fail_over_mac
+               num_grat_arp when mode == active-backup (since 3.3.0)
+               num_unsol_na when mode == active-backup (ipv6, since 3.4.0)
+
+             mode == balance-xor
+               xmit_hash_policy       (since 2.6.3/3.2.2)
+        -->
+
+        <choice>
+          <element name="miimon">
+            <!-- miimon frequency in ms -->
+            <attribute name="freq"><ref name="uint"/></attribute>
+            <optional>
+              <attribute name="downdelay"><ref name="uint"/></attribute>
+            </optional>
+            <optional>
+              <attribute name="updelay"><ref name="uint"/></attribute>
+            </optional>
+            <optional>
+              <!-- use_carrier -->
+              <attribute name="carrier">
+                <choice>
+                  <!-- use MII/ETHTOOL ioctl -->
+                  <value>ioctl</value>
+                  <!-- use netif_carrier_ok() -->
+                  <value>netif</value>
+                </choice>
+              </attribute>
+            </optional>
+          </element>
+          <element name="arpmon">
+            <attribute name="interval"><ref name="uint"/></attribute>
+            <attribute name="target"><ref name="ip-addr"/></attribute>
+            <optional>
+              <attribute name="validate">
+                <choice>
+                  <value>none</value>
+                  <value>active</value>
+                  <value>backup</value>
+                  <value>all</value>
+                </choice>
+              </attribute>
+            </optional>
+          </element>
+        </choice>
         <oneOrMore>
           <!-- The slave interfaces -->
           <ref name="bare-ethernet-interface"/>
@@ -118,7 +172,7 @@
     <element name="name"><ref name="device-name"/></element>
     <optional>
       <element name="mtu">
-        <attribute name="size"><ref name="unsigned-int"/></attribute>
+        <attribute name="size"><ref name="uint"/></attribute>
       </element>
     </optional>
   </define>
@@ -217,7 +271,7 @@
 
   <!-- Type library -->
 
-  <define name='unsigned-int'>
+  <define name='uint'>
     <data type='unsignedInt'>
       <param name="pattern">[0-9]+</param>
     </data>

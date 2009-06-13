@@ -3,7 +3,7 @@
   <ip address="192.168.50.7" prefix="24"/>
   <route gateway="192.168.50.1"/>
   <bond mode="active-backup">
-    <miimon freq="100" updelay="10" carrier="ioctl"/>
+    <arpmon interval="100" target="192.168.50.1" validate="active"/>
     <interface type="ethernet">
       <name>eth1</name>
     </interface>

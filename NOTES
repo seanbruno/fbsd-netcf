@@ -1,7 +1,6 @@
 -*- outline -*-
 
 * TODO
-** add miimon/arp_interval for bonds
 ** distinguish between active (up) and merely configured interfaces
 ** lookup by MAC must be able to return multiple VLAN's
 ** ipv4 and ipv6 addressing
