@@ -209,6 +209,21 @@ int ncf_error(struct netcf *ncf, const char **errmsg, const char **details) {
 }
 
 /*
+ * Test interface
+ */
+int ncf_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
+    ERR_RESET(ncf);
+
+    return drv_get_aug(ncf, ncf_xml, aug_xml);
+}
+
+int ncf_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
+    ERR_RESET(ncf);
+
+    return drv_put_aug(ncf, aug_xml, ncf_xml);
+}
+
+/*
  * Internal helpers
  */
 
