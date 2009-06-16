@@ -11,6 +11,8 @@ lib_LTLIBRARIES = libnetcf.la
 
 bin_PROGRAMS = ncftool
 
+noinst_PROGRAMS = ncftransform
+
 EXTRA_DIST=netcf_sym.version
 
 if NETCF_DRIVER_INITSCRIPTS
@@ -30,6 +32,9 @@ libnetcf_la_LIBADD = $(NETCF_LIBDEPS) $(GNULIB)
 
 ncftool_SOURCES = ncftool.c
 ncftool_LDADD = libnetcf.la $(READLINE_LIBS) $(GNULIB)
+
+ncftransform_SOURCES = ncftransform.c
+ncftransform_LDADD = libnetcf.la $(GNULIB)
 
 # Generate datadir.h. That's where we look for stylesheets
 internal.h: datadir.h

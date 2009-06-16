@@ -30,6 +30,7 @@ libtool
 ylwrap
 src/datadir.h
 src/ncftool
+src/ncftransform
 tests/test-initscripts
 *.aux
 *.dvi
