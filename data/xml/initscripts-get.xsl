@@ -123,10 +123,10 @@
       <xsl:when test="ip">
         <node label="BOOTPROTO" value="none"/>
         <node label="IPADDR">
-          <xsl:attribute name="value"><xsl:value-of select="ipcalc:address(ip/@address)"/></xsl:attribute>
+          <xsl:attribute name="value"><xsl:value-of select="ip/@address"/></xsl:attribute>
         </node>
         <node label="NETMASK">
-          <xsl:attribute name="value"><xsl:value-of select="ipcalc:netmask(ip/@address)"/></xsl:attribute>
+          <xsl:attribute name="value"><xsl:value-of select="ipcalc:netmask(ip/@prefix)"/></xsl:attribute>
         </node>
         <xsl:if test="route">
           <node label="GATEWAY">

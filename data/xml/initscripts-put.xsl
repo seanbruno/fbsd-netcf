@@ -109,7 +109,8 @@
       </xsl:when>
       <xsl:when test="node[@label = 'BOOTPROTO']/@value = 'none'">
         <ip>
-          <xsl:attribute name="address"><xsl:value-of select="node[@label = 'IPADDR']/@value"/><xsl:value-of select="ipcalc:prefix(node[@label = 'NETMASK']/@value)"/></xsl:attribute>
+          <xsl:attribute name="address"><xsl:value-of select="node[@label = 'IPADDR']/@value"/></xsl:attribute>
+          <xsl:attribute name="prefix"><xsl:value-of select="ipcalc:prefix(node[@label = 'NETMASK']/@value)"/></xsl:attribute>
         </ip>
         <xsl:if test="node[@label = 'GATEWAY']">
           <route>

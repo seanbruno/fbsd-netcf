@@ -37,64 +37,41 @@
 #define XSLT_EXT_BOND_NS                                \
     (BAD_CAST "http://redhat.com/xslt/netcf/bond/1.0")
 
-/* Given an IP address with prefix like "192.168.0.24/24", compute the
- * netmask "255.255.255.0"
+/* Given an IP prefix like "24", compute the netmask "255.255.255.0"
  */
 static void ipcalc_netmask(xmlXPathParserContextPtr ctxt, int nargs) {
-    xmlChar *ip_str = NULL;
+    double raw_prefix;
     unsigned long prefix = 0;
-    struct in_addr ip;
-    int r;
 
     if (nargs != 1) {
         xmlXPathSetArityError(ctxt);
         goto error;
     }
 
-    ip_str = xmlXPathPopString(ctxt);
-    if (ip_str == NULL) {
+    raw_prefix = xmlXPathPopNumber(ctxt);
+    if (xmlXPathCheckError(ctxt)) {
         xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-                    "ipcalc:netmask: internal error: allocation failed");
+                    "ipcalc:netmask: failed to get prefix as number");
         goto error;
     }
 
-    if (xmlStrchr(ip_str, '/') != NULL) {
-        xmlChar *prefix_str = (xmlChar *) xmlStrchr(ip_str, '/');
-        char *end;
-        errno = 0;
-        *prefix_str = '\0';
-        prefix_str += 1;
-
-        // FIXME: the (char *) cast is wrong
-        prefix = strtoul((char *) prefix_str, &end, 10);
-        if (errno || end == (char *) prefix_str || prefix > 32) {
-            xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-                               "ipcalc:netmask: illegal prefix '%s'",
-                               prefix_str);
-            goto error;
-        }
+    prefix = raw_prefix;
+    if ((double) prefix != raw_prefix) {
+        xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
+                    "ipcalc:netmask: failed to convert prefix to int");
+        goto error;
     }
 
-    r = inet_aton((char *) ip_str, &ip);
-    if (r < 0) {
+    if (prefix == 0 || prefix > 32) {
         xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-                           "ipcalc:netmask: illegal address '%s'",
-                           ip_str);
+                           "ipcalc:netmask: prefix %d not in the range 1 to 32", prefix);
         goto error;
     }
 
     struct in_addr netmask;
     xmlChar netmask_str[16];
-    if (prefix > 0) {
-        netmask.s_addr = htonl(~((1 << (32 - prefix)) - 1));
-    } else {
-        if (((ntohl(ip.s_addr) & 0xFF000000) >> 24) <= 127)
-            netmask.s_addr = htonl(0xFF000000);
-        else if (((ntohl(ip.s_addr) & 0xFF000000) >> 24) <= 191)
-            netmask.s_addr = htonl(0xFFFF0000);
-        else
-            netmask.s_addr = htonl(0xFFFFFF00);
-    }
+
+    netmask.s_addr = htonl(~((1 << (32 - prefix)) - 1));
 
     if (! inet_ntop(AF_INET, &netmask,
                     (char *) netmask_str, sizeof(netmask_str) - 1)) {
@@ -105,36 +82,6 @@ static void ipcalc_netmask(xmlXPathParserContextPtr ctxt, int nargs) {
     netmask_str[sizeof(netmask_str)-1] = '\0';
     xmlXPathReturnString(ctxt, xmlStrdup(netmask_str));
  error:
-    xmlFree(ip_str);
-    return;
-}
-
-/* Given an IP address with prefix like "192.168.0.24/24", return the address
- */
-static void ipcalc_address(xmlXPathParserContextPtr ctxt, int nargs) {
-    xmlChar *str = NULL;
-
-    if (nargs != 1) {
-        xmlXPathSetArityError(ctxt);
-        goto error;
-    }
-
-    str = xmlXPathPopString(ctxt);
-    if (str == NULL) {
-        xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-                    "ipcalc:address: internal error: allocation failed");
-        goto error;
-    }
-
-    if (xmlStrchr(str, '/') != NULL) {
-        xmlChar *prefix_str = (xmlChar *) xmlStrchr(str, '/');
-        *prefix_str = '\0';
-    }
-
-    xmlXPathReturnString(ctxt, str);
-    str = NULL;
- error:
-    xmlFree(str);
     return;
 }
 
@@ -172,7 +119,7 @@ static void ipcalc_prefix(xmlXPathParserContextPtr ctxt, int nargs) {
             prefix--;
     }
 
-    if (asprintf(&prefix_str, "/%d", prefix) < 0) {
+    if (asprintf(&prefix_str, "%d", prefix) < 0) {
         prefix_str = NULL;
         goto error;
     }
@@ -226,8 +173,6 @@ static void *xslt_ipcalc_init(ATTRIBUTE_UNUSED xsltTransformContextPtr ctxt,
                               ATTRIBUTE_UNUSED const xmlChar *URI) {
     xsltRegisterExtModuleFunction(BAD_CAST "netmask", XSLT_EXT_IPCALC_NS,
                                   ipcalc_netmask);
-    xsltRegisterExtModuleFunction(BAD_CAST "address", XSLT_EXT_IPCALC_NS,
-                                  ipcalc_address);
     xsltRegisterExtModuleFunction(BAD_CAST "prefix", XSLT_EXT_IPCALC_NS,
                                   ipcalc_prefix);
     return NULL;

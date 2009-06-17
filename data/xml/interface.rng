@@ -154,9 +154,8 @@
       -->
       <group>
         <element name="ip">
-          <optional>
-            <attribute name="address"><ref name="ip-mask"/></attribute>
-          </optional>
+          <attribute name="address"><ref name="ip-addr"/></attribute>
+          <attribute name="prefix"><ref name="prefix-pat"/></attribute>
         </element>
         <optional>
           <element name="route">
@@ -251,9 +250,9 @@
     </data>
   </define>
 
-  <define name='ip-mask'>
+  <define name='prefix-pat'>
     <data type='string'>
-      <param name="pattern">([0-2]?[0-9]?[0-9]\.){3}[0-2]?[0-9]?[0-9](/[0-9][0-9]?)?</param>
+      <param name="pattern">[0-9]|[12][0-9]|3[0-2]</param>
     </data>
   </define>
 
