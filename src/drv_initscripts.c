@@ -996,7 +996,7 @@ const char *drv_mac_string(struct netcf_if *nif) {
  */
 int drv_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
     xmlDocPtr ncf_doc = NULL, aug_doc = NULL;
-    int result = 0;
+    int result = -1;
 
     ncf_doc = parse_xml(ncf, ncf_xml);
     ERR_BAIL(ncf);
@@ -1008,7 +1008,9 @@ int drv_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
     aug_doc = xsltApplyStylesheet(ncf->driver->get, ncf_doc, NULL);
 
     xmlDocDumpFormatMemory(aug_doc, (xmlChar **) aug_xml, NULL, 1);
+    ERR_COND_BAIL(*aug_xml == NULL, ncf, EXMLINVALID);
     /* fallthrough intentional */
+    result = 0;
  error:
     xmlFreeDoc(ncf_doc);
     xmlFreeDoc(aug_doc);
@@ -1018,7 +1020,7 @@ int drv_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
 /* Transform the Augeas XML AUG_XML into interface XML NCF_XML */
 int drv_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
     xmlDocPtr ncf_doc = NULL, aug_doc = NULL;
-    int result = 0;
+    int result = -1;
 
     aug_doc = parse_xml(ncf, aug_xml);
     ERR_BAIL(ncf);
@@ -1027,7 +1029,9 @@ int drv_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
     ncf_doc = xsltApplyStylesheet(ncf->driver->put, aug_doc, NULL);
 
     xmlDocDumpFormatMemory(ncf_doc, (xmlChar **) ncf_xml, NULL, 1);
+    ERR_COND_BAIL(*ncf_xml == NULL, ncf, EXMLINVALID);
     /* fallthrough intentional */
+    result = 0;
  error:
     xmlFreeDoc(ncf_doc);
     xmlFreeDoc(aug_doc);

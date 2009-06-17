@@ -55,11 +55,20 @@ int main(int argc, char **argv) {
         die("Failed to initialize netcf\n");
 
     if (STREQ(argv[1], "get")) {
-        ncf_get_aug(ncf, in_xml, &out_xml);
+        r = ncf_get_aug(ncf, in_xml, &out_xml);
     } else {
-        ncf_put_aug(ncf, in_xml, &out_xml);
+        r = ncf_put_aug(ncf, in_xml, &out_xml);
     }
-    puts(out_xml);
+    if (r < 0) {
+        const char *errmsg, *details;
+        ncf_error(ncf, &errmsg, &details);
+        if (details == NULL)
+            die("transformation failed: %s", errmsg);
+        else
+            die("transformation failed: %s\n    %s", errmsg, details);
+    } else {
+        puts(out_xml);
+    }
 
     ncf_close(ncf);
 }
