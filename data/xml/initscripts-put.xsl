@@ -17,7 +17,7 @@
   -->
   <xsl:template name="ethernet-interface"
                 match="tree[count(node[@label = 'MASTER' or @label='BRIDGE']) = 0]">
-    <interface>
+    <interface type="ethernet">
       <xsl:call-template name="startmode"/>
       <xsl:call-template name="basic-ethernet-content"/>
       <xsl:call-template name="interface-addressing"/>

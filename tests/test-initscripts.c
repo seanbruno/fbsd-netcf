@@ -238,6 +238,7 @@ static void assert_transforms(CuTest *tc, const char *base) {
 
 static void testTransforms(CuTest *tc) {
     assert_transforms(tc, "bridge");
+    assert_transforms(tc, "ethernet-static");
 }
 
 int main(void) {
