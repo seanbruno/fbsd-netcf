@@ -25,8 +25,11 @@
 #include "internal.h"
 #include "cutest.h"
 #include "safe-alloc.h"
+#include "read-file.h"
 
 #include <stdio.h>
+
+#include <libxml/tree.h>
 
 static const char *abs_top_srcdir;
 static char *root;
@@ -34,9 +37,121 @@ static struct netcf *ncf;
 
 #define die(msg)                                                    \
     do {                                                            \
-        fprintf(stderr, "%d: Fatal error: %s\n", __LINE__, msg);    \
+        fprintf(stderr, "%s:%d: Fatal error: %s\n", __FILE__, __LINE__, msg); \
         exit(EXIT_FAILURE);                                         \
     } while(0)
+
+static char *read_test_file(CuTest *tc, const char *relpath) {
+    char *path = NULL;
+    char *txt = NULL;
+    size_t length;
+
+    if (asprintf(&path, "%s/tests/%s", abs_top_srcdir, relpath) < 0)
+        CuFail(tc, "Could not format path for file");
+    txt = read_file(path, &length);
+    if (txt == NULL)
+        CuFail(tc, "Failed to read file");
+    return txt;
+}
+
+static xmlDocPtr parse_xml(const char *xml_str) {
+    xmlParserCtxtPtr pctxt;
+    xmlDocPtr xml = NULL;
+
+    /* Set up a parser context so we can catch the details of XML errors. */
+    pctxt = xmlNewParserCtxt();
+    if (pctxt == NULL || pctxt->sax == NULL)
+        die("xmlNewParserCtxt failed");
+
+    xml = xmlCtxtReadDoc (pctxt, BAD_CAST xml_str, "netcf.xml", NULL,
+                          XML_PARSE_NOENT | XML_PARSE_NONET |
+                          XML_PARSE_NOWARNING);
+    if (xml == NULL)
+        die("failed to parse xml document");
+    if (xmlDocGetRootElement(xml) == NULL)
+        die("missing root element");
+
+    xmlFreeParserCtxt(pctxt);
+    return xml;
+}
+
+static int xml_attrs_subset(xmlNodePtr n1, xmlNodePtr n2, char **err) {
+    for (xmlAttrPtr a1 = n1->properties; a1 != NULL; a1 = a1->next) {
+        xmlChar *v1 = xmlGetProp(n1, a1->name);
+        xmlChar *v2 = xmlGetProp(n2, a1->name);
+        if (!xmlStrEqual(v1, v2)) {
+            asprintf(err, "Different values for attribute %s/@%s: %s != %s (lines %d and %d)", n1->name, a1->name, v1, v2, n1->line, n2->line);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static xmlNodePtr xml_next_element(xmlNodePtr n) {
+    while (n != NULL && n->type != XML_ELEMENT_NODE)
+        n = n->next;
+    return n;
+}
+
+static int xml_nodes_equal(xmlNodePtr n1, xmlNodePtr n2, char **err) {
+    if (n1 == NULL && n2 == NULL)
+        return 1;
+    if (n1 == NULL && n2 != NULL) {
+        asprintf(err, "First node null, second node %s (line %d)",
+                 n2->name, n2->line);
+        return 0;
+    }
+    if (n1 != NULL && n2 == NULL) {
+        asprintf(err, "First node %s, second node null (line %d)",
+                 n1->name, n1->line);
+        return 0;
+    }
+    if (!xmlStrEqual(n1->name, n2->name)) {
+        asprintf(err, "Different node names: %s != %s (lines %d and %d)",
+                 n1->name, n2->name, n1->line, n2->line);
+        return 0;
+    }
+    if (! xml_attrs_subset(n1, n2, err))
+        return 0;
+    if (! xml_attrs_subset(n2, n1, err))
+        return 0;
+
+    n1 = xml_next_element(n1->children);
+    n2 = xml_next_element(n2->children);
+    while (n1 != NULL && n2 != NULL) {
+        if (! xml_nodes_equal(n1, n2, err))
+            return 0;
+        n1 = xml_next_element(n1->next);
+        n2 = xml_next_element(n2->next);
+    }
+    if (n1 != NULL) {
+        asprintf(err, "Additional element %s (line %d)", n1->name, n1->line);
+        return 0;
+    } else if (n2 != NULL) {
+        asprintf(err, "Additional element %s (line %d)", n2->name, n2->line);
+        return 0;
+    }
+    return 1;
+}
+
+static void assert_xml_equals(CuTest *tc, const char *fname,
+                              char *exp, char *act) {
+    char *err, *msg;
+    xmlDocPtr exp_doc, act_doc;
+    int result;
+
+    exp_doc = parse_xml(exp);
+    act_doc = parse_xml(act);
+    result = xml_nodes_equal(xmlDocGetRootElement(exp_doc),
+                             xmlDocGetRootElement(act_doc), &err);
+    xmlFreeDoc(exp_doc);
+    xmlFreeDoc(act_doc);
+
+    if (! result) {
+        asprintf(&msg, "%s: %s", fname, err);
+        CuFail(tc, msg);
+    }
+}
 
 static void setup(CuTest *tc) {
     int r;
@@ -94,6 +209,39 @@ static void testLookupByMAC(CuTest *tc) {
     CuAssertIntEquals(tc, 1, ncf->ref);
 }
 
+ATTRIBUTE_UNUSED
+static void assert_transforms(CuTest *tc, const char *base) {
+    char *aug_fname = NULL, *ncf_fname = NULL;
+    char *aug_xml_exp = NULL, *ncf_xml_exp = NULL;
+    char *aug_xml_act = NULL, *ncf_xml_act = NULL;
+    int r;
+
+    r = asprintf(&aug_fname, "initscripts/%s.xml", base);
+    r = asprintf(&ncf_fname, "interface/%s.xml", base);
+
+    aug_xml_exp = read_test_file(tc, aug_fname);
+    ncf_xml_exp = read_test_file(tc, ncf_fname);
+
+    r = ncf_get_aug(ncf, ncf_xml_exp, &aug_xml_act);
+    CuAssertIntEquals(tc, 0, r);
+
+    r = ncf_put_aug(ncf, aug_xml_exp, &ncf_xml_act);
+    CuAssertIntEquals(tc, 0, r);
+
+    assert_xml_equals(tc, ncf_fname, ncf_xml_exp, ncf_xml_act);
+    assert_xml_equals(tc, aug_fname, aug_xml_exp, aug_xml_act);
+
+    free(ncf_xml_exp);
+    free(ncf_xml_act);
+    free(aug_xml_exp);
+    free(aug_xml_act);
+}
+
+static void testTransforms(CuTest *tc) {
+    // FIXME: None of the current tests pass
+    CuAssertTrue(tc, 1);
+}
+
 int main(void) {
     char *output = NULL;
     CuSuite* suite = CuSuiteNew();
@@ -110,6 +258,7 @@ int main(void) {
     SUITE_ADD_TEST(suite, testListInterfaces);
     SUITE_ADD_TEST(suite, testLookupByName);
     SUITE_ADD_TEST(suite, testLookupByMAC);
+    SUITE_ADD_TEST(suite, testTransforms);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, &output);

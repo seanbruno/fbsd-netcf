@@ -4,7 +4,7 @@ GNULIB= ../gnulib/lib/libgnu.la
 GNULIB_CFLAGS= -I $(top_srcdir)/gnulib/lib
 
 AM_CFLAGS = $(NETCF_CFLAGS) $(WARN_CFLAGS) $(GNULIB_CFLAGS) \
-	-I $(top_builddir)/src
+	$(LIBXML_CFLAGS) -I $(top_builddir)/src
 
 EXTRA_DIST = interface initscripts root
 
