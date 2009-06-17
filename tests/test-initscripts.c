@@ -209,7 +209,6 @@ static void testLookupByMAC(CuTest *tc) {
     CuAssertIntEquals(tc, 1, ncf->ref);
 }
 
-ATTRIBUTE_UNUSED
 static void assert_transforms(CuTest *tc, const char *base) {
     char *aug_fname = NULL, *ncf_fname = NULL;
     char *aug_xml_exp = NULL, *ncf_xml_exp = NULL;
@@ -238,8 +237,7 @@ static void assert_transforms(CuTest *tc, const char *base) {
 }
 
 static void testTransforms(CuTest *tc) {
-    // FIXME: None of the current tests pass
-    CuAssertTrue(tc, 1);
+    assert_transforms(tc, "bridge");
 }
 
 int main(void) {

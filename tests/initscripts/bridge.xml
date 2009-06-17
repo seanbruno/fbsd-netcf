@@ -5,17 +5,17 @@
 <forest>
   <tree path="/files/etc/sysconfig/network-scripts/ifcfg-br0">
     <node label="DEVICE" value="br0"/>
-    <node label="ONBOOT" value="yes"/>
-    <node label="TYPE" value="Bridge"/>
     <node label="MTU" value="1500"/>
+    <node label="TYPE" value="Bridge"/>
+    <node label="ONBOOT" value="yes"/>
     <node label="BOOTPROTO" value="dhcp"/>
     <node label="STP" value="off"/>
   </tree>
   <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth0">
     <node label="DEVICE" value="eth0"/>
-    <node label="BRIDGE" value="br0"/>
     <node label="MTU" value="1492"/>
     <node label="HWADDR" value="ab:bb:cc:dd:ee:ff"/>
+    <node label="BRIDGE" value="br0"/>
   </tree>
   <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth1">
     <node label="DEVICE" value="eth1"/>
