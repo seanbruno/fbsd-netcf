@@ -1,4 +1,4 @@
-SUBDIRS=gnulib/lib src gnulib/tests tests
+SUBDIRS=gnulib/lib src gnulib/tests tests doc
 
 ACLOCAL_AMFLAGS = -I gnulib/m4
 

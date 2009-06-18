@@ -1,0 +1,18 @@
+digraph nesting {
+  graph [rankdir=BT];
+  node [shape=box,style=filled,fillcolor="#ffbfbf", color="#ff8080"];
+
+  physical;
+  vlan;
+  bridge;
+  bond;
+
+  notes [ label = "Arrows denote 'can be contained in', which\l generally implies that the underlying interface\l can't have an address, except for VLAN's\l marked in green\l", shape=note, fontsize=10 ];
+  physical -> vlan [color = "#54d74c"];
+  physical -> bridge;
+  physical -> bond;
+  vlan -> bridge;
+  bridge -> vlan [color = "#54d74c"];
+  bond -> vlan [color = "#54d74c"];
+  bond -> bridge;
+}

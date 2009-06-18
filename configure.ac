@@ -55,4 +55,5 @@ AC_OUTPUT(Makefile                                          \
           gnulib/tests/Makefile                             \
           src/Makefile                                      \
           tests/Makefile                                    \
+          doc/Makefile                                      \
           netcf.pc netcf.spec)

@@ -28,6 +28,7 @@ ChangeLog
 TAGS
 libtool
 ylwrap
+doc/*.png
 src/datadir.h
 src/ncftool
 src/ncftransform
