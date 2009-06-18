@@ -1,0 +1,67 @@
+-*- outline -*-
+
+* TODO
+** add miimon/arp_interval for bonds
+** ipv4 and ipv6 addressing
+   including setting non-default routes (see DV's sketch for RelaxNG)
+** vlan's
+** using bonds and vlans in bridges
+   settle on XML format for nesting
+** support of additional bonding modes
+** remove requirement for interface-addressing from toplevel interfaces
+** remove requirement for at least one element in bridge
+
+* From email on libvir-list
+
+ -  One NIC for storage, another for host mgmt, and put
+    the guests all on VLANs
+
+     eth0 -> br0        IP addr used for storage
+     eth1 -> br1        IP addr used  for host mgmt
+     eth1.42 -> br1.42  IP addr, used to talk to guests
+     eth1.43 -> br1.43  No IP, guest traffic only
+     eth1.44 -> br1.44  No IP, guest traffic only
+
+ - Bonded NICs, used for everything
+
+     eth0 + eth1 -> bond0 -> br0  IP addr used for all
+
+ - Bonded NICs, and VLANs for guests
+
+     eth0 + eth1 -> bond0  IP addr used for host admin+storage
+     bond0.42 -> br0.42    IP addr, used to talk to guests
+     bond0.43 -> br0.43    No IP, guest traffic only
+
+ - Bonded NICs, and VLANs for host and for guests
+
+     eth0 + eth1 -> bond0  No IP, not used directly.
+     bond0.42              IP addr, Host mgmt traffic
+     bond0.43 -> br0.43    No IP, guest traffic only
+
+* From discussion with danpb on #virt (2009-06-18)
+
+  anything that is a slave of a bridge shoudln't have an IP address
+
+  so I can either enslave a nic and one or more vlans, provided none of
+  htem have addresses, or enslave just some vlan interfaces in which the
+  nic may or may not have an address
+    * the interfaces enslaved in a bond cannot have addresses
+    * the interaces enslaved in a bridge cannot have addreses
+    * everything else can optionally have an address
+    * a bond can only enslave physiucal NICs, a bridge can enslave anything
+
+  the place where it gets ugly though, is that with vlans, you can be
+  grafting a vlan based connection onto the middle of another connection
+    eth0+eth1 -> bond0
+    bond0 -> vlan53
+    bond0 + vlan54 -> br54
+
+  on second thought, I'd probably write
+    <interface type="vlan" device="eth0" tag="42"/> for conistency
+
+* NetworkManager
+  If NM is enabled/running on a system, what netcf does leads to absolute
+  chaos. Either disable NM or stick NM_MANAGED=no into all files we
+  generate
+
+  Is it ok for us to pull an interface out from under NM ?
