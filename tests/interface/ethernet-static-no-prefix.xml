@@ -1,0 +1,5 @@
+<interface type="ethernet" startmode="onboot">
+  <name>eth1</name>
+  <ip address="192.168.0.5"/>
+  <route gateway="192.168.0.1"/>
+</interface>

@@ -125,9 +125,11 @@
         <node label="IPADDR">
           <xsl:attribute name="value"><xsl:value-of select="ip/@address"/></xsl:attribute>
         </node>
-        <node label="NETMASK">
-          <xsl:attribute name="value"><xsl:value-of select="ipcalc:netmask(ip/@prefix)"/></xsl:attribute>
-        </node>
+        <xsl:if test="ip/@prefix">
+          <node label="NETMASK">
+            <xsl:attribute name="value"><xsl:value-of select="ipcalc:netmask(ip/@prefix)"/></xsl:attribute>
+          </node>
+        </xsl:if>
         <xsl:if test="route">
           <node label="GATEWAY">
             <xsl:attribute name="value"><xsl:value-of select="route/@gateway"/></xsl:attribute>

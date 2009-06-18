@@ -155,7 +155,9 @@
       <group>
         <element name="ip">
           <attribute name="address"><ref name="ip-addr"/></attribute>
-          <attribute name="prefix"><ref name="prefix-pat"/></attribute>
+          <optional>
+            <attribute name="prefix"><ref name="prefix-pat"/></attribute>
+          </optional>
         </element>
         <optional>
           <element name="route">
