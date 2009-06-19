@@ -190,12 +190,24 @@ static int cmd_dump_xml(const struct command *cmd) {
     char *xml = NULL;
     const char *name = arg_value(cmd, "name");
     struct netcf_if *nif = NULL;
+    int maxifaces;
     int result = CMD_RES_ERR;
 
-    if (opt_present(cmd, "mac"))
-        nif = ncf_lookup_by_mac_string(ncf, name);
-    else
+    if (opt_present(cmd, "mac")) {
+        maxifaces = ncf_lookup_by_mac_string(ncf, name, 1, &nif);
+        if (maxifaces < 0) {
+            fprintf(stderr, "error looking up interface with MAC %s\n",
+                    name);
+            goto done;
+        }
+        if (maxifaces > 1) {
+            fprintf(stderr,
+                    "warning: %d interfaces have MAC %s, only showing one\n",
+                    maxifaces, name);
+        }
+    } else {
         nif = ncf_lookup_by_name(ncf, name);
+    }
 
     if (nif == NULL) {
         fprintf(stderr,

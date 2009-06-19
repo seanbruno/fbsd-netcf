@@ -77,9 +77,23 @@ ncf_list_interfaces(struct netcf *, int maxnames, char **names);
 /* Look up interfaces by UUID, name and hwaddr (MAC-48) */
 struct netcf_if *
 ncf_lookup_by_name(struct netcf *, const char *name);
-/* MAC in hex notation aa:bb:cc:dd:ee:ff */
-struct netcf_if *
-ncf_lookup_by_mac_string(struct netcf *, const char *mac);
+
+/* Find all interfaces with the given hardware address MAC. Generally, MAC
+ * should be in hex notation aa:bb:cc:dd:ee:ff.
+ *
+ * Up to MAXIFACES interfaces are returned in the array IFACES, which must
+ * be allocated by the caller to hold at least MAXIFACES pointers to struct
+ * netcf_if. It is permissible to pass in MAXIFACES == 0, in which case
+ * IFACES is ignored. If there are more than MAXIFACES interfaces with the
+ * given MAC, only MAXIFACES many will be returned.
+ *
+ * The function returns -1 on error, or a nonnegative number indicating the
+ * number of interfaces with the given MAC, which can be larger than
+ * MAXIFACES.
+ */
+int
+ncf_lookup_by_mac_string(struct netcf *, const char *mac,
+                         int maxifaces, struct netcf_if **ifaces);
 
 /*
  * Define/start/stop/undefine interfaces

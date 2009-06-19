@@ -124,10 +124,11 @@ struct netcf_if * ncf_lookup_by_name(struct netcf *ncf, const char *name) {
     return drv_lookup_by_name(ncf, name);
 }
 
-struct netcf_if *
-ncf_lookup_by_mac_string(struct netcf *ncf, const char *mac) {
+int
+ncf_lookup_by_mac_string(struct netcf *ncf, const char *mac,
+                         int maxifaces, struct netcf_if **ifaces) {
     ERR_RESET(ncf);
-    return drv_lookup_by_mac_string(ncf, mac);
+    return drv_lookup_by_mac_string(ncf, mac, maxifaces, ifaces);
 }
 
 /*
