@@ -1,7 +1,9 @@
 <interface type="bridge" startmode="onboot">
   <name>br0</name>
   <mtu size="1500"/>
-  <dhcp/>
+  <protocol family="ipv4">
+    <dhcp/>
+  </protocol>
   <bridge stp="off">
     <interface type="ethernet">
       <name>eth0</name>

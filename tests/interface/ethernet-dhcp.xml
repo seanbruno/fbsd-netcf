@@ -2,5 +2,7 @@
   <name>eth0</name>
   <mtu size="1492"/>
   <mac address="aa:bb:cc:dd:ee:ff"/>
-  <dhcp peerdns="no"/>
+  <protocol family="ipv4">
+    <dhcp peerdns="no"/>
+  </protocol>
 </interface>

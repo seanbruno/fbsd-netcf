@@ -125,28 +125,34 @@
   </xsl:template>
 
   <xsl:template name="interface-addressing">
-    <xsl:choose>
-      <xsl:when test="node[@label = 'BOOTPROTO']/@value = 'dhcp'">
-        <dhcp>
-          <xsl:if test="node[@label = 'PEERDNS']">
-            <xsl:attribute name="peerdns"><xsl:value-of select="node[@label = 'PEERDNS']/@value"></xsl:value-of></xsl:attribute>
+    <xsl:call-template name="protocol-ipv4"/>
+  </xsl:template>
+
+  <xsl:template name="protocol-ipv4">
+    <protocol family="ipv4">
+      <xsl:choose>
+        <xsl:when test="node[@label = 'BOOTPROTO']/@value = 'dhcp'">
+          <dhcp>
+            <xsl:if test="node[@label = 'PEERDNS']">
+              <xsl:attribute name="peerdns"><xsl:value-of select="node[@label = 'PEERDNS']/@value"></xsl:value-of></xsl:attribute>
+            </xsl:if>
+          </dhcp>
+        </xsl:when>
+        <xsl:when test="node[@label = 'BOOTPROTO']/@value = 'none'">
+          <ip>
+            <xsl:attribute name="address"><xsl:value-of select="node[@label = 'IPADDR']/@value"/></xsl:attribute>
+            <xsl:if test="node[@label = 'NETMASK']">
+              <xsl:attribute name="prefix"><xsl:value-of select="ipcalc:prefix(node[@label = 'NETMASK']/@value)"/></xsl:attribute>
+            </xsl:if>
+          </ip>
+          <xsl:if test="node[@label = 'GATEWAY']">
+            <route>
+              <xsl:attribute name="gateway"><xsl:value-of select="node[@label = 'GATEWAY']/@value"/></xsl:attribute>
+            </route>
           </xsl:if>
-        </dhcp>
-      </xsl:when>
-      <xsl:when test="node[@label = 'BOOTPROTO']/@value = 'none'">
-        <ip>
-          <xsl:attribute name="address"><xsl:value-of select="node[@label = 'IPADDR']/@value"/></xsl:attribute>
-          <xsl:if test="node[@label = 'NETMASK']">
-            <xsl:attribute name="prefix"><xsl:value-of select="ipcalc:prefix(node[@label = 'NETMASK']/@value)"/></xsl:attribute>
-          </xsl:if>
-        </ip>
-        <xsl:if test="node[@label = 'GATEWAY']">
-          <route>
-            <xsl:attribute name="gateway"><xsl:value-of select="node[@label = 'GATEWAY']/@value"/></xsl:attribute>
-          </route>
-        </xsl:if>
-      </xsl:when>
-    </xsl:choose>
+        </xsl:when>
+      </xsl:choose>
+    </protocol>
   </xsl:template>
 
   <xsl:template name="basic-ethernet-content">

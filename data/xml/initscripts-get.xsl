@@ -131,6 +131,12 @@
   </xsl:template>
 
   <xsl:template name="interface-addressing">
+    <xsl:for-each select="protocol[@family='ipv4']">
+      <xsl:call-template name="protocol-ipv4"/>
+    </xsl:for-each>
+  </xsl:template>
+
+  <xsl:template name="protocol-ipv4">
     <xsl:choose>
       <xsl:when test="dhcp">
         <node label="BOOTPROTO" value="dhcp"/>

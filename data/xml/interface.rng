@@ -145,7 +145,7 @@
           </element>
           <element name="arpmon">
             <attribute name="interval"><ref name="uint"/></attribute>
-            <attribute name="target"><ref name="ip-addr"/></attribute>
+            <attribute name="target"><ref name="ipv4-addr"/></attribute>
             <optional>
               <attribute name="validate">
                 <choice>
@@ -189,8 +189,20 @@
     </attribute>
   </define>
 
-  <!-- Assignment of IP address to an interface -->
+  <!--
+       Assignment of addresses to an interface, allowing for
+       different protocols
+  -->
   <define name="interface-addressing">
+    <element name="protocol">
+      <ref name="protocol-ipv4"/>
+    </element>
+  </define>
+
+  <define name="protocol-ipv4">
+    <attribute name="family">
+      <value>ipv4</value>
+    </attribute>
     <choice>
       <element name="dhcp">
         <optional>
@@ -208,14 +220,14 @@
       -->
       <group>
         <element name="ip">
-          <attribute name="address"><ref name="ip-addr"/></attribute>
+          <attribute name="address"><ref name="ipv4-addr"/></attribute>
           <optional>
-            <attribute name="prefix"><ref name="prefix-pat"/></attribute>
+            <attribute name="prefix"><ref name="ipv4-prefix"/></attribute>
           </optional>
         </element>
         <optional>
           <element name="route">
-            <attribute name="gateway"><ref name="ip-addr"/></attribute>
+            <attribute name="gateway"><ref name="ipv4-addr"/></attribute>
           </element>
         </optional>
       </group>
@@ -300,15 +312,15 @@
     </data>
   </define>
 
-  <define name='ip-addr'>
+  <define name='ipv4-addr'>
     <data type='string'>
       <param name="pattern">([0-2]?[0-9]?[0-9]\.){3}[0-2]?[0-9]?[0-9]</param>
     </data>
   </define>
 
-  <define name='prefix-pat'>
+  <define name='ipv4-prefix'>
     <data type='string'>
-      <param name="pattern">[0-9]|[12][0-9]|3[0-2]</param>
+      <param name="pattern">[1-9]|[12][0-9]|3[0-2]</param>
     </data>
   </define>
 
