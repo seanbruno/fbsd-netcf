@@ -19,7 +19,7 @@ dist_lens_DATA=data/lenses/netcf.aug
 # This requires that trang is installed, but we don't want to require
 # that, even for building, since the .rnc files are only a convenience
 # when using Emacs
-rnc: xml/augeas.rnc xml/interface.rng
+rnc: data/xml/augeas.rnc data/xml/interface.rnc
 
 %.rnc: %.rng
 	trang $< $@
