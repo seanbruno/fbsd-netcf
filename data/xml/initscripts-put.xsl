@@ -120,7 +120,7 @@
   <xsl:template name="basic-attrs">
     <name><xsl:value-of select="node[@label= 'DEVICE']/@value"/></name>
     <xsl:if test="node[@label='MTU']">
-      <mtu><xsl:attribute name="size"><xsl:value-of select="node[@label='MTU']/@value"/></xsl:attribute></mtu>
+      <mtu size="{node[@label='MTU']/@value}"/>
     </xsl:if>
   </xsl:template>
 
@@ -139,16 +139,13 @@
           </dhcp>
         </xsl:when>
         <xsl:when test="node[@label = 'BOOTPROTO']/@value = 'none'">
-          <ip>
-            <xsl:attribute name="address"><xsl:value-of select="node[@label = 'IPADDR']/@value"/></xsl:attribute>
+          <ip address="{node[@label = 'IPADDR']/@value}">
             <xsl:if test="node[@label = 'NETMASK']">
               <xsl:attribute name="prefix"><xsl:value-of select="ipcalc:prefix(node[@label = 'NETMASK']/@value)"/></xsl:attribute>
             </xsl:if>
           </ip>
           <xsl:if test="node[@label = 'GATEWAY']">
-            <route>
-              <xsl:attribute name="gateway"><xsl:value-of select="node[@label = 'GATEWAY']/@value"/></xsl:attribute>
-            </route>
+            <route gateway="{node[@label = 'GATEWAY']/@value}"/>
           </xsl:if>
         </xsl:when>
       </xsl:choose>
@@ -158,9 +155,7 @@
   <xsl:template name="basic-ethernet-content">
     <xsl:call-template name="basic-attrs"/>
     <xsl:if test="node[@label = 'HWADDR']">
-      <mac>
-        <xsl:attribute name="address"><xsl:value-of select="node[@label = 'HWADDR']/@value"/></xsl:attribute>
-      </mac>
+      <mac address="{node[@label = 'HWADDR']/@value}"/>
     </xsl:if>
   </xsl:template>
 

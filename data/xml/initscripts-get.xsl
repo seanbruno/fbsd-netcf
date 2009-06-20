@@ -33,17 +33,13 @@
       <xsl:call-template name="startmode"/>
       <xsl:call-template name="interface-addressing"/>
       <xsl:if test="bridge/@stp">
-        <node label="STP">
-          <xsl:attribute name="value"><xsl:value-of select="bridge/@stp"/></xsl:attribute>
-        </node>
+        <node label="STP" value="{bridge/@stp}"/>
       </xsl:if>
     </tree>
     <xsl:for-each select='bridge/interface'>
       <tree>
         <xsl:call-template name="bare-ethernet-interface"/>
-        <node label="BRIDGE">
-          <xsl:attribute name="value"><xsl:value-of select="../../name"/></xsl:attribute>
-        </node>
+        <node label="BRIDGE" value="{../../name}"/>
       </tree>
     </xsl:for-each>
   </xsl:template>
@@ -83,9 +79,7 @@
     <xsl:for-each select='bond/interface'>
       <tree>
         <xsl:call-template name="bare-ethernet-interface"/>
-        <node label="MASTER">
-          <xsl:attribute name="value"><xsl:value-of select="../../name"/></xsl:attribute>
-        </node>
+        <node label="MASTER" value="{../../name}"/>
         <node label="SLAVE" value="yes"/>
       </tree>
     </xsl:for-each>
@@ -96,22 +90,16 @@
   -->
   <xsl:template name="basic-attrs">
     <xsl:attribute name="path">/files/etc/sysconfig/network-scripts/ifcfg-<xsl:value-of select="name"/></xsl:attribute>
-    <node label="DEVICE">
-      <xsl:attribute name="value"><xsl:value-of select="name"/></xsl:attribute>
-    </node>
+    <node label="DEVICE" value="{name}"/>
     <xsl:if test="mtu">
-      <node label="MTU">
-        <xsl:attribute name="value"><xsl:value-of select="mtu/@size"/></xsl:attribute>
-      </node>
+      <node label="MTU" value="{mtu/@size}"/>
     </xsl:if>
   </xsl:template>
 
   <xsl:template name="bare-ethernet-interface">
     <xsl:call-template name="basic-attrs"/>
     <xsl:if test="mac">
-      <node label="HWADDR">
-        <xsl:attribute name="value"><xsl:value-of select="mac/@address"/></xsl:attribute>
-      </node>
+      <node label="HWADDR" value="{mac/@address}"/>
     </xsl:if>
   </xsl:template>
 
@@ -141,25 +129,17 @@
       <xsl:when test="dhcp">
         <node label="BOOTPROTO" value="dhcp"/>
         <xsl:if test="dhcp/@peerdns">
-          <node label="PEERDNS">
-            <xsl:attribute name="value"><xsl:value-of select="dhcp/@peerdns"/></xsl:attribute>
-          </node>
+          <node label="PEERDNS" value="{dhcp/@peerdns}"/>
         </xsl:if>
       </xsl:when>
       <xsl:when test="ip">
         <node label="BOOTPROTO" value="none"/>
-        <node label="IPADDR">
-          <xsl:attribute name="value"><xsl:value-of select="ip/@address"/></xsl:attribute>
-        </node>
+        <node label="IPADDR" value="{ip/@address}"/>
         <xsl:if test="ip/@prefix">
-          <node label="NETMASK">
-            <xsl:attribute name="value"><xsl:value-of select="ipcalc:netmask(ip/@prefix)"/></xsl:attribute>
-          </node>
+          <node label="NETMASK" value="{ipcalc:netmask(ip/@prefix)}"/>
         </xsl:if>
         <xsl:if test="route">
-          <node label="GATEWAY">
-            <xsl:attribute name="value"><xsl:value-of select="route/@gateway"/></xsl:attribute>
-          </node>
+          <node label="GATEWAY" value="{route/@gateway}"/>
         </xsl:if>
       </xsl:when>
     </xsl:choose>
