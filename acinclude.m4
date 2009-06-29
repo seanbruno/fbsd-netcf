@@ -39,3 +39,47 @@ AC_DEFUN([NETCF_CHECK_READLINE], [
 
   AC_SUBST(READLINE_LIBS)
 ])
+
+dnl
+dnl Set compiler warning flags using gnulib's warnings module
+dnl
+AC_DEFUN([NETCF_COMPILE_WARNINGS],[
+    dnl ******************************
+    dnl More compiler warnings
+    dnl ******************************
+
+    AC_ARG_ENABLE(compile-warnings,
+        AC_HELP_STRING([--enable-compile-warnings=@<:@no/yes/error@:>@],
+                  [Turn on compiler warnings]),,
+                  [enable_compile_warnings="m4_default([$1],[yes])"])
+
+    case "x$enable_compile_warnings" in
+    xyes | xno | xerror)
+    ;;
+    *)
+    AC_MSG_ERROR(Unknown argument '$enable_compile_warnings' to --enable-compile-warnings)
+    ;;
+    esac
+
+    if test "x$enable_compile_warnings" != "xno"; then
+        gl_WARN_ADD([-Wall])
+        gl_WARN_ADD([-Wformat])
+        gl_WARN_ADD([-Wformat-security])
+        gl_WARN_ADD([-Wmissing-prototypes])
+        gl_WARN_ADD([-Wnested-externs])
+        gl_WARN_ADD([-Wpointer-arith])
+        gl_WARN_ADD([-Wextra])
+        gl_WARN_ADD([-Wshadow])
+        gl_WARN_ADD([-Wcast-align])
+        gl_WARN_ADD([-Wwrite-strings])
+        gl_WARN_ADD([-Waggregate-return])
+        gl_WARN_ADD([-Wstrict-prototypes])
+        gl_WARN_ADD([-Winline])
+        gl_WARN_ADD([-Wredundant-decls])
+        gl_WARN_ADD([-Wno-sign-compare])
+    fi
+
+    if test "x$enable_compile_warnings" = "xerror"; then
+        gl_WARN_ADD([-Werror])
+    fi
+])

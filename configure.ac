@@ -23,21 +23,7 @@ AC_SUBST([NETCF_CFLAGS], ['--std=gnu99 -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fas
 
 gl_INIT
 
-gl_WARN_ADD([-Wall])
-gl_WARN_ADD([-Wformat])
-gl_WARN_ADD([-Wformat-security])
-gl_WARN_ADD([-Wmissing-prototypes])
-gl_WARN_ADD([-Wnested-externs])
-gl_WARN_ADD([-Wpointer-arith])
-gl_WARN_ADD([-Wextra])
-gl_WARN_ADD([-Wshadow])
-gl_WARN_ADD([-Wcast-align])
-gl_WARN_ADD([-Wwrite-strings])
-gl_WARN_ADD([-Waggregate-return])
-gl_WARN_ADD([-Wstrict-prototypes])
-gl_WARN_ADD([-Winline])
-gl_WARN_ADD([-Wredundant-decls])
-gl_WARN_ADD([-Wno-sign-compare])
+NETCF_COMPILE_WARNINGS
 
 dnl Need to test if pkg-config exists
 PKG_PROG_PKG_CONFIG
