@@ -1,5 +1,5 @@
 
-noinst_DATA = nesting.png
+images: nesting.png
 
 %.png: %.dot
 	dot -Tpng -o $@ $<
