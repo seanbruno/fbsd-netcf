@@ -32,6 +32,7 @@ doc/*.png
 src/datadir.h
 src/ncftool
 src/ncftransform
+src/netcf.syms
 tests/test-initscripts
 *.aux
 *.dvi
