@@ -912,7 +912,7 @@ int drv_lookup_by_mac_string(struct netcf *ncf, const char *mac,
     struct augeas *aug = NULL;
     char *path = NULL, *ifcfg = NULL;
     const char **names = NULL;
-    int nmatches;
+    int nmatches = 0;
     char **matches = NULL;
     int r;
     int result = -1;
