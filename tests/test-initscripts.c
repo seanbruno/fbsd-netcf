@@ -41,6 +41,17 @@ static struct netcf *ncf;
         exit(EXIT_FAILURE);                                         \
     } while(0)
 
+static void format_error(char **strp, const char *format, ...) {
+  va_list args;
+  int r;
+
+  va_start (args, format);
+  r = vasprintf (strp, format, args);
+  va_end (args);
+  if (r < 0)
+      die("Failed to format error message (out of memory)");
+}
+
 static char *read_test_file(CuTest *tc, const char *relpath) {
     char *path = NULL;
     char *txt = NULL;
@@ -80,7 +91,7 @@ static int xml_attrs_subset(xmlNodePtr n1, xmlNodePtr n2, char **err) {
         xmlChar *v1 = xmlGetProp(n1, a1->name);
         xmlChar *v2 = xmlGetProp(n2, a1->name);
         if (!xmlStrEqual(v1, v2)) {
-            asprintf(err, "Different values for attribute %s/@%s: %s != %s (lines %d and %d)", n1->name, a1->name, v1, v2, n1->line, n2->line);
+            format_error(err, "Different values for attribute %s/@%s: %s != %s (lines %d and %d)", n1->name, a1->name, v1, v2, n1->line, n2->line);
             return 0;
         }
     }
@@ -97,18 +108,18 @@ static int xml_nodes_equal(xmlNodePtr n1, xmlNodePtr n2, char **err) {
     if (n1 == NULL && n2 == NULL)
         return 1;
     if (n1 == NULL && n2 != NULL) {
-        asprintf(err, "First node null, second node %s (line %d)",
-                 n2->name, n2->line);
+        format_error(err, "First node null, second node %s (line %d)",
+                     n2->name, n2->line);
         return 0;
     }
     if (n1 != NULL && n2 == NULL) {
-        asprintf(err, "First node %s, second node null (line %d)",
-                 n1->name, n1->line);
+        format_error(err, "First node %s, second node null (line %d)",
+                     n1->name, n1->line);
         return 0;
     }
     if (!xmlStrEqual(n1->name, n2->name)) {
-        asprintf(err, "Different node names: %s != %s (lines %d and %d)",
-                 n1->name, n2->name, n1->line, n2->line);
+        format_error(err, "Different node names: %s != %s (lines %d and %d)",
+                     n1->name, n2->name, n1->line, n2->line);
         return 0;
     }
     if (! xml_attrs_subset(n1, n2, err))
@@ -125,10 +136,12 @@ static int xml_nodes_equal(xmlNodePtr n1, xmlNodePtr n2, char **err) {
         n2 = xml_next_element(n2->next);
     }
     if (n1 != NULL) {
-        asprintf(err, "Additional element %s (line %d)", n1->name, n1->line);
+        format_error(err, "Additional element %s (line %d)",
+                     n1->name, n1->line);
         return 0;
     } else if (n2 != NULL) {
-        asprintf(err, "Additional element %s (line %d)", n2->name, n2->line);
+        format_error(err, "Additional element %s (line %d)",
+                     n2->name, n2->line);
         return 0;
     }
     return 1;
@@ -148,7 +161,7 @@ static void assert_xml_equals(CuTest *tc, const char *fname,
     xmlFreeDoc(act_doc);
 
     if (! result) {
-        asprintf(&msg, "%s: %s", fname, err);
+        format_error(&msg, "%s: %s", fname, err);
         CuFail(tc, msg);
     }
 }
