@@ -175,6 +175,16 @@ char *argv_to_string(const char *const *argv);
  */
 int xslt_ext_register(void);
 void xslt_ext_unregister(void);
+
+/*
+ * Useful for debugging, used by ncftransform
+ */
+
+/* Transform the NCF_XML into simple Augeas XML AUG_XML */
+int ncf_get_aug(struct netcf *, const char *ncf_xml, char **aug_xml);
+
+/* Transform the Augeas XML AUG_XML into interface XML NCF_XML */
+int ncf_put_aug(struct netcf *, const char *aug_xml, char **ncf_xml);
 #endif
 
 

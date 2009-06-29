@@ -141,16 +141,6 @@ void ncf_if_free(struct netcf_if *);
  * next call to another function in this API.
  */
 int ncf_error(struct netcf *, const char **errmsg, const char **details);
-
-/*
- * These functions are really only useful for testing
- */
-
-/* Transform the NCF_XML into simple Augeas XML AUG_XML */
-int ncf_get_aug(struct netcf *, const char *ncf_xml, char **aug_xml);
-
-/* Transform the Augeas XML AUG_XML into interface XML NCF_XML */
-int ncf_put_aug(struct netcf *, const char *aug_xml, char **ncf_xml);
 #endif
 
 

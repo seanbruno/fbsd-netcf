@@ -15,8 +15,6 @@ NETCF_0.0.0 {
       ncf_if_xml_desc;
       ncf_if_free;
       ncf_error;
-      ncf_get_aug;
-      ncf_put_aug;
     local:
       *;
 };
