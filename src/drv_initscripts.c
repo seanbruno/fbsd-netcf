@@ -793,25 +793,15 @@ char *drv_xml_desc(struct netcf_if *nif) {
     goto done;
 }
 
-/* Get the content of /interface/name. Result must be freed with free() */
+/* Get the content of /interface/@name. Result must be freed with xmlFree() */
 static char *device_name_from_xml(xmlDocPtr xml) {
-    xmlNodePtr iface, name;
-    xmlChar *xml_result;
+    xmlNodePtr iface;
     char *result;
 
     iface = xmlDocGetRootElement(xml);
     if (iface == NULL) return NULL;
 
-    for (name = iface->children; name != NULL; name = name->next)
-        if (xmlStrcmp(name->name, BAD_CAST "name") == 0)
-            break;
-    if (name == NULL) return NULL;
-
-    xml_result = xmlNodeListGetString(xml, name->children, 1);
-    if (xml_result == NULL)
-        return NULL;
-    result = strdup((char *) xml_result);
-    xmlFree(xml_result);
+    result = xml_prop(iface, "name");
     return result;
 }
 
