@@ -259,6 +259,7 @@ static void testTransforms(CuTest *tc) {
     assert_transforms(tc, "ethernet-static");
     assert_transforms(tc, "ethernet-static-no-prefix");
     assert_transforms(tc, "ethernet-dhcp");
+    assert_transforms(tc, "vlan");
 }
 
 int main(void) {
