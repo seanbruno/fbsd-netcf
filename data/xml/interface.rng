@@ -111,7 +111,10 @@
           </attribute>
         </optional>
         <oneOrMore>
-          <ref name="bare-ethernet-interface"/>
+          <choice>
+            <ref name="bare-ethernet-interface"/>
+            <ref name="bare-vlan-interface"/>
+          </choice>
         </oneOrMore>
       </element>
     </element>

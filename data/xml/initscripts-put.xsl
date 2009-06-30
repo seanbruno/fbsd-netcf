@@ -33,7 +33,7 @@
       VLAN's
   -->
   <xsl:template name="vlan-interface"
-                match="tree[node[@label = 'VLAN' and @value = 'yes']]">
+                match="tree[node[@label = 'VLAN' and @value = 'yes']][count(node[@label = 'MASTER' or @label='BRIDGE']) = 0]">
     <interface type="vlan">
       <xsl:call-template name="name-attr"/>
       <xsl:call-template name="startmode"/>
@@ -78,7 +78,12 @@
           <xsl:attribute name="stp"><xsl:value-of select="node[@label = 'STP']/@value"/></xsl:attribute>
         </xsl:if>
         <xsl:for-each select="/descendant-or-self::*[node[@label = 'BRIDGE' and @value = $iface]]">
-          <xsl:call-template name="bare-ethernet-interface"/>
+          <xsl:if test="count(node[@label = 'VLAN']) = 0">
+            <xsl:call-template name="bare-ethernet-interface"/>
+          </xsl:if>
+          <xsl:if test="count(node[@label = 'VLAN']) > 0">
+            <xsl:call-template name="bare-vlan-interface"/>
+          </xsl:if>
         </xsl:for-each>
       </bridge>
     </interface>

@@ -66,7 +66,12 @@
     </tree>
     <xsl:for-each select='bridge/interface'>
       <tree>
-        <xsl:call-template name="bare-ethernet-interface"/>
+        <xsl:if test="@type = 'ethernet'">
+          <xsl:call-template name="bare-ethernet-interface"/>
+        </xsl:if>
+        <xsl:if test="@type = 'vlan'">
+          <xsl:call-template name="bare-vlan-interface"/>
+        </xsl:if>
         <node label="BRIDGE" value="{../../@name}"/>
       </tree>
     </xsl:for-each>
