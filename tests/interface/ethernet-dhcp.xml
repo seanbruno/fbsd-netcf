@@ -1,7 +1,7 @@
-<interface type="ethernet" startmode="none">
-  <name>eth0</name>
-  <mtu size="1492"/>
+<interface type="ethernet" name="eth0">
+  <start mode="none"/>
   <mac address="aa:bb:cc:dd:ee:ff"/>
+  <mtu size="1492"/>
   <protocol family="ipv4">
     <dhcp peerdns="no"/>
   </protocol>

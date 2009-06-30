@@ -18,8 +18,12 @@
   <xsl:template name="ethernet-interface"
                 match="tree[count(node[@label = 'MASTER' or @label='BRIDGE']) = 0]">
     <interface type="ethernet">
+      <xsl:call-template name="name-attr"/>
       <xsl:call-template name="startmode"/>
-      <xsl:call-template name="basic-ethernet-content"/>
+      <xsl:if test="node[@label = 'HWADDR']">
+        <mac address="{node[@label = 'HWADDR']/@value}"/>
+      </xsl:if>
+      <xsl:call-template name="mtu"/>
       <xsl:call-template name="interface-addressing"/>
     </interface>
   </xsl:template>
@@ -31,9 +35,10 @@
                 match="tree[node[@label = 'TYPE' and @value = 'Bridge']]">
     <interface type="bridge">
       <!-- the bridge node itself -->
-      <xsl:call-template name="startmode"/>
       <xsl:variable name="iface" select="node[@label= 'DEVICE']/@value"/>
-      <xsl:call-template name="basic-attrs"/>
+      <xsl:call-template name="name-attr"/>
+      <xsl:call-template name="startmode"/>
+      <xsl:call-template name="mtu"/>
       <xsl:call-template name="interface-addressing"/>
       <bridge>
         <xsl:if test="node[@label = 'STP']">
@@ -52,9 +57,10 @@
   <xsl:template name="bond-interface"
                 match="tree[node[@label = 'DEVICE'][@value = //tree/node[@label = 'MASTER']/@value]]">
     <interface type="bond">
-      <xsl:call-template name="startmode"/>
       <xsl:variable name="iface" select="node[@label= 'DEVICE']/@value"/>
-      <xsl:call-template name="basic-attrs"/>
+      <xsl:call-template name="name-attr"/>
+      <xsl:call-template name="startmode"/>
+      <xsl:call-template name="mtu"/>
       <xsl:call-template name="interface-addressing"/>
       <bond>
         <xsl:variable name="opts" select="node[@label = 'BONDING_OPTS']/@value"/>
@@ -106,19 +112,24 @@
   <xsl:template name="startmode">
     <xsl:choose>
       <xsl:when test="node[@label ='HOTPLUG']/@value = 'yes'">
-        <xsl:attribute name="startmode">hotplug</xsl:attribute>
+        <start mode='hotplug'/>
       </xsl:when>
       <xsl:when test="node[@label = 'ONBOOT']/@value = 'yes'">
-        <xsl:attribute name="startmode">onboot</xsl:attribute>
+        <start mode='onboot'/>
       </xsl:when>
       <xsl:otherwise>
-        <xsl:attribute name="startmode">none</xsl:attribute>
+        <start mode='none'/>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
 
-  <xsl:template name="basic-attrs">
-    <name><xsl:value-of select="node[@label= 'DEVICE']/@value"/></name>
+  <xsl:template name="name-attr">
+    <xsl:attribute name="name">
+      <xsl:value-of select="node[@label= 'DEVICE']/@value"/>
+    </xsl:attribute>
+  </xsl:template>
+
+  <xsl:template name="mtu">
     <xsl:if test="node[@label='MTU']">
       <mtu size="{node[@label='MTU']/@value}"/>
     </xsl:if>
@@ -152,16 +163,13 @@
     </protocol>
   </xsl:template>
 
-  <xsl:template name="basic-ethernet-content">
-    <xsl:call-template name="basic-attrs"/>
-    <xsl:if test="node[@label = 'HWADDR']">
-      <mac address="{node[@label = 'HWADDR']/@value}"/>
-    </xsl:if>
-  </xsl:template>
-
   <xsl:template name="bare-ethernet-interface">
     <interface type="ethernet">
-      <xsl:call-template name="basic-ethernet-content"/>
+      <xsl:call-template name="name-attr"/>
+      <xsl:if test="node[@label = 'HWADDR']">
+        <mac address="{node[@label = 'HWADDR']/@value}"/>
+      </xsl:if>
+      <xsl:call-template name="mtu"/>
     </interface>
   </xsl:template>
 </xsl:stylesheet>

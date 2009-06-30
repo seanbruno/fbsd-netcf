@@ -28,9 +28,10 @@
   -->
   <xsl:template match="/interface[@type = 'bridge']">
     <tree>
-      <xsl:call-template name="basic-attrs"/>
-      <node label="TYPE" value="Bridge"/>
+      <xsl:call-template name="name-attr"/>
       <xsl:call-template name="startmode"/>
+      <xsl:call-template name="mtu"/>
+      <node label="TYPE" value="Bridge"/>
       <xsl:call-template name="interface-addressing"/>
       <xsl:if test="bridge/@stp">
         <node label="STP" value="{bridge/@stp}"/>
@@ -39,7 +40,7 @@
     <xsl:for-each select='bridge/interface'>
       <tree>
         <xsl:call-template name="bare-ethernet-interface"/>
-        <node label="BRIDGE" value="{../../name}"/>
+        <node label="BRIDGE" value="{../../@name}"/>
       </tree>
     </xsl:for-each>
   </xsl:template>
@@ -49,14 +50,15 @@
   -->
   <xsl:template match="/interface[@type = 'bond']">
     <tree>
-      <xsl:call-template name="basic-attrs"/>
+      <xsl:call-template name="name-attr"/>
       <xsl:call-template name="startmode"/>
+      <xsl:call-template name="mtu"/>
       <xsl:call-template name="interface-addressing"/>
       <node label="BONDING_OPTS">
         <xsl:attribute name="value">
           <xsl:text>'</xsl:text>
           <xsl:if test="bond/@mode">mode=<xsl:value-of select='bond/@mode'/></xsl:if>
-          <xsl:if test="bond/@mode = 'active-backup'"> primary=<xsl:value-of select='bond/interface[1]/name'/></xsl:if>
+          <xsl:if test="bond/@mode = 'active-backup'"> primary=<xsl:value-of select='bond/interface[1]/@name'/></xsl:if>
           <xsl:if test="bond/miimon">
             <xsl:text> miimon=</xsl:text><xsl:value-of select='bond/miimon/@freq'/>
             <xsl:if test="bond/miimon/@downdelay"><xsl:text> downdelay=</xsl:text><xsl:value-of select="bond/miimon/@downdelay"/></xsl:if>
@@ -79,7 +81,7 @@
     <xsl:for-each select='bond/interface'>
       <tree>
         <xsl:call-template name="bare-ethernet-interface"/>
-        <node label="MASTER" value="{../../name}"/>
+        <node label="MASTER" value="{../../@name}"/>
         <node label="SLAVE" value="yes"/>
       </tree>
     </xsl:for-each>
@@ -88,30 +90,34 @@
   <!--
        Named templates, following the Relax NG syntax
   -->
-  <xsl:template name="basic-attrs">
-    <xsl:attribute name="path">/files/etc/sysconfig/network-scripts/ifcfg-<xsl:value-of select="name"/></xsl:attribute>
-    <node label="DEVICE" value="{name}"/>
+  <xsl:template name="name-attr">
+    <xsl:attribute name="path">/files/etc/sysconfig/network-scripts/ifcfg-<xsl:value-of select="@name"/></xsl:attribute>
+    <node label="DEVICE" value="{@name}"/>
+  </xsl:template>
+
+  <xsl:template name="mtu">
     <xsl:if test="mtu">
       <node label="MTU" value="{mtu/@size}"/>
     </xsl:if>
   </xsl:template>
 
   <xsl:template name="bare-ethernet-interface">
-    <xsl:call-template name="basic-attrs"/>
+    <xsl:call-template name="name-attr"/>
     <xsl:if test="mac">
       <node label="HWADDR" value="{mac/@address}"/>
     </xsl:if>
+    <xsl:call-template name="mtu"/>
   </xsl:template>
 
   <xsl:template name="startmode">
     <xsl:choose>
-      <xsl:when test="@startmode = 'onboot'">
+      <xsl:when test="start/@mode = 'onboot'">
         <node label="ONBOOT" value="yes"/>
       </xsl:when>
-      <xsl:when test="@startmode = 'none'">
+      <xsl:when test="start/@mode = 'none'">
         <node label="ONBOOT" value="no"/>
       </xsl:when>
-      <xsl:when test="@startmode = 'hotplug'">
+      <xsl:when test="start/@mode = 'hotplug'">
         <node label="ONBOOT" value="no"/>
         <node label="HOTPLUG" value="yes"/>
       </xsl:when>

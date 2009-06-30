@@ -23,7 +23,7 @@
     <attribute name="type">
       <value>ethernet</value>
     </attribute>
-    <ref name="basic-attrs"/>
+    <ref name="name-attr"/>
     <!-- If no MAC is given when the interface is defined, it is determined
          by using the device name.
          FIXME: What if device name and MAC don't specify the same NIC ? -->
@@ -32,6 +32,7 @@
         <attribute name="address"><ref name="mac-addr"/></attribute>
       </element>
     </optional>
+    <ref name="mtu"/>
     <!-- FIXME: Allow (some) ethtool options -->
   </define>
 
@@ -58,8 +59,9 @@
       <attribute name="type">
         <value>bridge</value>
       </attribute>
+      <ref name="name-attr"/>
       <ref name="startmode"/>
-      <ref name="basic-attrs"/>
+      <ref name="mtu"/>
       <ref name="interface-addressing"/>
       <element name="bridge">
         <optional>
@@ -85,8 +87,9 @@
       <attribute name="type">
         <value>bond</value>
       </attribute>
+      <ref name="name-attr"/>
       <ref name="startmode"/>
-      <ref name="basic-attrs"/>
+      <ref name="mtu"/>
       <ref name="interface-addressing"/>
       <element name="bond">
         <optional>
@@ -167,9 +170,12 @@
   </define>
 
   <!-- Basic attributes for all interface types -->
-  <define name="basic-attrs">
+  <define name="name-attr">
     <!-- The device name, like eth0 or br2 -->
-    <element name="name"><ref name="device-name"/></element>
+    <attribute name="name"><ref name="device-name"/></attribute>
+  </define>
+
+  <define name="mtu">
     <optional>
       <element name="mtu">
         <attribute name="size"><ref name="uint"/></attribute>
@@ -178,15 +184,17 @@
   </define>
 
   <define name="startmode">
-    <attribute name="startmode">
-      <choice>
-        <value>onboot</value>
-        <value>none</value>
-        <value>hotplug</value>
-        <!-- Jim Fehlig lists the following that SuSe supports:
-             manual, ifplug, nfsroot -->
-      </choice>
-    </attribute>
+    <element name="start">
+      <attribute name="mode">
+        <choice>
+          <value>onboot</value>
+          <value>none</value>
+          <value>hotplug</value>
+          <!-- Jim Fehlig lists the following that SuSe supports:
+               manual, ifplug, nfsroot -->
+        </choice>
+      </attribute>
+    </element>
   </define>
 
   <!--
