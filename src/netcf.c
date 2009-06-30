@@ -102,17 +102,17 @@ void ncf_close(struct netcf *ncf) {
  *
  * Maybe we should just list them as STRUCT NETCF_IF *
  */
-int ncf_num_of_interfaces(struct netcf *ncf) {
+int ncf_num_of_interfaces(struct netcf *ncf, unsigned int flags) {
     ERR_RESET(ncf);
-    return drv_num_of_interfaces(ncf);
+    return drv_num_of_interfaces(ncf, flags);
 }
 
-int ncf_list_interfaces(struct netcf *ncf, int maxnames, char **names) {
+int ncf_list_interfaces(struct netcf *ncf, int maxnames, char **names, unsigned int flags) {
     int result;
 
     ERR_RESET(ncf);
     MEMZERO(names, maxnames);
-    result = drv_list_interfaces(ncf, maxnames, names);
+    result = drv_list_interfaces(ncf, maxnames, names, flags);
     if (result < 0)
         for (int i=0; i < maxnames; i++)
             FREE(names[i]);

@@ -30,6 +30,11 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+
 #include "safe-alloc.h"
 #include "ref.h"
 #include "list.h"
@@ -86,6 +91,7 @@ struct driver {
     xsltStylesheetPtr  put;
     xsltStylesheetPtr  get;
     xmlRelaxNGPtr      rng;
+    int                ioctl_fd;
 };
 
 /* Entries in a ifcfg file that tell us that the interface
@@ -212,6 +218,18 @@ static int is_slave(struct netcf *ncf, const char *intf) {
             return r;
     }
     return 0;
+}
+
+static int is_active(struct netcf *ncf, const char *intf) {
+    struct ifreq ifr;
+
+    MEMZERO(&ifr, 1);
+    strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
+    ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
+    if (ioctl(ncf->driver->ioctl_fd, SIOCGIFFLAGS, &ifr))  {
+        return 0;
+    }
+    return ((ifr.ifr_flags & IFF_UP) == IFF_UP);
 }
 
 static int list_interfaces(struct netcf *ncf, char ***intf) {
@@ -422,11 +440,35 @@ static char *xml_prop(xmlNodePtr node, const char *name) {
     return (char *) xmlGetProp(node, BAD_CAST name);
 }
 
+static int init_ioctl_fd(struct netcf *ncf) {
+
+    int ioctl_fd;
+    int flags;
+
+    ioctl_fd = socket(AF_INET, SOCK_STREAM, 0);
+    ERR_THROW(ioctl_fd < 0, ncf, EINTERNAL, "failed to open socket for interface ioctl");
+
+    flags = fcntl(ioctl_fd, F_GETFD);
+    ERR_THROW(flags < 0, ncf, EINTERNAL, "failed to get flags for ioctl socket");
+
+    flags = fcntl(ioctl_fd, F_SETFD, flags | FD_CLOEXEC);
+    ERR_THROW(flags < 0, ncf, EINTERNAL, "failed to set FD_CLOEXEC flag on ioctl socket");
+    return ioctl_fd;
+
+error:
+    if (ioctl_fd >= 0)
+        close(ioctl_fd);
+    return -1;
+}
+
 int drv_init(struct netcf *ncf) {
     int r;
 
     if (ALLOC(ncf->driver) < 0)
         return -1;
+
+    ncf->driver->ioctl_fd = -1;
+
     // FIXME: Check for errors
     xsltInit();
     r = xslt_ext_register();
@@ -436,8 +478,16 @@ int drv_init(struct netcf *ncf) {
     ncf->driver->rng = rng_parse(ncf, "interface.rng");
     /* We undconditionally bridge physdevs; could be more discriminating */
     bridge_physdevs(ncf);
+
+    /* open a socket for interface ioctls */
+    ncf->driver->ioctl_fd = init_ioctl_fd(ncf);
+    if (ncf->driver->ioctl_fd < 0)
+        goto error;
     return 0;
+
  error:
+    if (ncf->driver->ioctl_fd >= 0)
+        close(ncf->driver->ioctl_fd);
     FREE(ncf->driver);
     return -1;
 }
@@ -447,49 +497,68 @@ void drv_close(struct netcf *ncf) {
     xsltFreeStylesheet(ncf->driver->put);
     xslt_ext_unregister();
     xsltCleanupGlobals();
+    if (ncf->driver->ioctl_fd >= 0)
+        close(ncf->driver->ioctl_fd);
     FREE(ncf->driver);
-}
-
-int drv_num_of_interfaces(struct netcf *ncf) {
-    int nint = 0;
-    char **intf = NULL;
-
-    nint = list_interfaces(ncf, &intf);
-    free_matches(nint, &intf);
-    return nint;
 }
 
 static int list_interface_ids(struct netcf *ncf,
                               int maxnames, char **names,
+                              unsigned int flags,
                               const char *id_attr) {
     struct augeas *aug = NULL;
-    int nint = 0, nmatches = 0, result = 0, r;
+    int nint = 0, nmatches = 0, nqualified = 0, result = 0, r;
     char **intf = NULL, **matches = NULL;
 
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
     nint = list_interfaces(ncf, &intf);
-    for (result = 0; result < nint && result < maxnames; result++) {
+    if (!names) {
+        maxnames = nint;    /* if not returning list, ignore maxnames too */
+    }
+    for (result = 0; (result < nint) && (nqualified < maxnames); result++) {
         nmatches = aug_submatch(ncf, intf[result], id_attr, &matches);
         if (nmatches > 0) {
             const char *name;
+            int is_qualified = ((flags & (NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE))
+                                == (NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE));
+
             r = aug_get(aug, matches[nmatches-1], &name);
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            names[result] = strdup(name);
-            ERR_COND_BAIL(names[result] == NULL, ncf, ENOMEM);
+
+            if (!is_qualified) {
+                int if_is_active = is_active(ncf, name);
+                if ((if_is_active && (flags & NETCF_IFACE_ACTIVE))
+                    || ((!if_is_active) && (flags & NETCF_IFACE_INACTIVE))) {
+
+                    is_qualified = 1;
+                }
+            }
+
+            if (is_qualified) {
+                if (names) {
+                    names[nqualified] = strdup(name);
+                    ERR_COND_BAIL(names[nqualified] == NULL, ncf, ENOMEM);
+                }
+                nqualified++;
+            }
         }
         free_matches(nmatches, &matches);
     }
     free_matches(nint, &intf);
-    return result;
+    return nqualified;
  error:
     free_matches(nmatches, &matches);
     free_matches(nint, &intf);
     return -1;
 }
 
-int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names) {
-    return list_interface_ids(ncf, maxnames, names, "DEVICE");
+int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names, unsigned int flags) {
+    return list_interface_ids(ncf, maxnames, names, flags, "DEVICE");
+}
+
+int drv_num_of_interfaces(struct netcf *ncf, unsigned int flags) {
+    return list_interface_ids(ncf, 0, NULL, flags, "DEVICE");
 }
 
 static struct netcf_if *make_netcf_if(struct netcf *ncf, char *name) {

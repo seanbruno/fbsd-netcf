@@ -137,13 +137,21 @@ static const char *arg_value(const struct command *cmd, const char *name) {
 static int cmd_list(ATTRIBUTE_UNUSED const struct command *cmd) {
     int nint;
     char **intf;
+    unsigned int flags = NETCF_IFACE_ACTIVE;
 
-    nint = ncf_num_of_interfaces(ncf);
+    if (opt_present(cmd, "inactive")) {
+        flags = NETCF_IFACE_INACTIVE;
+    }
+    if (opt_present(cmd, "all")) {
+        flags = NETCF_IFACE_ACTIVE | NETCF_IFACE_INACTIVE;
+    }
+
+    nint = ncf_num_of_interfaces(ncf, flags);
     if (nint < 0)
         return CMD_RES_ERR;
     if (ALLOC_N(intf, nint) < 0)
         return CMD_RES_ENOMEM;
-    nint = ncf_list_interfaces(ncf, nint, intf);
+    nint = ncf_list_interfaces(ncf, nint, intf, flags);
     if (nint < 0)
         return CMD_RES_ERR;
     for (int i=0; i < nint; i++) {
@@ -175,6 +183,10 @@ static int cmd_list(ATTRIBUTE_UNUSED const struct command *cmd) {
 static const struct command_opt_def cmd_list_opts[] = {
     { .tag = CMD_OPT_BOOL, .name = "macs",
       .help = "show MAC addresses" },
+    { .tag = CMD_OPT_BOOL, .name = "all",
+      .help = "show all (up & down) interfaces" },
+    { .tag = CMD_OPT_BOOL, .name = "inactive",
+      .help = "show only inactive (down) interfaces" },
     CMD_OPT_DEF_LAST
 };
 

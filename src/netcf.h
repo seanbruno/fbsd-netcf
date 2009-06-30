@@ -24,10 +24,6 @@
 #define NETCF_H_
 
 /*
- * FIXME: We need a way to distinguish between 'active' interfaces (i.e.,
- * ones that are up) and ones that are merely defined; maybe punt that to
- * clients ?
- *
  * FIXME: NM needs a way to be notified of changes to the underlying
  * network files, either we provide a way to register callbacks for an
  * interface, or we hand out a list of files that contain the configs for
@@ -53,6 +49,18 @@ typedef enum {
     NETCF_EEXEC          /* external program execution failed or returned non-0 */
 } netcf_errcode_t;
 
+
+/*
+ * flags accepted by ncf_num_of_interfaces and ncf_list_interfaces.
+ * IMPORTANT NOTE: These are bits, so you should assign only powers of two
+ * (Default behavior is to match NO interfaces)
+ */
+typedef enum {
+    NETCF_IFACE_INACTIVE = 1,     /* match down interfaces */
+    NETCF_IFACE_ACTIVE = 2,       /* match up interfaces */
+} netcf_if_flag_t;
+
+
 /*
  * Initialize netcf. This function must be called before any other netcf
  * function can be called.
@@ -70,9 +78,10 @@ void ncf_close(struct netcf *);
  * identified by their name.
  */
 int
-ncf_num_of_interfaces(struct netcf *);
+ncf_num_of_interfaces(struct netcf *, unsigned int flags);
 int
-ncf_list_interfaces(struct netcf *, int maxnames, char **names);
+ncf_list_interfaces(struct netcf *, int maxnames, char **names, unsigned int flags);
+
 
 /* Look up interfaces by UUID, name and hwaddr (MAC-48) */
 struct netcf_if *

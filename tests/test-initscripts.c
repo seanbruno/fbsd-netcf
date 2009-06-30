@@ -182,11 +182,11 @@ static void testListInterfaces(CuTest *tc) {
     static const char *const exp_names[] = { "br0", "bond0", "lo" };
     static const int exp_nint = ARRAY_CARDINALITY(exp_names);
 
-    nint = ncf_num_of_interfaces(ncf);
+    nint = ncf_num_of_interfaces(ncf, NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE);
     CuAssertIntEquals(tc, exp_nint, nint);
     if (ALLOC_N(names, nint) < 0)
         die("allocation failed");
-    nint = ncf_list_interfaces(ncf, nint, names);
+    nint = ncf_list_interfaces(ncf, nint, names, NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE);
     CuAssertIntEquals(tc, exp_nint, nint);
     for (int i=0; i < exp_nint; i++) {
         int found = 0;
