@@ -6,6 +6,7 @@
       <ref name="ethernet-interface"/>
       <ref name="bridge-interface"/>
       <ref name="bond-interface"/>
+      <ref name="vlan-interface"/>
     </choice>
   </start>
 
@@ -48,6 +49,46 @@
       <ref name="startmode"/>
       <ref name="basic-ethernet-content"/>
       <ref name="interface-addressing"/>
+    </element>
+  </define>
+
+  <!--
+      VLAN's
+  -->
+  <define name="vlan-interface-common">
+    <attribute name="type">
+      <value>vlan</value>
+    </attribute>
+    <!-- The name attribute is only useful for reporting back and is always
+         of the form DEVICE.VLAN
+    -->
+    <optional><ref name="name-attr"/></optional>
+  </define>
+
+  <define name="vlan-device">
+    <element name="vlan">
+      <attribute name="tag"><ref name="vlan-id"/></attribute>
+      <element name="interface">
+        <attribute name="name"><ref name="device-name"/></attribute>
+      </element>
+    </element>
+  </define>
+
+  <define name="bare-vlan-interface">
+    <element name="interface">
+      <ref name="vlan-interface-common"/>
+      <ref name="mtu"/>
+      <ref name="vlan-device"/>
+    </element>
+  </define>
+
+  <define name="vlan-interface">
+    <element name="interface">
+      <ref name="vlan-interface-common"/>
+      <ref name="startmode"/>
+      <ref name="mtu"/>
+      <ref name="interface-addressing"/>
+      <ref name="vlan-device"/>
     </element>
   </define>
 
@@ -332,4 +373,9 @@
     </data>
   </define>
 
+  <define name='vlan-id'>
+    <data type="unsignedInt">
+      <param name="maxInclusive">4096</param>
+    </data>
+  </define>
 </grammar>

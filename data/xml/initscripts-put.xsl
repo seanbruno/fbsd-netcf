@@ -16,7 +16,8 @@
       Ethernet adapter
   -->
   <xsl:template name="ethernet-interface"
-                match="tree[count(node[@label = 'MASTER' or @label='BRIDGE']) = 0]">
+                match="tree[count(node[@label = 'MASTER' or @label='BRIDGE'
+                                       or @label = 'VLAN']) = 0]">
     <interface type="ethernet">
       <xsl:call-template name="name-attr"/>
       <xsl:call-template name="startmode"/>
@@ -26,6 +27,38 @@
       <xsl:call-template name="mtu"/>
       <xsl:call-template name="interface-addressing"/>
     </interface>
+  </xsl:template>
+
+  <!--
+      VLAN's
+  -->
+  <xsl:template name="vlan-interface"
+                match="tree[node[@label = 'VLAN' and @value = 'yes']]">
+    <interface type="vlan">
+      <xsl:call-template name="name-attr"/>
+      <xsl:call-template name="startmode"/>
+      <xsl:call-template name="mtu"/>
+      <xsl:call-template name="interface-addressing"/>
+      <xsl:call-template name="vlan-device"/>
+    </interface>
+  </xsl:template>
+
+  <xsl:template name="bare-vlan-interface">
+    <xsl:variable name="name" select="node[@label = 'DEVICE']/@value"/>
+    <interface type="vlan">
+      <xsl:call-template name="name-attr"/>
+      <xsl:call-template name="mtu"/>
+      <xsl:call-template name="vlan-device"/>
+    </interface>
+  </xsl:template>
+
+  <xsl:template name="vlan-device">
+    <xsl:variable name="name" select="node[@label = 'DEVICE']/@value"/>
+    <xsl:variable name="device" select="substring-before($name, '.')"/>
+    <xsl:variable name="tag" select="substring-after($name, '.')"/>
+    <vlan tag="{$tag}">
+      <interface name="{$device}"/>
+    </vlan>
   </xsl:template>
 
   <!--

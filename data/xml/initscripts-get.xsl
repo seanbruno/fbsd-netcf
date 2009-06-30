@@ -24,6 +24,33 @@
   </xsl:template>
 
   <!--
+      VLAN's
+  -->
+  <xsl:template match="interface[@type = 'vlan']" name="vlan-interface">
+    <tree>
+      <xsl:call-template name="vlan-interface-common"/>
+      <xsl:call-template name="startmode"/>
+      <xsl:call-template name="mtu"/>
+      <xsl:call-template name="interface-addressing"/>
+      <!-- nothing to do for vlan-device -->
+    </tree>
+  </xsl:template>
+
+  <xsl:template name="vlan-interface-common">
+    <xsl:variable name="iface" select="concat(vlan/interface/@name, '.', vlan/@tag)"/>
+
+    <xsl:attribute name="path">/files/etc/sysconfig/network-scripts/ifcfg-<xsl:value-of select="$iface"/></xsl:attribute>
+    <node label="DEVICE" value="{$iface}"/>
+    <node label="VLAN" value="yes"/>
+  </xsl:template>
+
+  <xsl:template name='bare-vlan-interface'>
+    <xsl:call-template name='vlan-interface-common'/>
+    <xsl:call-template name="mtu"/>
+    <!-- nothing to do for vlan-device -->
+  </xsl:template>
+
+  <!--
       Bridge
   -->
   <xsl:template match="/interface[@type = 'bridge']">
