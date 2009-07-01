@@ -1,16 +1,15 @@
 -*- outline -*-
 
 * TODO
-** distinguish between active (up) and merely configured interfaces
-** lookup by MAC must be able to return multiple VLAN's
 ** ipv4 and ipv6 addressing
    including setting non-default routes (see DV's sketch for RelaxNG)
-** vlan's
-** using bonds and vlans in bridges
+** using bonds in bridges
    settle on XML format for nesting
 ** support of additional bonding modes
 ** remove requirement for interface-addressing from toplevel interfaces
 ** remove requirement for at least one element in bridge
+** validate that name on vlan interface is consistent with base device + tag
+** generate name attr if there is none (device_name_from_xml)
 
 * From email on libvir-list
 
