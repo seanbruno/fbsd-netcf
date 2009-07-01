@@ -17,6 +17,7 @@
        To keep my sanity, all global variables start with 'g_'
   -->
   <xsl:variable name="g_startmode" select="/interface/start/@mode"/>
+  <xsl:variable name="g_mtu" select="/interface/mtu/@size"/>
 
   <!--
       Ethernet (physical interface)
@@ -24,7 +25,6 @@
   <xsl:template match="/interface[@type = 'ethernet']">
     <tree>
       <xsl:call-template name="bare-ethernet-interface"/>
-      <xsl:call-template name="mtu"/>
       <xsl:call-template name="interface-addressing"/>
     </tree>
   </xsl:template>
@@ -53,6 +53,7 @@
   <xsl:template name='bare-vlan-interface'>
     <xsl:call-template name='vlan-interface-common'/>
     <xsl:call-template name="startmode"/>
+    <xsl:call-template name="mtu"/>
     <!-- nothing to do for vlan-device -->
   </xsl:template>
 
@@ -134,8 +135,8 @@
   </xsl:template>
 
   <xsl:template name="mtu">
-    <xsl:if test="mtu">
-      <node label="MTU" value="{mtu/@size}"/>
+    <xsl:if test="$g_mtu != ''">
+      <node label="MTU" value="{$g_mtu}"/>
     </xsl:if>
   </xsl:template>
 
@@ -145,6 +146,7 @@
       <node label="HWADDR" value="{mac/@address}"/>
     </xsl:if>
     <xsl:call-template name="startmode"/>
+    <xsl:call-template name="mtu"/>
   </xsl:template>
 
   <xsl:template name="startmode">
