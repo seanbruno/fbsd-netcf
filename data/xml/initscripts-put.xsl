@@ -47,7 +47,6 @@
     <xsl:variable name="name" select="node[@label = 'DEVICE']/@value"/>
     <interface type="vlan">
       <xsl:call-template name="name-attr"/>
-      <xsl:call-template name="mtu"/>
       <xsl:call-template name="vlan-device"/>
     </interface>
   </xsl:template>
@@ -207,7 +206,6 @@
       <xsl:if test="node[@label = 'HWADDR']">
         <mac address="{node[@label = 'HWADDR']/@value}"/>
       </xsl:if>
-      <xsl:call-template name="mtu"/>
     </interface>
   </xsl:template>
 </xsl:stylesheet>

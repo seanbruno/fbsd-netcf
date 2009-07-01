@@ -24,6 +24,7 @@
   <xsl:template match="/interface[@type = 'ethernet']">
     <tree>
       <xsl:call-template name="bare-ethernet-interface"/>
+      <xsl:call-template name="mtu"/>
       <xsl:call-template name="interface-addressing"/>
     </tree>
   </xsl:template>
@@ -51,7 +52,6 @@
 
   <xsl:template name='bare-vlan-interface'>
     <xsl:call-template name='vlan-interface-common'/>
-    <xsl:call-template name="mtu"/>
     <xsl:call-template name="startmode"/>
     <!-- nothing to do for vlan-device -->
   </xsl:template>
@@ -144,7 +144,6 @@
     <xsl:if test="mac">
       <node label="HWADDR" value="{mac/@address}"/>
     </xsl:if>
-    <xsl:call-template name="mtu"/>
     <xsl:call-template name="startmode"/>
   </xsl:template>
 

@@ -161,7 +161,8 @@ static void assert_xml_equals(CuTest *tc, const char *fname,
     xmlFreeDoc(act_doc);
 
     if (! result) {
-        format_error(&msg, "%s: %s", fname, err);
+        format_error(&msg, "%s: %s\nExpected XML:\n%s\nActual XML:\n%s\n",
+                     fname, err, exp, act);
         CuFail(tc, msg);
     }
 }
