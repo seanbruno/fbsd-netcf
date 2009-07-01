@@ -11,11 +11,13 @@
   </tree>
   <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth1">
     <node label="DEVICE" value="eth1"/>
+    <node label="ONBOOT" value="no"/>
     <node label="MASTER" value="bond0"/>
     <node label="SLAVE" value="yes"/>
   </tree>
   <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth0">
     <node label="DEVICE" value="eth0"/>
+    <node label="ONBOOT" value="no"/>
     <node label="MASTER" value="bond0"/>
     <node label="SLAVE" value="yes"/>
   </tree>

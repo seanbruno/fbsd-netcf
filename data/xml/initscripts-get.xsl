@@ -12,13 +12,18 @@
     </forest>
   </xsl:template>
 
+  <!-- Some global variables
+
+       To keep my sanity, all global variables start with 'g_'
+  -->
+  <xsl:variable name="g_startmode" select="/interface/start/@mode"/>
+
   <!--
       Ethernet (physical interface)
   -->
   <xsl:template match="/interface[@type = 'ethernet']">
     <tree>
       <xsl:call-template name="bare-ethernet-interface"/>
-      <xsl:call-template name="startmode"/>
       <xsl:call-template name="interface-addressing"/>
     </tree>
   </xsl:template>
@@ -47,6 +52,7 @@
   <xsl:template name='bare-vlan-interface'>
     <xsl:call-template name='vlan-interface-common'/>
     <xsl:call-template name="mtu"/>
+    <xsl:call-template name="startmode"/>
     <!-- nothing to do for vlan-device -->
   </xsl:template>
 
@@ -139,17 +145,18 @@
       <node label="HWADDR" value="{mac/@address}"/>
     </xsl:if>
     <xsl:call-template name="mtu"/>
+    <xsl:call-template name="startmode"/>
   </xsl:template>
 
   <xsl:template name="startmode">
     <xsl:choose>
-      <xsl:when test="start/@mode = 'onboot'">
+      <xsl:when test="$g_startmode = 'onboot'">
         <node label="ONBOOT" value="yes"/>
       </xsl:when>
-      <xsl:when test="start/@mode = 'none'">
+      <xsl:when test="$g_startmode = 'none'">
         <node label="ONBOOT" value="no"/>
       </xsl:when>
-      <xsl:when test="start/@mode = 'hotplug'">
+      <xsl:when test="$g_startmode = 'hotplug'">
         <node label="ONBOOT" value="no"/>
         <node label="HOTPLUG" value="yes"/>
       </xsl:when>
