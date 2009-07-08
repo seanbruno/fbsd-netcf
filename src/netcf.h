@@ -145,6 +145,8 @@ void ncf_if_free(struct netcf_if *);
  *
  * ERRMSG is a human-readable explanation of the error. For some errors,
  * DETAILS will contain additional information, for others it will be NULL.
+ * The pointer passed in to store either of these can be NULL with no ill
+ * effects (useful if you just want the code)
  *
  * Both the ERRMSG pointer and the DETAILS pointer are only valid until the
  * next call to another function in this API.

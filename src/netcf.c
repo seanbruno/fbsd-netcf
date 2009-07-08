@@ -204,8 +204,10 @@ int ncf_error(struct netcf *ncf, const char **errmsg, const char **details) {
 
     if (ncf->errcode >= ARRAY_CARDINALITY(errmsgs))
         errcode = NETCF_EINTERNAL;
-    *errmsg = errmsgs[errcode];
-    *details = ncf->errdetails;
+    if (errmsg)
+        *errmsg = errmsgs[errcode];
+    if (details)
+        *details = ncf->errdetails;
     return errcode;
 }
 
