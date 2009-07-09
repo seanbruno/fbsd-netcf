@@ -33,7 +33,7 @@
 #include "netcf.h"
 
 /* Clear error code and details */
-#define ERR_RESET(ncf)                          \
+#define API_ENTRY(ncf)                          \
     do {                                        \
         (ncf)->errcode = NETCF_NOERROR;         \
         FREE((ncf)->errdetails);                \
@@ -90,7 +90,7 @@ int ncf_init(struct netcf **ncf, const char *root) {
 }
 
 void ncf_close(struct netcf *ncf) {
-    ERR_RESET(ncf);
+    API_ENTRY(ncf);
 
     drv_close(ncf);
     unref(ncf, netcf);
@@ -103,14 +103,14 @@ void ncf_close(struct netcf *ncf) {
  * Maybe we should just list them as STRUCT NETCF_IF *
  */
 int ncf_num_of_interfaces(struct netcf *ncf, unsigned int flags) {
-    ERR_RESET(ncf);
+    API_ENTRY(ncf);
     return drv_num_of_interfaces(ncf, flags);
 }
 
 int ncf_list_interfaces(struct netcf *ncf, int maxnames, char **names, unsigned int flags) {
     int result;
 
-    ERR_RESET(ncf);
+    API_ENTRY(ncf);
     MEMZERO(names, maxnames);
     result = drv_list_interfaces(ncf, maxnames, names, flags);
     if (result < 0)
@@ -120,14 +120,14 @@ int ncf_list_interfaces(struct netcf *ncf, int maxnames, char **names, unsigned 
 }
 
 struct netcf_if * ncf_lookup_by_name(struct netcf *ncf, const char *name) {
-    ERR_RESET(ncf);
+    API_ENTRY(ncf);
     return drv_lookup_by_name(ncf, name);
 }
 
 int
 ncf_lookup_by_mac_string(struct netcf *ncf, const char *mac,
                          int maxifaces, struct netcf_if **ifaces) {
-    ERR_RESET(ncf);
+    API_ENTRY(ncf);
     return drv_lookup_by_mac_string(ncf, mac, maxifaces, ifaces);
 }
 
@@ -138,23 +138,23 @@ ncf_lookup_by_mac_string(struct netcf *ncf, const char *mac,
 /* Define a new interface */
 struct netcf_if *
 ncf_define(struct netcf *ncf, const char *xml) {
-    ERR_RESET(ncf);
+    API_ENTRY(ncf);
     return drv_define(ncf, xml);
 }
 
 const char *ncf_if_name(struct netcf_if *nif) {
-    ERR_RESET(nif->ncf);
+    API_ENTRY(nif->ncf);
     return nif->name;
 }
 
 const char *ncf_if_mac_string(struct netcf_if *nif) {
-    ERR_RESET(nif->ncf);
+    API_ENTRY(nif->ncf);
     return drv_mac_string(nif);
 }
 
 /* Delete the definition */
 int ncf_if_undefine(struct netcf_if *nif) {
-    ERR_RESET(nif->ncf);
+    API_ENTRY(nif->ncf);
     return drv_undefine(nif);
 }
 
@@ -165,7 +165,7 @@ int ncf_if_up(struct netcf_if *nif) {
     };
 
     /* I'm a bit concerned that this assumes nif (and nif->ncf) is non-NULL) */
-    ERR_RESET(nif->ncf);
+    API_ENTRY(nif->ncf);
     return run_program(nif->ncf, if_up_argv);
 }
 
@@ -176,7 +176,7 @@ int ncf_if_down(struct netcf_if *nif) {
     };
 
     /* I'm a bit concerned that this assumes nif (and nif->ncf) is non-NULL) */
-    ERR_RESET(nif->ncf);
+    API_ENTRY(nif->ncf);
     return run_program(nif->ncf, if_down_argv);
 }
 
@@ -184,7 +184,7 @@ int ncf_if_down(struct netcf_if *nif) {
  * NCF_DEFINE expects
  */
 char *ncf_if_xml_desc(struct netcf_if *nif) {
-    ERR_RESET(nif->ncf);
+    API_ENTRY(nif->ncf);
     return drv_xml_desc(nif);
 }
 
@@ -195,7 +195,7 @@ void ncf_if_free(struct netcf_if *nif) {
     if (nif == NULL)
         return;
 
-    ERR_RESET(nif->ncf);
+    API_ENTRY(nif->ncf);
     unref(nif, netcf_if);
 }
 
@@ -215,13 +215,13 @@ int ncf_error(struct netcf *ncf, const char **errmsg, const char **details) {
  * Test interface
  */
 int ncf_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
-    ERR_RESET(ncf);
+    API_ENTRY(ncf);
 
     return drv_get_aug(ncf, ncf_xml, aug_xml);
 }
 
 int ncf_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
-    ERR_RESET(ncf);
+    API_ENTRY(ncf);
 
     return drv_put_aug(ncf, aug_xml, ncf_xml);
 }
