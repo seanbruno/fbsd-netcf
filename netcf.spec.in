@@ -32,7 +32,7 @@ developing applications that use %{name}.
 %package        libs
 Summary:        Libraries for %{name}
 Group:          System Environment/Libraries
-Requires:       augeas-libs >= 0.5.0
+Requires:       augeas-libs >= 0.5.1
 
 %description    libs
 The libraries for %{name}.

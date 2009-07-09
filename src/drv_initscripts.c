@@ -123,7 +123,7 @@ static struct augeas *get_augeas(struct netcf *ncf) {
         r = xasprintf(&path, "%s/lenses", ncf->data_dir);
         ERR_COND_BAIL(r < 0, ncf, ENOMEM);
 
-        aug = aug_init(ncf->root, path, AUG_NO_LOAD);
+        aug = aug_init(ncf->root, path, AUG_NO_MODL_AUTOLOAD);
         FREE(path);
         ERR_THROW(aug == NULL, ncf, EOTHER, "aug_init failed");
         ncf->driver->augeas = aug;
