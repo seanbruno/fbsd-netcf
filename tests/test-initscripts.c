@@ -66,6 +66,10 @@ static char *read_test_file(CuTest *tc, const char *relpath) {
     return txt;
 }
 
+static void assert_ncf_no_error(CuTest *tc) {
+    CuAssertIntEquals(tc, NETCF_NOERROR, ncf_error(ncf, NULL, NULL));
+}
+
 static xmlDocPtr parse_xml(const char *xml_str) {
     xmlParserCtxtPtr pctxt;
     xmlDocPtr xml = NULL;
@@ -259,6 +263,30 @@ static void testLookupByMAC(CuTest *tc) {
     CuAssertIntEquals(tc, 1, ncf->ref);
 }
 
+static void testDefineUndefine(CuTest *tc) {
+    char *bridge_xml = NULL;
+    struct netcf_if *nif = NULL;
+    int r;
+
+    bridge_xml = read_test_file(tc, "interface/bridge42.xml");
+    CuAssertPtrNotNull(tc, bridge_xml);
+
+    nif = ncf_define(ncf, bridge_xml);
+    CuAssertPtrNotNull(tc, nif);
+    assert_ncf_no_error(tc);
+
+    r = ncf_if_undefine(nif);
+    CuAssertIntEquals(tc, 0, r);
+    assert_ncf_no_error(tc);
+
+    ncf_close(ncf);
+    r = ncf_init(&ncf, root);
+    CuAssertIntEquals(tc, 0, r);
+
+    nif = ncf_lookup_by_name(ncf, "br42");
+    CuAssertPtrEquals(tc, NULL, nif);
+}
+
 static void assert_transforms(CuTest *tc, const char *base) {
     char *aug_fname = NULL, *ncf_fname = NULL;
     char *aug_xml_exp = NULL, *ncf_xml_exp = NULL;
@@ -319,6 +347,7 @@ int main(void) {
     SUITE_ADD_TEST(suite, testListInterfaces);
     SUITE_ADD_TEST(suite, testLookupByName);
     SUITE_ADD_TEST(suite, testLookupByMAC);
+    SUITE_ADD_TEST(suite, testDefineUndefine);
     SUITE_ADD_TEST(suite, testTransforms);
 
     CuSuiteRun(suite);
