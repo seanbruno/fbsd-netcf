@@ -152,6 +152,8 @@ void vreport_error(struct netcf *ncf, netcf_errcode_t errcode,
  */
 int drv_init(struct netcf *netcf);
 void drv_close(struct netcf *netcf);
+/* Called on every entry through the public API */
+void drv_entry(struct netcf *netcf);
 int drv_num_of_interfaces(struct netcf *ncf, unsigned int flags);
 int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names, unsigned int flags);
 struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name);

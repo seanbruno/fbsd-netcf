@@ -92,6 +92,7 @@ struct driver {
     xsltStylesheetPtr  get;
     xmlRelaxNGPtr      rng;
     int                ioctl_fd;
+    unsigned int       load_augeas : 1;
 };
 
 /* Entries in a ifcfg file that tell us that the interface
@@ -114,11 +115,15 @@ static int xasprintf(char **strp, const char *format, ...) {
   return result;
 }
 
+/* Get the Augeas instance; if we already initialized it, just return
+ * it. Otherwise, create a new one and return that.
+ */
 static struct augeas *get_augeas(struct netcf *ncf) {
+    int r;
+
     if (ncf->driver->augeas == NULL) {
         struct augeas *aug;
         char *path;
-        int r;
 
         r = xasprintf(&path, "%s/lenses", ncf->data_dir);
         ERR_COND_BAIL(r < 0, ncf, ENOMEM);
@@ -150,6 +155,19 @@ static struct augeas *get_augeas(struct netcf *ncf) {
             fprintf(stderr, "warning: augeas initialization had errors\n");
             fprintf(stderr, "please file a bug with the following lines in the bug report:\n");
             aug_print(aug, stderr, "/augeas//error");
+        }
+    } else {
+        if (ncf->driver->load_augeas) {
+            struct augeas *aug = ncf->driver->augeas;
+            /* Undefine all our variables to work around bug 79 in Augeas */
+            aug_defvar(aug, "iptables", NULL);
+            aug_defvar(aug, "fw", NULL);
+            aug_defvar(aug, "fw_custom", NULL);
+            aug_defvar(aug, "ipt_filter", NULL);
+
+            r = aug_load(ncf->driver->augeas);
+            ERR_THROW(r < 0, ncf, EOTHER, "failed to reload config files");
+            ncf->driver->load_augeas = 0;
         }
     }
     return ncf->driver->augeas;
@@ -500,6 +518,10 @@ void drv_close(struct netcf *ncf) {
     if (ncf->driver->ioctl_fd >= 0)
         close(ncf->driver->ioctl_fd);
     FREE(ncf->driver);
+}
+
+void drv_entry(struct netcf *ncf) {
+    ncf->driver->load_augeas = 1;
 }
 
 static int list_interface_ids(struct netcf *ncf,

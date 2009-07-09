@@ -37,6 +37,8 @@
     do {                                        \
         (ncf)->errcode = NETCF_NOERROR;         \
         FREE((ncf)->errdetails);                \
+        if (ncf->driver != NULL)                \
+            drv_entry(ncf);                     \
     } while(0);
 
 /* Human-readable error messages. This array is indexed by NETCF_ERRCODE_T */
