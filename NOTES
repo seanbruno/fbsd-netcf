@@ -6,7 +6,6 @@
 ** using bonds in bridges
    settle on XML format for nesting
 ** support of additional bonding modes
-** remove requirement for interface-addressing from toplevel interfaces
 ** remove requirement for at least one element in bridge
 ** validate that name on vlan interface is consistent with base device + tag
 ** generate name attr if there is none (device_name_from_xml)

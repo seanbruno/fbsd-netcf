@@ -177,16 +177,22 @@
   </xsl:template>
 
   <xsl:template name="protocol-ipv4">
+    <xsl:variable name="uses_dhcp"
+                  select="node[@label = 'BOOTPROTO']/@value = 'dhcp'"/>
+    <xsl:variable name="uses_static"
+                  select="count(node[@label = 'IPADDR']) > 0"/>
+    <xsl:variable name="uses_ipv4" select="$uses_dhcp or $uses_static"/>
+    <xsl:if test="$uses_ipv4">
     <protocol family="ipv4">
       <xsl:choose>
-        <xsl:when test="node[@label = 'BOOTPROTO']/@value = 'dhcp'">
+        <xsl:when test="$uses_dhcp">
           <dhcp>
             <xsl:if test="node[@label = 'PEERDNS']">
               <xsl:attribute name="peerdns"><xsl:value-of select="node[@label = 'PEERDNS']/@value"></xsl:value-of></xsl:attribute>
             </xsl:if>
           </dhcp>
         </xsl:when>
-        <xsl:when test="node[@label = 'BOOTPROTO']/@value = 'none'">
+        <xsl:when test="$uses_static">
           <ip address="{node[@label = 'IPADDR']/@value}">
             <xsl:if test="node[@label = 'NETMASK']">
               <xsl:attribute name="prefix"><xsl:value-of select="ipcalc:prefix(node[@label = 'NETMASK']/@value)"/></xsl:attribute>
@@ -198,6 +204,7 @@
         </xsl:when>
       </xsl:choose>
     </protocol>
+    </xsl:if>
   </xsl:template>
 
   <xsl:template name="bare-ethernet-interface">
