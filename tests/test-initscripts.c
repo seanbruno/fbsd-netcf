@@ -32,7 +32,8 @@
 #include <libxml/tree.h>
 
 static const char *abs_top_srcdir;
-static char *root;
+static const char *abs_top_builddir;
+static char *root, *src_root;
 static struct netcf *ncf;
 
 #define die(msg)                                                    \
@@ -167,14 +168,46 @@ static void assert_xml_equals(CuTest *tc, const char *fname,
     }
 }
 
+static void run(CuTest *tc, const char *format, ...) {
+    char *command;
+    va_list args;
+    int r;
+
+    va_start(args, format);
+    r = vasprintf(&command, format, args);
+    va_end (args);
+    if (r < 0)
+        CuFail(tc, "Failed to format command (out of memory)");
+    r = system(command);
+    if (r < 0 || (WIFEXITED(r) && WEXITSTATUS(r) != 0)) {
+        char *msg;
+        r = asprintf(&msg, "Command %s failed with status %d\n",
+                     command, WEXITSTATUS(r));
+        CuFail(tc, msg);
+        free(msg);
+    }
+}
+
 static void setup(CuTest *tc) {
     int r;
+
+    if (asprintf(&root, "%s/build/test_initscripts/%s",
+                 abs_top_builddir, tc->name) < 0) {
+        CuFail(tc, "failed to set root");
+    }
+
+    run(tc, "rm -rf %s", root);
+    run(tc, "mkdir -p %s", root);
+    run(tc, "cp -pr %s/* %s", src_root, root);
+
     r = ncf_init(&ncf, root);
     CuAssertIntEquals(tc, 0, r);
 }
 
 static void teardown(ATTRIBUTE_UNUSED CuTest *tc) {
     ncf_close(ncf);
+    free(root);
+    root = NULL;
 }
 
 static void testListInterfaces(CuTest *tc) {
@@ -272,8 +305,13 @@ int main(void) {
     abs_top_srcdir = getenv("abs_top_srcdir");
     if (abs_top_srcdir == NULL)
         die("env var abs_top_srcdir must be set");
-    if (asprintf(&root, "%s/tests/root", abs_top_srcdir) < 0) {
-        die("failed to set root");
+
+    abs_top_builddir = getenv("abs_top_builddir");
+    if (abs_top_builddir == NULL)
+        die("env var abs_top_builddir must be set");
+
+    if (asprintf(&src_root, "%s/tests/root", abs_top_srcdir) < 0) {
+        die("failed to set src_root");
     }
 
     CuSuiteSetup(suite, setup, teardown);
