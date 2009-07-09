@@ -163,6 +163,8 @@ char *drv_xml_desc(struct netcf_if *);
 const char *drv_mac_string(struct netcf_if *nif);
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml);
 int drv_undefine(struct netcf_if *nif);
+int drv_if_up(struct netcf_if *nif);
+int drv_if_down(struct netcf_if *nif);
 int drv_get_aug(struct netcf *, const char *ncf_xml, char **aug_xml);
 int drv_put_aug(struct netcf *, const char *aug_xml, char **ncf_xml);
 

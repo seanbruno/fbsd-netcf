@@ -162,24 +162,16 @@ int ncf_if_undefine(struct netcf_if *nif) {
 
 /* Bring the interface up */
 int ncf_if_up(struct netcf_if *nif) {
-    const char *const if_up_argv[] = {
-        "ifup", nif->name, NULL
-    };
-
     /* I'm a bit concerned that this assumes nif (and nif->ncf) is non-NULL) */
     API_ENTRY(nif->ncf);
-    return run_program(nif->ncf, if_up_argv);
+    return drv_if_up(nif);
 }
 
 /* Take it down */
 int ncf_if_down(struct netcf_if *nif) {
-    const char *const if_down_argv[] = {
-        "ifdown", nif->name, NULL
-    };
-
     /* I'm a bit concerned that this assumes nif (and nif->ncf) is non-NULL) */
     API_ENTRY(nif->ncf);
-    return run_program(nif->ncf, if_down_argv);
+    return drv_if_down(nif);
 }
 
 /* Produce an XML description for the interface, in the same format that

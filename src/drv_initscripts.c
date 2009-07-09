@@ -1079,6 +1079,25 @@ const char *drv_mac_string(struct netcf_if *nif) {
 }
 
 /*
+ * Bringing interfaces up/down
+ */
+int drv_if_up(struct netcf_if *nif) {
+    const char *const if_up_argv[] = {
+        "ifup", nif->name, NULL
+    };
+
+    return run_program(nif->ncf, if_up_argv);
+}
+
+int drv_if_down(struct netcf_if *nif) {
+    const char *const if_down_argv[] = {
+        "ifdown", nif->name, NULL
+    };
+
+    return run_program(nif->ncf, if_down_argv);
+}
+
+/*
  * Test interface
  */
 int drv_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
