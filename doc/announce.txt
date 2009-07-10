@@ -1,0 +1,58 @@
+I am pleased to announce the availability of netcf 0.0.1, the initial
+release of a library for managing network configuration in a platform
+agnostic manner. If I were into code names, this would be the "what have
+you been waiting for" release.
+
+Netcf does its work by directly modifying the 'native' configuration files
+of the host it is running on; this avoids a whole class of problems caused
+by similar approaches that do network configuration behind the back of the
+native mechanisms. The API allows listing of configured interfaces,
+defining the configuration of an interface, retrieving the same (regardless
+of whether the interface was initially configured with netcf or not), and
+bringing interfaces up and down. This functionality is needed both by
+libvirt and NetworkManager, so it seemed only logical to move their common
+needs into a separate library.
+
+This release is mostly geared at soliciting feedback and sparking spirited
+reviews. In particular, the API is not stable yet (it will be with the
+release of netcf 0.1.0) Besides general comments, criticism and the
+customary praise, I am particularly interested in reviews on the following:
+
+  * The API (barring any strong objections, I will declare it stable)
+  * The XML schema for describing network interfaces (in
+    data/xml/interface.rng)
+  * General code review
+
+Where can I get it ?
+--------------------
+Main website
+  https://fedorahosted.org/netcf/
+
+A tarball can be downloaded from
+  https://fedorahosted.org/released/netcf/
+
+The git repo is at
+  http://git.fedorahosted.org/git/netcf.git
+  git clone git://git.fedorahosted.org/netcf.git
+
+For those running Fedora 10, I built some preliminary RPM's and made them
+available at
+  http://people.redhat.com/dlutter/netcf/download/
+
+(and if you are a Fedora reviewer, the review BZ is 493750 ;)
+
+How can I help ?
+----------------
+Join the mailing list at
+  https://fedorahosted.org/mailman/listinfo/netcf-devel
+
+Currently, netcf can set up simple Ethernet interfaces, bridges with
+enslaved physical devices and bonds on Fedora. This points to two areas
+where improvements are most needed:
+
+  * support other Linux distros and operating systems
+  * expand what kind of interfaces netcf can handle (most sorely needed are
+    VLAN's and adding bonds to a bridge)
+
+If you can help with either of these two, or anything, really, drop a note
+on the mailing list so wecan discuss.
