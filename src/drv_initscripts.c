@@ -843,6 +843,51 @@ static bool is_bond(struct netcf *ncf, const char *name) {
     return nmatches > 0;
 }
 
+/* The device NAME is a bridge if it has an entry TYPE=Bridge */
+static bool is_bridge(struct netcf *ncf, const char *name) {
+    char *path = NULL;
+    struct augeas *aug = get_augeas(ncf);
+    int r, nmatches = 0;
+
+    r = xasprintf(&path, "%s[ DEVICE = '%s' and TYPE = 'Bridge']",
+                  ifcfg_path, name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    nmatches = aug_match(aug, path, NULL);
+    free(path);
+ error:
+    return nmatches > 0;
+}
+
+static int bridge_slaves(struct netcf *ncf, const char *name, char ***slaves) {
+    struct augeas *aug = NULL;
+    char *path = NULL;
+    int r, nslaves = 0;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    r = xasprintf(&path, "%s[ BRIDGE = '%s' ]/DEVICE", ifcfg_path, name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    nslaves = aug_match(aug, path, slaves);
+    free(path);
+    ERR_COND_BAIL(nslaves < 0, ncf, EOTHER);
+    for (int i=0; i < nslaves; i++) {
+        char *p = (*slaves)[i];
+        const char *dev;
+        r = aug_get(aug, p, &dev);
+        ERR_COND_BAIL(r < 0, ncf, EOTHER);
+
+        (*slaves)[i] = strdup(dev);
+        free(p);
+        ERR_COND_BAIL(slaves[i] == NULL, ncf, ENOMEM);
+    }
+    return nslaves;
+ error:
+    free_matches(nslaves, slaves);
+    return -1;
+}
+
 /* Add an 'alias NAME bonding' to an appropriate file in /etc/modprobe.d,
  * if none exists yet. If we need to create a new one, it goes into the
  * file netcf.conf.
@@ -1081,20 +1126,61 @@ const char *drv_mac_string(struct netcf_if *nif) {
 /*
  * Bringing interfaces up/down
  */
-int drv_if_up(struct netcf_if *nif) {
-    const char *const if_up_argv[] = {
-        "ifup", nif->name, NULL
+
+static void run1(struct netcf *ncf, const char *prog, const char *name) {
+    const char *const argv[] = {
+        prog, name, NULL
     };
 
-    return run_program(nif->ncf, if_up_argv);
+    run_program(ncf, argv);
+}
+
+int drv_if_up(struct netcf_if *nif) {
+    static const char *const ifup = "ifup";
+    struct netcf *ncf = nif->ncf;
+    char **slaves = NULL;
+    int nslaves = 0;
+    int result = -1;
+
+    if (is_bridge(ncf, nif->name)) {
+        /* Bring up bridge slaves before the bridge */
+        nslaves = bridge_slaves(ncf, nif->name, &slaves);
+        ERR_BAIL(ncf);
+
+        for (int i=0; i < nslaves; i++) {
+            run1(ncf, ifup, slaves[i]);
+            ERR_BAIL(ncf);
+        }
+    }
+    run1(ncf, ifup, nif->name);
+    result = 0;
+ error:
+    free_matches(nslaves, &slaves);
+    return result;
 }
 
 int drv_if_down(struct netcf_if *nif) {
-    const char *const if_down_argv[] = {
-        "ifdown", nif->name, NULL
-    };
+    static const char *const ifdown = "ifdown";
+    struct netcf *ncf = nif->ncf;
+    char **slaves = NULL;
+    int nslaves = 0;
+    int result = -1;
 
-    return run_program(nif->ncf, if_down_argv);
+    run1(ncf, ifdown, nif->name);
+    if (is_bridge(ncf, nif->name)) {
+        /* Bring up bridge slaves after the bridge */
+        nslaves = bridge_slaves(ncf, nif->name, &slaves);
+        ERR_BAIL(ncf);
+
+        for (int i=0; i < nslaves; i++) {
+            run1(ncf, ifdown, slaves[i]);
+            ERR_BAIL(ncf);
+        }
+    }
+    result = 0;
+ error:
+    free_matches(nslaves, &slaves);
+    return result;
 }
 
 /*
