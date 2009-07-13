@@ -86,7 +86,9 @@ int ncf_init(struct netcf **netcf, const char *root);
 int ncf_close(struct netcf *);
 
 /* Number of known interfaces and list of them. For listing, interfaces are
- * identified by their name.
+ * identified by their name. FLAGS is a bitmask of NETCF_IF_FLAG_T and
+ * makes it possible to filter which interfaces are returned
+ * (active/inactive/all)
  */
 int
 ncf_num_of_interfaces(struct netcf *, unsigned int flags);
@@ -94,7 +96,11 @@ int
 ncf_list_interfaces(struct netcf *, int maxnames, char **names, unsigned int flags);
 
 
-/* Look up interfaces by UUID, name and hwaddr (MAC-48) */
+/* Look interface up by name.
+ *
+ * Returns the interface, which must later be freed with a call to
+ * NCF_IF_FREE, or NULL on error.
+ */
 struct netcf_if *
 ncf_lookup_by_name(struct netcf *, const char *name);
 
