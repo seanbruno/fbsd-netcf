@@ -517,6 +517,7 @@ void drv_close(struct netcf *ncf) {
     xsltCleanupGlobals();
     if (ncf->driver->ioctl_fd >= 0)
         close(ncf->driver->ioctl_fd);
+    aug_close(ncf->driver->augeas);
     FREE(ncf->driver);
 }
 
