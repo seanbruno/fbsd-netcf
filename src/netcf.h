@@ -46,7 +46,10 @@ typedef enum {
     NETCF_EXMLPARSER,    /* XML parser choked */
     NETCF_EXMLINVALID,   /* XML invalid in some form */
     NETCF_ENOENT,        /* Required entry in a tree is missing */
-    NETCF_EEXEC          /* external program execution failed or returned non-0 */
+    NETCF_EEXEC,         /* external program execution failed or returned
+                          * non-0 */
+    NETCF_EINUSE         /* attempt to close a netcf instance that is still
+                          * used by other data structures */
 } netcf_errcode_t;
 
 
@@ -72,7 +75,15 @@ typedef enum {
  */
 int ncf_init(struct netcf **netcf, const char *root);
 
-void ncf_close(struct netcf *);
+/* Close the connection to netcf and release any resources associated with
+ * it. It is an error to call this function before all data structeres
+ * retrieved using this netcf instance have been free'd; in particular, any
+ * struct netcf_if retrieved with this netcf instance must be cleaned up
+ * with NCF_IF_FREE before calling this function.
+ *
+ * Returns 0 on success, and -1 on error.
+ */
+int ncf_close(struct netcf *);
 
 /* Number of known interfaces and list of them. For listing, interfaces are
  * identified by their name.

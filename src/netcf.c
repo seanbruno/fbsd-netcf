@@ -50,7 +50,8 @@ static const char *const errmsgs[] = {
     "XML parser failed",                  /* EXMLPARSER */
     "XML invalid",                        /* EXMLINVALID */
     "required entry missing",             /* ENOENT */
-    "failed to execute external program"  /* EEXEC */
+    "failed to execute external program", /* EEXEC */
+    "instance still in use"               /* EINUSE */
 };
 
 static void free_netcf(struct netcf *ncf) {
@@ -91,11 +92,16 @@ int ncf_init(struct netcf **ncf, const char *root) {
     return -2;
 }
 
-void ncf_close(struct netcf *ncf) {
+int ncf_close(struct netcf *ncf) {
     API_ENTRY(ncf);
+
+    ERR_COND_BAIL(ncf->ref > 1, ncf, EINUSE);
 
     drv_close(ncf);
     unref(ncf, netcf);
+    return 0;
+ error:
+    return -1;
 }
 
 /* Number of known interfaces and list of them.
