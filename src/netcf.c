@@ -93,6 +93,9 @@ int ncf_init(struct netcf **ncf, const char *root) {
 }
 
 int ncf_close(struct netcf *ncf) {
+    if (ncf == NULL)
+        return 0;
+
     API_ENTRY(ncf);
 
     ERR_COND_BAIL(ncf->ref > 1, ncf, EINUSE);
