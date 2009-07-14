@@ -200,9 +200,12 @@ static void setup(CuTest *tc) {
         CuFail(tc, "failed to set root");
     }
 
+    run(tc, "test -d %s && chmod -R u+w %s || :", root, root);
     run(tc, "rm -rf %s", root);
     run(tc, "mkdir -p %s", root);
     run(tc, "cp -pr %s/* %s", src_root, root);
+    run(tc, "chmod -R u+w %s", root);
+    run(tc, "chmod -R a-w %s/sys", root);
 
     r = ncf_init(&ncf, root);
     CuAssertIntEquals(tc, 0, r);
