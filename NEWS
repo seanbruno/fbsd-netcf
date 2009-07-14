@@ -1,4 +1,19 @@
+0.1.0 - 2009-07-14
+  - Stable API and XML schema; from now on, API and XML schema will only
+    change in backwards compatible ways
+  - Various schema changes and schema cleanup
+  - Add MII and ARP monitoring for bonds
+  - Add VLAN's
+  - Allow adding a VLAN to a bridge
+  - toplevel interfaces are no longer required to have an address
+  - ncf_lookup_by_mac_string: return multiple interfaces
+  - ncf_num_of_interfaces, ncf_list_interfaces: allow filtering
+    active/inactive interfaces (Laine Stump)
+  - ncf_close: return int instead of void
+  - initscripts driver: bring bridges up/down properly
+
 0.0.2 - 2009-04-15
   - Fix pkgconfig and RPM specfile
+
 0.0.1 - 2009-04-02
   - Initial release

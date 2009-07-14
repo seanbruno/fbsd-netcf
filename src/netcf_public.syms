@@ -1,4 +1,4 @@
-NETCF_0.0.0 {
+NETCF_1.0.0 {
     global:
       ncf_init;
       ncf_close;

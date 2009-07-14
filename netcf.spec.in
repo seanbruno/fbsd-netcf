@@ -9,7 +9,7 @@ URL:            https://fedorahosted.org/netcf/
 Source0:        https://fedorahosted.org/released/%{name}/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-BuildRequires:  readline-devel augeas-devel >= 0.5.0
+BuildRequires:  readline-devel augeas-devel >= 0.5.2
 BuildRequires:  libxml2-devel libxslt-devel
 Requires:       %{name}-libs = %{version}-%{release}
 
@@ -32,7 +32,6 @@ developing applications that use %{name}.
 %package        libs
 Summary:        Libraries for %{name}
 Group:          System Environment/Libraries
-Requires:       augeas-libs >= 0.5.1
 
 %description    libs
 The libraries for %{name}.
@@ -74,6 +73,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/netcf.pc
 
 %changelog
+* Mon Jul 13 2009 David Lutterkort <lutter@redhat.com> - 0.1.0-1
+- BR on augeas-0.5.2
+- Drop explicit requires for augeas-libs
+
 * Wed Apr 15 2009 David Lutterkort <lutter@redhat.com> - 0.0.2-1
 - Updates acording to Fedora review
 

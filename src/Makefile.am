@@ -59,4 +59,4 @@ FORCE-datadir.h: Makefile
 
 datadir.h: FORCE-datadir.h
 
-DISTCLEANFILES = $(BUILT_SOURCES)
+DISTCLEANFILES += $(BUILT_SOURCES)

@@ -1,11 +1,11 @@
-AC_INIT(netcf, 0.0.2)
+AC_INIT(netcf, 0.1.0)
 AC_CONFIG_SRCDIR([src/netcf.c])
 AC_CONFIG_AUX_DIR([build/aux])
 AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([-Wno-portability])
 
 
-AC_SUBST([LIBNETCF_VERSION_INFO], [0:0:0])
+AC_SUBST([LIBNETCF_VERSION_INFO], [1:0:0])
 
 AC_GNU_SOURCE
 
