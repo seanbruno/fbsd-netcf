@@ -70,6 +70,9 @@
       <xsl:if test="bridge/@stp">
         <node label="STP" value="{bridge/@stp}"/>
       </xsl:if>
+      <xsl:if test="bridge/@delay">
+        <node label="DELAY" value="{bridge/@delay}"/>
+      </xsl:if>
     </tree>
     <xsl:for-each select='bridge/interface'>
       <tree>

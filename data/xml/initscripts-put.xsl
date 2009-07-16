@@ -76,6 +76,9 @@
         <xsl:if test="node[@label = 'STP']">
           <xsl:attribute name="stp"><xsl:value-of select="node[@label = 'STP']/@value"/></xsl:attribute>
         </xsl:if>
+        <xsl:if test="node[@label = 'DELAY']">
+          <xsl:attribute name="delay"><xsl:value-of select="node[@label = 'DELAY']/@value"/></xsl:attribute>
+        </xsl:if>
         <xsl:for-each select="/descendant-or-self::*[node[@label = 'BRIDGE' and @value = $iface]]">
           <xsl:if test="count(node[@label = 'VLAN']) = 0">
             <xsl:call-template name="bare-ethernet-interface"/>
