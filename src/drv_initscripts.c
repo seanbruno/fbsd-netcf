@@ -47,7 +47,7 @@ static const char *const ifcfg_path =
     "/files/etc/sysconfig/network-scripts/*";
 
 /* Augeas should only load the files we are interested in */
-static const char *const augeas_xfm[][2] = {
+static const struct augeas_pv augeas_xfm[] = {
     /* Ifcfg files */
     { "/augeas/load/Ifcfg/lens", "Shellvars.lns" },
     { "/augeas/load/Ifcfg/incl",
@@ -90,68 +90,6 @@ static const char *const subif_paths[] = {
     "MASTER", "BRIDGE"
 };
 
-/* Get the Augeas instance; if we already initialized it, just return
- * it. Otherwise, create a new one and return that.
- */
-static struct augeas *get_augeas(struct netcf *ncf) {
-    int r;
-
-    if (ncf->driver->augeas == NULL) {
-        struct augeas *aug;
-        char *path;
-
-        r = xasprintf(&path, "%s/lenses", ncf->data_dir);
-        ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-        aug = aug_init(ncf->root, path, AUG_NO_MODL_AUTOLOAD);
-        FREE(path);
-        ERR_THROW(aug == NULL, ncf, EOTHER, "aug_init failed");
-        ncf->driver->augeas = aug;
-        /* Only look at a few config files */
-        r = aug_rm(aug, "/augeas/load/*");
-        ERR_THROW(r < 0, ncf, EOTHER, "aug_rm failed in get_augeas");
-
-        for (int i=0; i < ARRAY_CARDINALITY(augeas_xfm); i++) {
-            r = aug_set(aug, augeas_xfm[i][0], augeas_xfm[i][1]);
-            ERR_THROW(r < 0, ncf, EOTHER,
-                      "transform setup failed to set %s",
-                      augeas_xfm[i][0]);
-        }
-        r = aug_load(aug);
-        ERR_THROW(r < 0, ncf, EOTHER, "failed to load config files");
-
-        /* FIXME: we need to produce _much_ better diagnostics here - need
-         * to analyze what came back in /augeas//error; ultimately, we need
-         * to understand whether this is harmless or a real error. For real
-         * errors, we need to return an error.
-        */
-        r = aug_match(aug, "/augeas//error", NULL);
-        if (r > 0) {
-            fprintf(stderr, "warning: augeas initialization had errors\n");
-            fprintf(stderr, "please file a bug with the following lines in the bug report:\n");
-            aug_print(aug, stderr, "/augeas//error");
-        }
-    } else {
-        if (ncf->driver->load_augeas) {
-            struct augeas *aug = ncf->driver->augeas;
-            /* Undefine all our variables to work around bug 79 in Augeas */
-            aug_defvar(aug, "iptables", NULL);
-            aug_defvar(aug, "fw", NULL);
-            aug_defvar(aug, "fw_custom", NULL);
-            aug_defvar(aug, "ipt_filter", NULL);
-
-            r = aug_load(ncf->driver->augeas);
-            ERR_THROW(r < 0, ncf, EOTHER, "failed to reload config files");
-            ncf->driver->load_augeas = 0;
-        }
-    }
-    return ncf->driver->augeas;
- error:
-    aug_close(ncf->driver->augeas);
-    ncf->driver->augeas = NULL;
-    return NULL;
-}
-
 ATTRIBUTE_FORMAT(printf, 4, 5)
 static int defnode(struct netcf *ncf, const char *name, const char *value,
                    const char *format, ...) {
@@ -174,25 +112,6 @@ static int defnode(struct netcf *ncf, const char *name, const char *value,
  error:
     free(expr);
     return (r < 0) ? -1 : created;
-}
-
-static int aug_submatch(struct netcf *ncf, const char *p1,
-                        const char *p2, char ***matches) {
-    struct augeas *aug = get_augeas(ncf);
-    char *path = NULL;
-    int r;
-
-    r = xasprintf(&path, "%s/%s", p1, p2);
-    ERR_COND_BAIL(r < 0, ncf, EOTHER);
-
-    r = aug_match(aug, path, matches);
-    ERR_COND_BAIL(r < 0, ncf, EOTHER);
-
-    free(path);
-    return r;
- error:
-    free(path);
-    return -1;
 }
 
 static int is_slave(struct netcf *ncf, const char *intf) {
@@ -355,6 +274,8 @@ int drv_init(struct netcf *ncf) {
         return -1;
 
     ncf->driver->ioctl_fd = -1;
+    ncf->driver->augeas_xfm_size = ARRAY_CARDINALITY(augeas_xfm);
+    ncf->driver->augeas_xfm = augeas_xfm;
 
     // FIXME: Check for errors
     xsltInit();

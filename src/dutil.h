@@ -33,10 +33,24 @@ struct driver {
     xmlRelaxNGPtr      rng;
     int                ioctl_fd;
     unsigned int       load_augeas : 1;
+    unsigned int augeas_xfm_size;
+    const struct augeas_pv *augeas_xfm;
+};
+
+struct augeas_pv {
+    const char *const path;
+    const char *const value;
 };
 
 /* Like asprintf, but set *STRP to NULL on error */
 int xasprintf(char **strp, const char *format, ...);
+
+/* Get or create the augeas instance from @ncf */
+struct augeas *get_augeas(struct netcf *ncf);
+
+/* Like aug_match, but match P1/P2 */
+int aug_submatch(struct netcf *ncf, const char *p1,
+                        const char *p2, char ***matches);
 
 /* Free matches from aug_match (or aug_submatch) */
 void free_matches(int nint, char ***intf);
