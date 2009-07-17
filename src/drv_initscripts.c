@@ -31,13 +31,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
-
 #include "safe-alloc.h"
 #include "ref.h"
 #include "list.h"
+#include "dutil.h"
 
 #include <libxml/parser.h>
 #include <libxml/relaxng.h>
@@ -86,34 +83,12 @@ static const char *const lokkit_custom_rules =
 
 static const char *const prog_rc_d_iptables = "/etc/init.d/iptables";
 
-struct driver {
-    struct augeas     *augeas;
-    xsltStylesheetPtr  put;
-    xsltStylesheetPtr  get;
-    xmlRelaxNGPtr      rng;
-    int                ioctl_fd;
-    unsigned int       load_augeas : 1;
-};
-
 /* Entries in a ifcfg file that tell us that the interface
  * is not a toplevel interface
  */
 static const char *const subif_paths[] = {
     "MASTER", "BRIDGE"
 };
-
-/* Like asprintf, but set *STRP to NULL on error */
-static int xasprintf(char **strp, const char *format, ...) {
-  va_list args;
-  int result;
-
-  va_start (args, format);
-  result = vasprintf (strp, format, args);
-  va_end (args);
-  if (result < 0)
-      *strp = NULL;
-  return result;
-}
 
 /* Get the Augeas instance; if we already initialized it, just return
  * it. Otherwise, create a new one and return that.
@@ -220,14 +195,6 @@ static int aug_submatch(struct netcf *ncf, const char *p1,
     return -1;
 }
 
-static void free_matches(int nint, char ***intf) {
-    if (*intf != NULL) {
-        for (int i=0; i < nint; i++)
-            FREE((*intf)[i]);
-        FREE(*intf);
-    }
-}
-
 static int is_slave(struct netcf *ncf, const char *intf) {
     for (int s = 0; s < ARRAY_CARDINALITY(subif_paths); s++) {
         int r;
@@ -236,18 +203,6 @@ static int is_slave(struct netcf *ncf, const char *intf) {
             return r;
     }
     return 0;
-}
-
-static int is_active(struct netcf *ncf, const char *intf) {
-    struct ifreq ifr;
-
-    MEMZERO(&ifr, 1);
-    strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
-    ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
-    if (ioctl(ncf->driver->ioctl_fd, SIOCGIFFLAGS, &ifr))  {
-        return 0;
-    }
-    return ((ifr.ifr_flags & IFF_UP) == IFF_UP);
 }
 
 static int list_interfaces(struct netcf *ncf, char ***intf) {
@@ -391,92 +346,6 @@ static void bridge_physdevs(struct netcf *ncf) {
     free(path);
     free(p);
     return;
-}
-
-static xsltStylesheetPtr parse_stylesheet(struct netcf *ncf,
-                                          const char *fname) {
-    xsltStylesheetPtr result = NULL;
-    char *path = NULL;
-    int r;
-
-    r = xasprintf(&path, "%s/xml/%s", ncf->data_dir, fname);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-    // FIXME: Error checking ??
-    result = xsltParseStylesheetFile(BAD_CAST path);
- error:
-    free(path);
-    return result;
-}
-
-/* Callback for reporting RelaxNG errors */
-static void rng_error(void *ctx, const char *format, ...) {
-    struct netcf *ncf = ctx;
-    va_list ap;
-
-    va_start(ap, format);
-    vreport_error(ncf, NETCF_EXMLINVALID, format, ap);
-    va_end(ap);
-}
-
-static xmlRelaxNGPtr rng_parse(struct netcf *ncf, const char *fname) {
-    char *path = NULL;
-    xmlRelaxNGPtr result = NULL;
-    xmlRelaxNGParserCtxtPtr ctxt = NULL;
-    int r;
-
-    r = xasprintf(&path, "%s/xml/%s", ncf->data_dir, fname);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-    ctxt = xmlRelaxNGNewParserCtxt(path);
-    xmlRelaxNGSetParserErrors(ctxt, rng_error, rng_error, ncf);
-
-    result = xmlRelaxNGParse(ctxt);
-
- error:
-    xmlRelaxNGFreeParserCtxt(ctxt);
-    free(path);
-    return result;
-}
-
-static void rng_validate(struct netcf *ncf, xmlDocPtr doc) {
-	xmlRelaxNGValidCtxtPtr ctxt;
-	int r;
-
-	ctxt = xmlRelaxNGNewValidCtxt(ncf->driver->rng);
-	xmlRelaxNGSetValidErrors(ctxt, rng_error, rng_error, ncf);
-
-    r = xmlRelaxNGValidateDoc(ctxt, doc);
-    if (r != 0 && ncf->errcode == NETCF_NOERROR)
-        report_error(ncf, NETCF_EXMLINVALID,
-           "Interface definition fails to validate");
-
-	xmlRelaxNGFreeValidCtxt(ctxt);
-}
-
-static char *xml_prop(xmlNodePtr node, const char *name) {
-    return (char *) xmlGetProp(node, BAD_CAST name);
-}
-
-static int init_ioctl_fd(struct netcf *ncf) {
-
-    int ioctl_fd;
-    int flags;
-
-    ioctl_fd = socket(AF_INET, SOCK_STREAM, 0);
-    ERR_THROW(ioctl_fd < 0, ncf, EINTERNAL, "failed to open socket for interface ioctl");
-
-    flags = fcntl(ioctl_fd, F_GETFD);
-    ERR_THROW(flags < 0, ncf, EINTERNAL, "failed to get flags for ioctl socket");
-
-    flags = fcntl(ioctl_fd, F_SETFD, flags | FD_CLOEXEC);
-    ERR_THROW(flags < 0, ncf, EINTERNAL, "failed to set FD_CLOEXEC flag on ioctl socket");
-    return ioctl_fd;
-
-error:
-    if (ioctl_fd >= 0)
-        close(ioctl_fd);
-    return -1;
 }
 
 int drv_init(struct netcf *ncf) {
@@ -730,51 +599,6 @@ static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml) {
     xmlFree(path);
     FREE(lpath);
     return result;
-}
-
-/* Called from SAX on parsing errors in the XML. */
-static void
-catch_xml_error(void *ctx, const char *msg ATTRIBUTE_UNUSED, ...) {
-    xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) ctx;
-
-    if (ctxt != NULL) {
-        struct netcf *ncf = ctxt->_private;
-
-        if (ctxt->lastError.level == XML_ERR_FATAL &&
-            ctxt->lastError.message != NULL) {
-            report_error(ncf, NETCF_EXMLPARSER,
-                         "at line %d: %s",
-                         ctxt->lastError.line,
-                         ctxt->lastError.message);
-        }
-    }
-}
-
-static xmlDocPtr parse_xml(struct netcf *ncf, const char *xml_str) {
-    xmlParserCtxtPtr pctxt;
-    xmlDocPtr xml = NULL;
-
-    /* Set up a parser context so we can catch the details of XML errors. */
-    pctxt = xmlNewParserCtxt();
-    ERR_COND_BAIL(pctxt == NULL || pctxt->sax == NULL, ncf, ENOMEM);
-
-    pctxt->sax->error = catch_xml_error;
-    pctxt->_private = ncf;
-
-    xml = xmlCtxtReadDoc (pctxt, BAD_CAST xml_str, "netcf.xml", NULL,
-                          XML_PARSE_NOENT | XML_PARSE_NONET |
-                          XML_PARSE_NOWARNING);
-    ERR_THROW(xml == NULL, ncf, EXMLPARSER,
-              "failed to parse xml document");
-    ERR_THROW(xmlDocGetRootElement(xml) == NULL, ncf, EINTERNAL,
-              "missing root element");
-
-    xmlFreeParserCtxt(pctxt);
-    return xml;
-error:
-    xmlFreeParserCtxt (pctxt);
-    xmlFreeDoc (xml);
-    return NULL;
 }
 
 char *drv_xml_desc(struct netcf_if *nif) {
@@ -1188,47 +1012,14 @@ int drv_if_down(struct netcf_if *nif) {
  * Test interface
  */
 int drv_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
-    xmlDocPtr ncf_doc = NULL, aug_doc = NULL;
-    int result = -1;
-
-    ncf_doc = parse_xml(ncf, ncf_xml);
-    ERR_BAIL(ncf);
-
-    rng_validate(ncf, ncf_doc);
-    ERR_BAIL(ncf);
-
-    // FIXME: Check for errors from ApplyStylesheet
-    aug_doc = xsltApplyStylesheet(ncf->driver->get, ncf_doc, NULL);
-
-    xmlDocDumpFormatMemory(aug_doc, (xmlChar **) aug_xml, NULL, 1);
-    ERR_COND_BAIL(*aug_xml == NULL, ncf, EXMLINVALID);
-    /* fallthrough intentional */
-    result = 0;
- error:
-    xmlFreeDoc(ncf_doc);
-    xmlFreeDoc(aug_doc);
-    return result;
+    /* Use utility implementation */
+    return dutil_get_aug(ncf, ncf_xml, aug_xml);
 }
 
 /* Transform the Augeas XML AUG_XML into interface XML NCF_XML */
 int drv_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
-    xmlDocPtr ncf_doc = NULL, aug_doc = NULL;
-    int result = -1;
-
-    aug_doc = parse_xml(ncf, aug_xml);
-    ERR_BAIL(ncf);
-
-    // FIXME: Check for errors from ApplyStylesheet
-    ncf_doc = xsltApplyStylesheet(ncf->driver->put, aug_doc, NULL);
-
-    xmlDocDumpFormatMemory(ncf_doc, (xmlChar **) ncf_xml, NULL, 1);
-    ERR_COND_BAIL(*ncf_xml == NULL, ncf, EXMLINVALID);
-    /* fallthrough intentional */
-    result = 0;
- error:
-    xmlFreeDoc(ncf_doc);
-    xmlFreeDoc(aug_doc);
-    return result;
+    /* Use utility implementation */
+    return dutil_put_aug(ncf, aug_xml, ncf_xml);
 }
 
 /*
@@ -1239,3 +1030,4 @@ int drv_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
  *  tab-width: 4
  * End:
  */
+/* vim: set ts=4 sw=4 et: */
