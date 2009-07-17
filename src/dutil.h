@@ -45,7 +45,7 @@ struct augeas_pv {
 /* Like asprintf, but set *STRP to NULL on error */
 int xasprintf(char **strp, const char *format, ...);
 
-/* Get or create the augeas instance from @ncf */
+/* Get or create the augeas instance from NCF */
 struct augeas *get_augeas(struct netcf *ncf);
 
 /* Like aug_match, but match P1/P2 */

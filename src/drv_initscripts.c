@@ -35,6 +35,7 @@
 #include "ref.h"
 #include "list.h"
 #include "dutil.h"
+#include "dutil_linux.h"
 
 #include <libxml/parser.h>
 #include <libxml/relaxng.h>
@@ -794,11 +795,7 @@ int drv_lookup_by_mac_string(struct netcf *ncf, const char *mac,
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
-    r = xasprintf(&path,
-                  "/files/sys/class/net/*[address/content = '%s']", mac);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-    nmatches = aug_match(aug, path, &matches);
+    nmatches = aug_match_mac(ncf, mac, &matches);
     ERR_THROW(nmatches < 0, ncf, EOTHER, "looking up %s failed", mac);
     if (nmatches == 0) {
         result = 0;
@@ -810,15 +807,11 @@ int drv_lookup_by_mac_string(struct netcf *ncf, const char *mac,
 
     int cnt = 0;
     for (int i = 0; i < nmatches; i++) {
-        const char *n = strrchr(matches[i], '/');
-        ERR_THROW(n == NULL, ncf, EINTERNAL, "missing / in sysfs path");
-        n += 1;
-
-        r = xasprintf(&ifcfg, "%s[DEVICE = '%s']", ifcfg_path, n);
+        r = xasprintf(&ifcfg, "%s[DEVICE = '%s']", ifcfg_path, matches[i]);
         ERR_COND_BAIL(r < 0, ncf, ENOMEM);
 
         if (! is_slave(ncf, ifcfg))
-            names[cnt++] = n;
+            names[cnt++] = matches[i];
         FREE(ifcfg);
     }
     for (int i=0; i < cnt && i < maxifaces; i++) {
@@ -843,19 +836,11 @@ int drv_lookup_by_mac_string(struct netcf *ncf, const char *mac,
 
 const char *drv_mac_string(struct netcf_if *nif) {
     struct netcf *ncf = nif->ncf;
-    struct augeas *aug = NULL;
     const char *mac;
     char *path = NULL;
     int r;
 
-    aug = get_augeas(ncf);
-    ERR_BAIL(ncf);
-
-    r = xasprintf(&path, "/files/sys/class/net/%s/address/content",
-                  nif->name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-    r = aug_get(aug, path, &mac);
+    r = aug_get_mac(ncf, nif->name, &mac);
     ERR_THROW(r <= 0, ncf, EOTHER, "could not lookup MAC of %s", nif->name);
 
     if (nif->mac == NULL || STRNEQ(nif->mac, mac)) {
