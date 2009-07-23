@@ -5,6 +5,8 @@
                 extension-element-prefixes="bond ipcalc"
                 version="1.0">
 
+  <xsl:import href="util-put.xsl"/>
+
   <xsl:output method="xml" indent="yes"/>
   <xsl:strip-space elements="*"/>
 
@@ -104,38 +106,10 @@
       <xsl:call-template name="interface-addressing"/>
       <bond>
         <xsl:variable name="opts" select="node[@label = 'BONDING_OPTS']/@value"/>
-        <xsl:variable name="mode" select="bond:option($opts, 'mode')"/>
+        <xsl:call-template name="bonding-opts">
+          <xsl:with-param name="opts" select="$opts"/>
+        </xsl:call-template>
         <xsl:variable name="primary" select="bond:option($opts, 'primary')"/>
-        <xsl:if test="string-length($mode) > 0">
-          <xsl:attribute name="mode">
-            <xsl:value-of select="$mode"/>
-          </xsl:attribute>
-        </xsl:if>
-        <xsl:if test="bond:option($opts, 'miimon')">
-          <miimon freq="{bond:option($opts, 'miimon')}">
-            <xsl:if test="bond:option($opts, 'downdelay')"><xsl:attribute name="downdelay"><xsl:value-of select="bond:option($opts, 'downdelay')"/></xsl:attribute></xsl:if>
-            <xsl:if test="bond:option($opts, 'updelay')"><xsl:attribute name="updelay"><xsl:value-of select="bond:option($opts, 'updelay')"/></xsl:attribute></xsl:if>
-            <xsl:if test="bond:option($opts, 'use_carrier')">
-              <xsl:attribute name="carrier">
-                <xsl:if test="bond:option($opts, 'use_carrier') = '0'">ioctl</xsl:if>
-                <xsl:if test="bond:option($opts, 'use_carrier') = '1'">netif</xsl:if>
-              </xsl:attribute>
-            </xsl:if>
-          </miimon>
-        </xsl:if>
-        <xsl:if test="bond:option($opts, 'arp_interval')">
-          <arpmon interval="{bond:option($opts, 'arp_interval')}" target="{bond:option($opts, 'arp_ip_target')}">
-            <xsl:variable name="val" select="bond:option($opts, 'arp_validate')"/>
-            <xsl:if test="$val">
-              <xsl:attribute name="validate">
-                <xsl:if test="$val = 'none' or $val = '0'">none</xsl:if>
-                <xsl:if test="$val = 'active' or $val = '1'">active</xsl:if>
-                <xsl:if test="$val = 'backup' or $val = '2'">backup</xsl:if>
-                <xsl:if test="$val = 'all' or $val = '3'">all</xsl:if>
-              </xsl:attribute>
-            </xsl:if>
-          </arpmon>
-        </xsl:if>
         <xsl:for-each select="/descendant-or-self::*[node[@label = 'MASTER' and @value = $iface]][node[@label = 'DEVICE' and @value = $primary]]">
           <xsl:call-template name='bare-ethernet-interface'/>
         </xsl:for-each>
