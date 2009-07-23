@@ -118,7 +118,7 @@ static int defnode(struct netcf *ncf, const char *name, const char *value,
 static int is_slave(struct netcf *ncf, const char *intf) {
     for (int s = 0; s < ARRAY_CARDINALITY(subif_paths); s++) {
         int r;
-        r = aug_submatch(ncf, intf, subif_paths[s], NULL);
+        r = aug_fmt_match(ncf, NULL, "%s/%s", intf, subif_paths[s]);
         if (r != 0)
             return r;
     }
@@ -331,7 +331,8 @@ static int list_interface_ids(struct netcf *ncf,
         maxnames = nint;    /* if not returning list, ignore maxnames too */
     }
     for (result = 0; (result < nint) && (nqualified < maxnames); result++) {
-        nmatches = aug_submatch(ncf, intf[result], id_attr, &matches);
+        nmatches = aug_fmt_match(ncf, &matches,
+                                 "%s/%s", intf[result], id_attr);
         if (nmatches > 0) {
             const char *name;
             int is_qualified = ((flags & (NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE))
@@ -446,7 +447,7 @@ static xmlDocPtr aug_get_xml(struct netcf *ncf, int nint, char **intf) {
     for (int i=0; i < nint; i++) {
         tree = xmlNewChild(root, NULL, BAD_CAST "tree", NULL);
         xmlNewProp(tree, BAD_CAST "path", BAD_CAST intf[i]);
-        nmatches = aug_submatch(ncf, intf[i], "*", &matches);
+        nmatches = aug_fmt_match(ncf, &matches, "%s/%s", intf[i], "*");
         ERR_COND_BAIL(nint < 0, ncf, EOTHER);
         for (int j = 0; j < nmatches; j++) {
             xmlNodePtr node = xmlNewChild(tree, NULL, BAD_CAST "node", NULL);

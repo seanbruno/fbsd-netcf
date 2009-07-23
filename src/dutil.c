@@ -125,25 +125,6 @@ struct augeas *get_augeas(struct netcf *ncf) {
     return NULL;
 }
 
-int aug_submatch(struct netcf *ncf, const char *p1,
-                        const char *p2, char ***matches) {
-    struct augeas *aug = get_augeas(ncf);
-    char *path = NULL;
-    int r;
-
-    r = xasprintf(&path, "%s/%s", p1, p2);
-    ERR_COND_BAIL(r < 0, ncf, EOTHER);
-
-    r = aug_match(aug, path, matches);
-    ERR_COND_BAIL(r < 0, ncf, EOTHER);
-
-    free(path);
-    return r;
- error:
-    free(path);
-    return -1;
-}
-
 int aug_fmt_match(struct netcf *ncf, char ***matches, const char *fmt, ...) {
     struct augeas *aug = NULL;
     char *path = NULL;

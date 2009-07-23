@@ -48,10 +48,6 @@ int xasprintf(char **strp, const char *format, ...);
 /* Get or create the augeas instance from NCF */
 struct augeas *get_augeas(struct netcf *ncf);
 
-/* Like aug_match, but match P1/P2 */
-int aug_submatch(struct netcf *ncf, const char *p1,
-                        const char *p2, char ***matches);
-
 /* Format a path by doing a printf of FMT and the var args, then call
    AUG_MATCH on that path. Sets NCF->ERRCODE on error */
 ATTRIBUTE_FORMAT(printf, 3, 4)
