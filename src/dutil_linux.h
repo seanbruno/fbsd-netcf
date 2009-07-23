@@ -23,7 +23,7 @@
 #ifndef DUTIL_LINUX_H_
 #define DUTIL_LINUX_H_
 
-/* Returns a list of all interfaces with MAC address INTF */
+/* Returns a list of all interfaces with MAC address MAC */
 int aug_match_mac(struct netcf *ncf, const char *mac, char ***matches);
 
 /* Get the MAC address of the interface INTF */

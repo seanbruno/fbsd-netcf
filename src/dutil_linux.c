@@ -40,29 +40,20 @@
 #include "dutil.h"
 #include "dutil_linux.h"
 
-/* Returns a list of all interfaces with MAC address INTF */
+/* Returns a list of all interfaces with MAC address MAC */
 int aug_match_mac(struct netcf *ncf, const char *mac, char ***matches) {
-    int r, nmatches;
-    char *path, *mac_lower;
-    struct augeas *aug = get_augeas(ncf);
+    int nmatches;
+    char *path = NULL, *mac_lower = NULL;
 
     mac_lower = strdup(mac);
     ERR_COND_BAIL(mac_lower == NULL, ncf, ENOMEM);
     for (char *s = mac_lower; *s != '\0'; s++)
         *s = c_tolower(*s);
 
-    r = xasprintf(&path,
+    nmatches = aug_fmt_match(ncf, matches,
             "/files/sys/class/net/*[address/content = '%s']", mac_lower);
-    FREE(mac_lower);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_BAIL(ncf);
 
-    r = aug_match(aug, path, matches);
-    /* Messages for a aug_match-fail are handled outside this function */
-    if (r < 0)
-        goto error;
-
-    nmatches = r;
-    r = -1;
     for (int i = 0; i < nmatches; i++) {
         char *n = strrchr((*matches)[i], '/');
         ERR_THROW(n == NULL, ncf, EINTERNAL, "missing / in sysfs path");

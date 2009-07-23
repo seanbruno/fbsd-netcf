@@ -344,7 +344,8 @@ static int list_interface_ids(struct netcf *ncf,
     return -1;
 }
 
-int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names, unsigned int flags) {
+int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names,
+        unsigned int flags) {
     return list_interface_ids(ncf, maxnames, names, flags, "DEVICE");
 }
 
@@ -677,7 +678,7 @@ int drv_lookup_by_mac_string(struct netcf *ncf, const char *mac,
     ERR_BAIL(ncf);
 
     nmatches = aug_match_mac(ncf, mac, &matches);
-    ERR_THROW(nmatches < 0, ncf, EOTHER, "looking up %s failed", mac);
+    ERR_BAIL(ncf);
     if (nmatches == 0) {
         result = 0;
         goto done;
