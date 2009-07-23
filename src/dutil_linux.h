@@ -29,6 +29,15 @@ int aug_match_mac(struct netcf *ncf, const char *mac, char ***matches);
 /* Get the MAC address of the interface INTF */
 int aug_get_mac(struct netcf *ncf, const char *intf, const char **mac);
 
+/* Add an 'alias NAME bonding' to an appropriate file in /etc/modprobe.d,
+ * if none exists yet. If we need to create a new one, it goes into the
+ * file netcf.conf.
+ */
+void modprobed_alias_bond(struct netcf *ncf, const char *name);
+
+/* Remove an 'alias NAME bonding' as created by modprobed_alias_bond */
+void modprobed_unalias_bond(struct netcf *ncf, const char *name);
+
 #endif
 
 /*

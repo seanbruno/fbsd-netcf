@@ -576,64 +576,6 @@ static int bridge_slaves(struct netcf *ncf, const char *name, char ***slaves) {
     return -1;
 }
 
-/* Add an 'alias NAME bonding' to an appropriate file in /etc/modprobe.d,
- * if none exists yet. If we need to create a new one, it goes into the
- * file netcf.conf.
- */
-static void modprobe_alias_bond(struct netcf *ncf, const char *name) {
-    char *path = NULL;
-    struct augeas *aug = get_augeas(ncf);
-    int r, nmatches;
-
-    nmatches = aug_fmt_match(ncf, NULL,
-                             "/files/etc/modprobe.d/*/alias[ . = '%s']",
-                             name);
-    ERR_BAIL(ncf);
-
-    if (nmatches == 0) {
-        /* Add a new alias node; this probably deserves better API support
-           in Augeas, it's too convoluted */
-        r = xasprintf(&path,
-                      "/files/etc/modprobe.d/netcf.conf/alias[last()]", name);
-        ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-        nmatches = aug_match(aug, path, NULL);
-        if (nmatches > 0) {
-            r = aug_insert(aug, path, "alias", 0);
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-        }
-        r = aug_set(aug, path, name);
-        FREE(path);
-    }
-
-    r = xasprintf(&path,
-                  "/files/etc/modprobe.d/*/alias[ . = '%s']/modulename",
-                  name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-    r = aug_set(aug, path, "bonding");
-    ERR_COND_BAIL(r < 0, ncf, EOTHER);
-
- error:
-    FREE(path);
-}
-
-/* Remove the alias for NAME to the bonding module */
-static void modprobe_unalias_bond(struct netcf *ncf, const char *name) {
-    char *path = NULL;
-    struct augeas *aug = get_augeas(ncf);
-    int r;
-
-    r = xasprintf(&path,
-         "/files/etc/modprobe.d/*/alias[ . = '%s'][modulename = 'bonding']",
-                  name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-    r = aug_rm(aug, path);
-    ERR_COND_BAIL(r < 0, ncf, EOTHER);
- error:
-    FREE(path);
-}
-
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     xmlDocPtr ncf_xml = NULL, aug_xml = NULL;
     char *name = NULL, *path = NULL;
@@ -666,7 +608,7 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     ERR_BAIL(ncf);
 
     if (is_bond(ncf, name)) {
-        modprobe_alias_bond(ncf, name);
+        modprobed_alias_bond(ncf, name);
         ERR_BAIL(ncf);
     }
 
@@ -696,7 +638,7 @@ int drv_undefine(struct netcf_if *nif) {
     ERR_BAIL(ncf);
 
     if (is_bond(ncf, nif->name)) {
-        modprobe_unalias_bond(ncf, nif->name);
+        modprobed_unalias_bond(ncf, nif->name);
         ERR_BAIL(ncf);
     }
 
