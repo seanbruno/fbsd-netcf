@@ -144,6 +144,33 @@ int aug_submatch(struct netcf *ncf, const char *p1,
     return -1;
 }
 
+int aug_fmt_match(struct netcf *ncf, char ***matches, const char *fmt, ...) {
+    struct augeas *aug = NULL;
+    char *path = NULL;
+    va_list args;
+    int r;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    va_start(args, fmt);
+    r = vasprintf(&path, fmt, args);
+    va_end(args);
+    if (r < 0) {
+        path = NULL;
+        ERR_COND_BAIL(1, ncf, ENOMEM);
+    }
+
+    r = aug_match(aug, path, matches);
+    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+
+    free(path);
+    return r;
+ error:
+    free(path);
+    return -1;
+}
+
 void free_matches(int nint, char ***intf) {
     if (*intf != NULL) {
         for (int i=0; i < nint; i++)

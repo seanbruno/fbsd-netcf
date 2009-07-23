@@ -52,6 +52,11 @@ struct augeas *get_augeas(struct netcf *ncf);
 int aug_submatch(struct netcf *ncf, const char *p1,
                         const char *p2, char ***matches);
 
+/* Format a path by doing a printf of FMT and the var args, then call
+   AUG_MATCH on that path. Sets NCF->ERRCODE on error */
+ATTRIBUTE_FORMAT(printf, 3, 4)
+int aug_fmt_match(struct netcf *ncf, char ***matches, const char *fmt, ...);
+
 /* Free matches from aug_match (or aug_submatch) */
 void free_matches(int nint, char ***intf);
 

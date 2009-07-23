@@ -524,27 +524,21 @@ static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml) {
 }
 
 char *drv_xml_desc(struct netcf_if *nif) {
-    char *path = NULL, *result = NULL;
+    char *result = NULL;
     struct augeas *aug;
     struct netcf *ncf;
     char **intf = NULL;
     xmlDocPtr aug_xml = NULL, ncf_xml = NULL;
     int nint = 0;
-    int r;
 
     ncf = nif->ncf;
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
-    r = xasprintf(&path,
-          "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
-          ifcfg_path, nif->name, nif->name, nif->name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-    nint = aug_match(aug, path, &intf);
-    ERR_THROW(nint < 0, ncf, EINTERNAL,
-              "no nodes match '%s'", path);
-    FREE(path);
+    nint = aug_fmt_match(ncf, &intf,
+              "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
+              ifcfg_path, nif->name, nif->name, nif->name);
+    ERR_BAIL(ncf);
 
     aug_xml = aug_get_xml(ncf, nint, intf);
     ncf_xml = xsltApplyStylesheet(ncf->driver->put, aug_xml, NULL);
@@ -552,7 +546,6 @@ char *drv_xml_desc(struct netcf_if *nif) {
     xmlDocDumpFormatMemory(ncf_xml, (xmlChar **) &result, NULL, 1);
 
  done:
-    FREE(path);
     free_matches(nint, &intf);
     xmlFreeDoc(aug_xml);
     xmlFreeDoc(ncf_xml);
@@ -578,47 +571,33 @@ static char *device_name_from_xml(xmlDocPtr xml) {
  * other devices config file
  */
 static bool is_bond(struct netcf *ncf, const char *name) {
-    char *path = NULL;
-    struct augeas *aug = get_augeas(ncf);
-    int r, nmatches = 0;
+    int nmatches = 0;
 
-    r = xasprintf(&path, "%s[ MASTER = '%s']", ifcfg_path, name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-    nmatches = aug_match(aug, path, NULL);
-    free(path);
- error:
+    nmatches = aug_fmt_match(ncf, NULL,
+                             "%s[ MASTER = '%s']", ifcfg_path, name);
     return nmatches > 0;
 }
 
 /* The device NAME is a bridge if it has an entry TYPE=Bridge */
 static bool is_bridge(struct netcf *ncf, const char *name) {
-    char *path = NULL;
-    struct augeas *aug = get_augeas(ncf);
-    int r, nmatches = 0;
+    int nmatches = 0;
 
-    r = xasprintf(&path, "%s[ DEVICE = '%s' and TYPE = 'Bridge']",
-                  ifcfg_path, name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-    nmatches = aug_match(aug, path, NULL);
-    free(path);
- error:
+    nmatches = aug_fmt_match(ncf, NULL,
+                             "%s[ DEVICE = '%s' and TYPE = 'Bridge']",
+                             ifcfg_path, name);
     return nmatches > 0;
 }
 
 static int bridge_slaves(struct netcf *ncf, const char *name, char ***slaves) {
     struct augeas *aug = NULL;
-    char *path = NULL;
     int r, nslaves = 0;
 
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
-    r = xasprintf(&path, "%s[ BRIDGE = '%s' ]/DEVICE", ifcfg_path, name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-
-    nslaves = aug_match(aug, path, slaves);
-    free(path);
-    ERR_COND_BAIL(nslaves < 0, ncf, EOTHER);
+    nslaves = aug_fmt_match(ncf, slaves,
+                            "%s[ BRIDGE = '%s' ]/DEVICE", ifcfg_path, name);
+    ERR_BAIL(ncf);
     for (int i=0; i < nslaves; i++) {
         char *p = (*slaves)[i];
         const char *dev;
@@ -644,13 +623,11 @@ static void modprobe_alias_bond(struct netcf *ncf, const char *name) {
     struct augeas *aug = get_augeas(ncf);
     int r, nmatches;
 
-    r = xasprintf(&path, "/files/etc/modprobe.d/*/alias[ . = '%s']", name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    nmatches = aug_fmt_match(ncf, NULL,
+                             "/files/etc/modprobe.d/*/alias[ . = '%s']",
+                             name);
+    ERR_BAIL(ncf);
 
-    nmatches = aug_match(aug, path, NULL);
-    ERR_COND_BAIL(nmatches < 0, ncf, EOTHER);
-
-    FREE(path);
     if (nmatches == 0) {
         /* Add a new alias node; this probably deserves better API support
            in Augeas, it's too convoluted */
