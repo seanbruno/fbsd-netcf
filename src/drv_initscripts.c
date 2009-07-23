@@ -91,30 +91,6 @@ static const char *const subif_paths[] = {
     "MASTER", "BRIDGE"
 };
 
-ATTRIBUTE_FORMAT(printf, 4, 5)
-static int defnode(struct netcf *ncf, const char *name, const char *value,
-                   const char *format, ...) {
-    struct augeas *aug = get_augeas(ncf);
-    va_list ap;
-    char *expr = NULL;
-    int r, created;
-
-    va_start(ap, format);
-    r = vasprintf (&expr, format, ap);
-    va_end (ap);
-    if (r < 0)
-        expr = NULL;
-    ERR_THROW(r < 0, ncf, ENOMEM, "failed to format node expression");
-
-    r = aug_defnode(aug, name, expr, value, &created);
-    ERR_THROW(r < 0, ncf, EOTHER, "failed to define node %s", name);
-
-    /* Fallthrough intentional */
- error:
-    free(expr);
-    return (r < 0) ? -1 : created;
-}
-
 static int is_slave(struct netcf *ncf, const char *intf) {
     for (int s = 0; s < ARRAY_CARDINALITY(subif_paths); s++) {
         int r;
@@ -374,21 +350,6 @@ int drv_list_interfaces(struct netcf *ncf, int maxnames, char **names, unsigned 
 
 int drv_num_of_interfaces(struct netcf *ncf, unsigned int flags) {
     return list_interface_ids(ncf, 0, NULL, flags, "DEVICE");
-}
-
-static struct netcf_if *make_netcf_if(struct netcf *ncf, char *name) {
-    int r;
-    struct netcf_if *result = NULL;
-
-    r = make_ref(result);
-    ERR_THROW(r < 0, ncf, ENOMEM, NULL);
-    result->ncf = ref(ncf);
-    result->name = name;
-    return result;
-
- error:
-    unref(result, netcf_if);
-    return result;
 }
 
 struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
@@ -835,14 +796,6 @@ const char *drv_mac_string(struct netcf_if *nif) {
 /*
  * Bringing interfaces up/down
  */
-
-static void run1(struct netcf *ncf, const char *prog, const char *name) {
-    const char *const argv[] = {
-        prog, name, NULL
-    };
-
-    run_program(ncf, argv);
-}
 
 int drv_if_up(struct netcf_if *nif) {
     static const char *const ifup = "ifup";

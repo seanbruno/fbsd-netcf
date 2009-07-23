@@ -125,6 +125,30 @@ struct augeas *get_augeas(struct netcf *ncf) {
     return NULL;
 }
 
+ATTRIBUTE_FORMAT(printf, 4, 5)
+int defnode(struct netcf *ncf, const char *name, const char *value,
+                   const char *format, ...) {
+    struct augeas *aug = get_augeas(ncf);
+    va_list ap;
+    char *expr = NULL;
+    int r, created;
+
+    va_start(ap, format);
+    r = vasprintf (&expr, format, ap);
+    va_end (ap);
+    if (r < 0)
+        expr = NULL;
+    ERR_THROW(r < 0, ncf, ENOMEM, "failed to format node expression");
+
+    r = aug_defnode(aug, name, expr, value, &created);
+    ERR_THROW(r < 0, ncf, EOTHER, "failed to define node %s", name);
+
+    /* Fallthrough intentional */
+ error:
+    free(expr);
+    return (r < 0) ? -1 : created;
+}
+
 int aug_fmt_match(struct netcf *ncf, char ***matches, const char *fmt, ...) {
     struct augeas *aug = NULL;
     char *path = NULL;
@@ -301,6 +325,22 @@ int is_active(struct netcf *ncf, const char *intf) {
     return ((ifr.ifr_flags & IFF_UP) == IFF_UP);
 }
 
+/* Create a new netcf if instance for interface NAME */
+struct netcf_if *make_netcf_if(struct netcf *ncf, char *name) {
+    int r;
+    struct netcf_if *result = NULL;
+
+    r = make_ref(result);
+    ERR_THROW(r < 0, ncf, ENOMEM, NULL);
+    result->ncf = ref(ncf);
+    result->name = name;
+    return result;
+
+ error:
+    unref(result, netcf_if);
+    return result;
+}
+
 /*
  * Test interface
  */
@@ -346,6 +386,19 @@ int dutil_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
     xmlFreeDoc(ncf_doc);
     xmlFreeDoc(aug_doc);
     return result;
+}
+
+/*
+ * Bringing interfaces up/down
+ */
+
+/* Run the program PROG with the single argument ARG */
+void run1(struct netcf *ncf, const char *prog, const char *arg) {
+    const char *const argv[] = {
+        prog, arg, NULL
+    };
+
+    run_program(ncf, argv);
 }
 
 /*

@@ -48,6 +48,11 @@ int xasprintf(char **strp, const char *format, ...);
 /* Get or create the augeas instance from NCF */
 struct augeas *get_augeas(struct netcf *ncf);
 
+/* Define a node inside the augeas tree */
+ATTRIBUTE_FORMAT(printf, 4, 5)
+int defnode(struct netcf *ncf, const char *name, const char *value,
+                   const char *format, ...);
+
 /* Format a path by doing a printf of FMT and the var args, then call
    AUG_MATCH on that path. Sets NCF->ERRCODE on error */
 ATTRIBUTE_FORMAT(printf, 3, 4)
@@ -83,11 +88,17 @@ int init_ioctl_fd(struct netcf *ncf);
 /* Check if the interface INTF is up using a ioctl call */
 int is_active(struct netcf *ncf, const char *intf);
 
+/* Create a new netcf if instance for interface NAME */
+struct netcf_if *make_netcf_if(struct netcf *ncf, char *name);
+
 /* Transform the interface XML NCF_XML into Augeas XML AUG_XML */
 int dutil_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml);
 
 /* Transform the Augeas XML AUG_XML into interface XML NCF_XML */
 int dutil_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml);
+
+/* Run the program PROG with the single argument ARG */
+void run1(struct netcf *ncf, const char *prog, const char *arg);
 
 #endif
 
