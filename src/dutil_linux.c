@@ -31,6 +31,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <c-ctype.h>
 
 #include "safe-alloc.h"
 #include "ref.h"
@@ -42,11 +43,17 @@
 /* Returns a list of all interfaces with MAC address INTF */
 int aug_match_mac(struct netcf *ncf, const char *mac, char ***matches) {
     int r, nmatches;
-    char *path;
+    char *path, *mac_lower;
     struct augeas *aug = get_augeas(ncf);
 
+    mac_lower = strdup(mac);
+    ERR_COND_BAIL(mac_lower == NULL, ncf, ENOMEM);
+    for (char *s = mac_lower; *s != '\0'; s++)
+        *s = c_tolower(*s);
+
     r = xasprintf(&path,
-            "/files/sys/class/net/*[address/content = '%s']", mac);
+            "/files/sys/class/net/*[address/content = '%s']", mac_lower);
+    FREE(mac_lower);
     ERR_COND_BAIL(r < 0, ncf, ENOMEM);
 
     r = aug_match(aug, path, matches);
@@ -72,8 +79,9 @@ int aug_match_mac(struct netcf *ncf, const char *mac, char ***matches) {
     return nmatches;
 
  error:
+    FREE(mac_lower);
     FREE(path);
-    return r;
+    return -1;
 }
 
 /* Get the MAC address of the interface INTF */
