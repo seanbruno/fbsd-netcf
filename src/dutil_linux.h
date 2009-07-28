@@ -26,8 +26,15 @@
 /* Returns a list of all interfaces with MAC address MAC */
 int aug_match_mac(struct netcf *ncf, const char *mac, char ***matches);
 
-/* Get the MAC address of the interface INTF */
-int aug_get_mac(struct netcf *ncf, const char *intf, const char **mac);
+/* Get the MAC address of the interface NAME
+ *
+ * Returns 1 if the MAC for NAME was found, 0 if none was found, and a
+ * negative value on error. MAC is only set to a non-NULL value when the
+ * MAC for NAME was found; in all other cases it is set to NULL. The
+ * returned MAC address will be all lowercase.
+ */
+int aug_get_mac(struct netcf *ncf, const char *name, const char **mac);
+
 
 /* Add an 'alias NAME bonding' to an appropriate file in /etc/modprobe.d,
  * if none exists yet. If we need to create a new one, it goes into the
