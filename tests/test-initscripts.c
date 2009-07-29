@@ -42,7 +42,8 @@ extern struct netcf *ncf;
 static void testListInterfaces(CuTest *tc) {
     int nint;
     char **names;
-    static const char *const exp_names[] = { "br0", "bond0", "lo" };
+    static const char *const exp_names[] =
+        { "br0", "bond0", "lo", "eth3", "eth4" };
     static const int exp_nint = ARRAY_CARDINALITY(exp_names);
 
     nint = ncf_num_of_interfaces(ncf, NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE);
@@ -67,6 +68,27 @@ static void testLookupByName(CuTest *tc) {
     nif = ncf_lookup_by_name(ncf, "br0");
     CuAssertPtrNotNull(tc, nif);
     CuAssertStrEquals(tc, "br0", nif->name);
+    ncf_if_free(nif);
+    CuAssertIntEquals(tc, 1, ncf->ref);
+}
+
+/* Check that we get the right ifcfg- file when we have to
+ * look it up indirectly by HWADDR
+ */
+static void testLookupByNameDecoy(CuTest *tc) {
+    struct netcf_if *nif;
+    char *xml, *loc;
+
+    nif = ncf_lookup_by_name(ncf, "eth4");
+    CuAssertPtrNotNull(tc, nif);
+    CuAssertStrEquals(tc, "eth4", nif->name);
+
+    xml = ncf_if_xml_desc(nif);
+    CuAssertPtrNotNull(tc, xml);
+    loc = strstr(xml, "<mac address=\"00:00:00:00:00:01\"/>");
+    CuAssertPtrNotNull(tc, loc);
+
+    free(xml);
     ncf_if_free(nif);
     CuAssertIntEquals(tc, 1, ncf->ref);
 }
@@ -186,6 +208,7 @@ int main(void) {
 
     SUITE_ADD_TEST(suite, testListInterfaces);
     SUITE_ADD_TEST(suite, testLookupByName);
+    SUITE_ADD_TEST(suite, testLookupByNameDecoy);
     SUITE_ADD_TEST(suite, testLookupByMAC);
     SUITE_ADD_TEST(suite, testDefineUndefine);
     SUITE_ADD_TEST(suite, testTransforms);

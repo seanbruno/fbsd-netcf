@@ -45,6 +45,9 @@
 #include <libxslt/transform.h>
 #include <libxslt/xsltutils.h>
 
+static const char *const network_scripts_path =
+    "/files/etc/sysconfig/network-scripts";
+
 static const char *const ifcfg_path =
     "/files/etc/sysconfig/network-scripts/*";
 
@@ -105,6 +108,201 @@ static int is_slave(struct netcf *ncf, const char *intf) {
     return 0;
 }
 
+static int cmpstrp(const void *p1, const void *p2) {
+    const char *s1 = * (const char **)p1;
+    const char *s2 = * (const char **)p2;
+    return strcmp(s1, s2);
+}
+
+/* Find the path to the ifcfg file that has the configuration for the
+ * interface with MAC address MAC.
+ */
+static char *find_ifcfg_path_by_hwaddr(struct netcf *ncf, const char *mac) {
+    static const char *const hwaddr_str = "/HWADDR";
+
+    int nhwaddr = 0, r;
+    char **hwaddr = NULL;
+    struct augeas *aug = NULL;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    // It would be nice if Augeas provided a way to do case-insensitive
+    // matching. For now, we just write it out
+    nhwaddr = aug_fmt_match(ncf, &hwaddr, "%s%s", ifcfg_path, hwaddr_str);
+    ERR_COND_BAIL(nhwaddr < 0, ncf, EOTHER);
+
+    /* Sort because need_config will return the last match in case
+     * of multiple matches */
+    qsort(hwaddr, nhwaddr, sizeof(*hwaddr), cmpstrp);
+    int match = -1;
+    for (int i=0; i < nhwaddr; i++) {
+        const char *addr;
+        r = aug_get(aug, hwaddr[i], &addr);
+        ERR_COND_BAIL(r != 1, ncf, EOTHER);
+        if (STRCASEEQ(addr, mac))
+            match = i;
+    }
+    if (match != -1) {
+        char *path = hwaddr[match];
+        hwaddr[match] = NULL;
+        path[strlen(path) - strlen(hwaddr_str)] = '\0';
+        free_matches(nhwaddr, &hwaddr);
+        return path;
+    }
+ error:
+    free_matches(nhwaddr, &hwaddr);
+    return NULL;
+}
+
+/* Find the path to the ifcfg file that has the configuration for the
+ * interface by checking for an entry 'DEVICE=NAME'
+ */
+static char *find_ifcfg_path_by_device(struct netcf *ncf, const char *name) {
+    struct augeas *aug = NULL;
+    int ndevs = 0;
+    char **devs = NULL;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    ndevs = aug_fmt_match(ncf, &devs, "%s[DEVICE = '%s']",
+                          ifcfg_path, name);
+    ERR_COND_BAIL(ndevs < 0, ncf, EOTHER);
+
+    if (ndevs == 0)
+        return NULL;
+
+    qsort(devs, ndevs, sizeof(*devs), cmpstrp);
+
+    char *path = devs[ndevs - 1];
+    devs[ndevs - 1] = NULL;
+
+    free_matches(ndevs, &devs);
+
+    return path;
+ error:
+    free_matches(ndevs, &devs);
+    return NULL;
+}
+
+/* Find the path to the ifcfg file that has the configuration for
+ * the device NAME. The logic follows the need_config function
+ * in /etc/sysconfig/network-scripts/network-functions
+ */
+static char *find_ifcfg_path(struct netcf *ncf, const char *name) {
+    struct augeas *aug = NULL;
+    char *path = NULL;
+    const char *mac = NULL;
+    int r, nmatches;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    /* if ifcfg-NAME exists, use that */
+    r = xasprintf(&path, "%s/ifcfg-%s", network_scripts_path, name);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    nmatches = aug_match(aug, path, NULL);
+    ERR_COND_BAIL(nmatches < 0, ncf, EOTHER);
+
+    if (nmatches == 1)
+        return path;
+
+    FREE(path);
+
+    /* Now find the config by MAC, matching on HWADDR */
+    r = aug_get_mac(ncf, name, &mac);
+    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+    if (r > 0) {
+        path = find_ifcfg_path_by_hwaddr(ncf, mac);
+        ERR_BAIL(ncf);
+        if (path != NULL)
+            return path;
+    }
+
+    path = find_ifcfg_path_by_device(ncf, name);
+    ERR_BAIL(ncf);
+
+    return path;
+ error:
+    FREE(path);
+    return NULL;
+}
+
+/* Given NDEVS path to DEVICE entries which may contain duplicate devices,
+ * produce a list of canonical paths to the interfaces in INTF and return
+ * the number of entries. Return -1 on error
+ */
+static int uniq_ifcfg_paths(struct netcf *ncf,
+                            int ndevs, char **devs,
+                            char ***intf) {
+    struct augeas *aug;
+    int r;
+    int ndevnames = 0;
+    const char **devnames = NULL;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    /* List unique device names */
+    r = ALLOC_N(devnames, ndevs);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    for (int i=0; i < ndevs; i++) {
+        const char *name = NULL;
+        r = aug_get(aug, devs[i], &name);
+        ERR_COND_BAIL(r != 1, ncf, EOTHER);
+        int exists = 0;
+        for (int j = 0; j < ndevnames; j++)
+            if (STREQ(name, devnames[j])) {
+                exists = 1;
+                break;
+            }
+        if (!exists)
+            devnames[ndevnames++] = name;
+    }
+    qsort(devnames, ndevnames, sizeof(*devnames), cmpstrp);
+
+    /* Find canonical config for each device name */
+    r = ALLOC_N(*intf, ndevnames);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    for (int i= 0; i < ndevnames; i++) {
+        (*intf)[i] = find_ifcfg_path(ncf, devnames[i]);
+        ERR_BAIL(ncf);
+    }
+
+    FREE(devnames);
+    return ndevnames;
+
+ error:
+    FREE(devnames);
+    free_matches(ndevnames, intf);
+    return -1;
+}
+
+/* List all configured network devices; returns the number of devices or -1
+ * on error. On success, the path to the config file for each interface
+ * is returned in INTF
+ */
+static int list_ifcfg_paths(struct netcf *ncf, char ***intf) {
+    int result = 0, ndevs;
+    char **devs = NULL;
+
+    ndevs = aug_fmt_match(ncf, &devs, "%s/DEVICE", ifcfg_path);
+    ERR_COND_BAIL(ndevs < 0, ncf, EOTHER);
+
+    result = uniq_ifcfg_paths(ncf, ndevs, devs, intf);
+    ERR_BAIL(ncf);
+
+    free_matches(ndevs, &devs);
+    return result;
+
+ error:
+    free_matches(ndevs, &devs);
+    return -1;
+}
+
 static int list_interfaces(struct netcf *ncf, char ***intf) {
     int nint = 0, result = 0;
     struct augeas *aug = NULL;
@@ -113,8 +311,8 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
     ERR_BAIL(ncf);
 
     /* Look in augeas for all interfaces */
-    nint = aug_match(aug, ifcfg_path, intf);
-    ERR_COND_BAIL(nint < 0, ncf, EOTHER);
+    nint = list_ifcfg_paths(ncf, intf);
+    ERR_BAIL(ncf);
     result = nint;
 
     /* Filter out the interfaces that are slaves/subordinate */
@@ -357,19 +555,14 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
     char *pathx = NULL;
     char *name_dup = NULL;
     struct augeas *aug;
-    int nint;
-    int r;
 
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
-    r = xasprintf(&pathx, "%s[DEVICE = '%s']", ifcfg_path, name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    pathx = find_ifcfg_path(ncf, name);
+    ERR_BAIL(ncf);
 
-    nint = aug_get(aug, pathx, NULL);
-    ERR_COND_BAIL(nint < 0, ncf, EOTHER);
-
-    if (nint == 0 || is_slave(ncf, pathx))
+    if (pathx == NULL || is_slave(ncf, pathx))
         goto done;
 
     name_dup = strdup(name);
@@ -489,17 +682,20 @@ char *drv_xml_desc(struct netcf_if *nif) {
     char *result = NULL;
     struct augeas *aug;
     struct netcf *ncf;
-    char **intf = NULL;
+    char **devs = NULL, **intf = NULL;
     xmlDocPtr aug_xml = NULL, ncf_xml = NULL;
-    int nint = 0;
+    int ndevs = 0, nint = 0;
 
     ncf = nif->ncf;
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
-    nint = aug_fmt_match(ncf, &intf,
-              "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
+    ndevs = aug_fmt_match(ncf, &devs,
+              "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']/DEVICE",
               ifcfg_path, nif->name, nif->name, nif->name);
+    ERR_BAIL(ncf);
+
+    nint = uniq_ifcfg_paths(ncf, ndevs, devs, &intf);
     ERR_BAIL(ncf);
 
     aug_xml = aug_get_xml(ncf, nint, intf);
@@ -508,6 +704,7 @@ char *drv_xml_desc(struct netcf_if *nif) {
     ERR_BAIL(ncf);
 
  done:
+    free_matches(ndevs, &devs);
     free_matches(nint, &intf);
     xmlFreeDoc(aug_xml);
     xmlFreeDoc(ncf_xml);
