@@ -44,7 +44,11 @@
 
 typedef unsigned int ref_t;
 
-ATTRIBUTE_UNUSED ATTRIBUTE_RETURN_CHECK
+/* Prevent this function from being inlined; the compiler thinks that the
+ * assignment to PTRPTR breaks strict aliasing - it does not since we know
+ * that ptrptr is already of type (T **)
+ */
+ATTRIBUTE_UNUSED ATTRIBUTE_RETURN_CHECK ATTRIBUTE_NOINLINE
 static int ref_make_ref(void *ptrptr, size_t size, size_t ref_ofs) {
     *(void**) ptrptr = calloc(1, size);
     if (*(void **)ptrptr == NULL) {

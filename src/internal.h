@@ -70,11 +70,15 @@
 #endif
 #endif
 
+#ifndef ATTRIBUTE_NOINLINE
+#define ATTRIBUTE_NOINLINE __attribute__((__noinline__))
+#endif
 #else
 #define ATTRIBUTE_UNUSED
 #define ATTRIBUTE_FORMAT(...)
 #define ATTRIBUTE_PURE
 #define ATTRIBUTE_RETURN_CHECK
+#define ATTRIBUTE_NOINLINE
 #endif                                   /* __GNUC__ */
 
 /* This needs ATTRIBUTE_RETURN_CHECK */
