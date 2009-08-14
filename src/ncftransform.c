@@ -27,6 +27,15 @@
 #include <stdio.h>
 #include "read-file.h"
 
+struct netcf *ncf = NULL;
+char *in_xml = NULL, *out_xml = NULL;
+
+static void cleanup(void) {
+    ncf_close(ncf);
+    free(in_xml);
+    free(out_xml);
+}
+
 static void die(const char *format, ...) {
     va_list ap;
 
@@ -34,13 +43,12 @@ static void die(const char *format, ...) {
     vfprintf(stderr, format, ap);
     va_end(ap);
 
+    cleanup();
     exit(1);
 }
 
 int main(int argc, char **argv) {
-    char *in_xml = NULL, *out_xml = NULL;
     size_t length;
-    struct netcf *ncf = NULL;
     int r;
 
     if (argc != 3 || (STRNEQ(argv[1], "get") && STRNEQ(argv[1], "put")))
@@ -70,7 +78,7 @@ int main(int argc, char **argv) {
         puts(out_xml);
     }
 
-    ncf_close(ncf);
+    cleanup();
 }
 /*
  * Local variables:
