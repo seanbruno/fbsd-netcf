@@ -17,7 +17,8 @@ EXTRA_DIST = netcf_public.syms \
 	netcf_private.syms
 
 if NETCF_DRIVER_INITSCRIPTS
-DRIVER_SOURCES = drv_initscripts.c dutil.c dutil_linux.c
+DRIVER_SOURCES = drv_initscripts.c dutil.h dutil.c \
+     dutil_linux.h dutil_linux.c
 endif
 
 BUILT_SOURCES = datadir.h netcf.syms
