@@ -64,6 +64,10 @@ void free_matches(int nint, char ***intf);
 /* Parse an XSLT stylesheet residing in the file NCF->data_dir/xml/FNAME */
 xsltStylesheetPtr parse_stylesheet(struct netcf *ncf, const char *fname);
 
+/* Apply an XSLT stylesheet to a document with our extensions */
+xmlDocPtr apply_stylesheet(struct netcf *ncf, xsltStylesheetPtr style,
+                           xmlDocPtr doc);
+
 /* Callback for reporting RelaxNG errors */
 void rng_error(void *ctx, const char *format, ...);
 

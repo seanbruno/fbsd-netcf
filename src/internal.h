@@ -30,6 +30,8 @@
 #include <string.h>
 #include <stdarg.h>
 
+#include <libxslt/transform.h>
+
 /*
  * Macros for gcc's attributes
  */
@@ -181,8 +183,7 @@ char *argv_to_string(const char *const *argv);
 /*
  * XSLT extension functions in xslt_ext.c
  */
-int xslt_ext_register(void);
-void xslt_ext_unregister(void);
+int xslt_register_exts(xsltTransformContextPtr ctxt);
 
 /*
  * Useful for debugging, used by ncftransform

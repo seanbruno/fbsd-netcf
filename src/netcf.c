@@ -51,7 +51,8 @@ static const char *const errmsgs[] = {
     "XML invalid",                        /* EXMLINVALID */
     "required entry missing",             /* ENOENT */
     "failed to execute external program", /* EEXEC */
-    "instance still in use"               /* EINUSE */
+    "instance still in use",              /* EINUSE */
+    "XSLT transformation failed"          /* EXSLTFAILED */
 };
 
 static void free_netcf(struct netcf *ncf) {

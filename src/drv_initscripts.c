@@ -245,8 +245,6 @@ static void bridge_physdevs(struct netcf *ncf) {
 }
 
 int drv_init(struct netcf *ncf) {
-    int r;
-
     if (ALLOC(ncf->driver) < 0)
         return -1;
 
@@ -256,8 +254,6 @@ int drv_init(struct netcf *ncf) {
 
     // FIXME: Check for errors
     xsltInit();
-    r = xslt_ext_register();
-    ERR_THROW(r < 0, ncf, EINTERNAL, "xsltRegisterExtModule failed");
     ncf->driver->get = parse_stylesheet(ncf, "initscripts-get.xsl");
     ncf->driver->put = parse_stylesheet(ncf, "initscripts-put.xsl");
     ncf->driver->rng = rng_parse(ncf, "interface.rng");
@@ -280,8 +276,6 @@ int drv_init(struct netcf *ncf) {
 void drv_close(struct netcf *ncf) {
     xsltFreeStylesheet(ncf->driver->get);
     xsltFreeStylesheet(ncf->driver->put);
-    xslt_ext_unregister();
-    xsltCleanupGlobals();
     if (ncf->driver->ioctl_fd >= 0)
         close(ncf->driver->ioctl_fd);
     aug_close(ncf->driver->augeas);
@@ -504,7 +498,8 @@ char *drv_xml_desc(struct netcf_if *nif) {
     ERR_BAIL(ncf);
 
     aug_xml = aug_get_xml(ncf, nint, intf);
-    ncf_xml = xsltApplyStylesheet(ncf->driver->put, aug_xml, NULL);
+    ncf_xml = apply_stylesheet(ncf, ncf->driver->put, aug_xml);
+    ERR_BAIL(ncf);
 
     xmlDocDumpFormatMemory(ncf_xml, (xmlChar **) &result, NULL, 1);
 
@@ -602,8 +597,8 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     r = aug_rm(aug, path);
     ERR_COND_BAIL(r < 0, ncf, EOTHER);
 
-    // FIXME: Check for errors from ApplyStylesheet
-    aug_xml = xsltApplyStylesheet(ncf->driver->get, ncf_xml, NULL);
+    aug_xml = apply_stylesheet(ncf, ncf->driver->get, ncf_xml);
+    ERR_BAIL(ncf);
 
     aug_put_xml(ncf, aug_xml);
     ERR_BAIL(ncf);

@@ -169,32 +169,25 @@ static void bond_option(xmlXPathParserContextPtr ctxt, int nargs) {
     xmlFree(bond_opts);
 }
 
-static void *xslt_ipcalc_init(ATTRIBUTE_UNUSED xsltTransformContextPtr ctxt,
-                              ATTRIBUTE_UNUSED const xmlChar *URI) {
-    xsltRegisterExtModuleFunction(BAD_CAST "netmask", XSLT_EXT_IPCALC_NS,
-                                  ipcalc_netmask);
-    xsltRegisterExtModuleFunction(BAD_CAST "prefix", XSLT_EXT_IPCALC_NS,
-                                  ipcalc_prefix);
-    return NULL;
-}
+int xslt_register_exts(xsltTransformContextPtr ctxt) {
+    int r;
 
-static void *xslt_bond_init(ATTRIBUTE_UNUSED xsltTransformContextPtr ctxt,
-                            ATTRIBUTE_UNUSED const xmlChar *URI) {
-    xsltRegisterExtModuleFunction(BAD_CAST "option", XSLT_EXT_BOND_NS,
-                                  bond_option);
-    return NULL;
-}
+    r = xsltRegisterExtFunction(ctxt, BAD_CAST "netmask",
+                                XSLT_EXT_IPCALC_NS, ipcalc_netmask);
+    if (r < 0)
+        return r;
 
-int xslt_ext_register(void) {
-    int r = 0;
-    r = xsltRegisterExtModule(XSLT_EXT_IPCALC_NS, xslt_ipcalc_init, NULL);
-    if (r < 0) return r;
-    r = xsltRegisterExtModule(XSLT_EXT_BOND_NS, xslt_bond_init, NULL);
-    return r;
-}
+    r = xsltRegisterExtFunction(ctxt, BAD_CAST "prefix",
+                                XSLT_EXT_IPCALC_NS, ipcalc_prefix);
+    if (r < 0)
+        return r;
 
-void xslt_ext_unregister(void) {
-    xsltUnregisterExtModule	(XSLT_EXT_IPCALC_NS);
+    r = xsltRegisterExtFunction(ctxt, BAD_CAST "option",
+                                XSLT_EXT_BOND_NS, bond_option);
+    if (r < 0)
+        return r;
+
+    return 0;
 }
 
 /*

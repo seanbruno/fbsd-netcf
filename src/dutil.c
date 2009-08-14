@@ -48,6 +48,7 @@
 #include <libxslt/xslt.h>
 #include <libxslt/xsltInternals.h>
 #include <libxslt/transform.h>
+#include <libxslt/xsltutils.h>
 
 /* Like asprintf, but set *STRP to NULL on error */
 int xasprintf(char **strp, const char *format, ...) {
@@ -200,6 +201,43 @@ xsltStylesheetPtr parse_stylesheet(struct netcf *ncf,
     return result;
 }
 
+ATTRIBUTE_FORMAT(printf, 2, 3)
+static void apply_stylesheet_error(void *ctx, const char *format, ...) {
+    struct netcf *ncf = ctx;
+    va_list ap;
+
+    va_start(ap, format);
+    vreport_error(ncf, NETCF_EXSLTFAILED, format, ap);
+    va_end(ap);
+}
+
+xmlDocPtr apply_stylesheet(struct netcf *ncf, xsltStylesheetPtr style,
+                           xmlDocPtr doc) {
+    xsltTransformContextPtr ctxt;
+    xmlDocPtr res = NULL;
+    int r;
+
+    ctxt = xsltNewTransformContext(style, doc);
+    ERR_COND_BAIL(ctxt == NULL, ncf, ENOMEM);
+
+    xsltSetTransformErrorFunc(ctxt, ncf, apply_stylesheet_error);
+
+    r = xslt_register_exts(ctxt);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+
+    res = xsltApplyStylesheetUser(style, doc, NULL, NULL, NULL, ctxt);
+    if ((ctxt->state == XSLT_STATE_ERROR) ||
+        (ctxt->state == XSLT_STATE_STOPPED)) {
+        xmlFreeDoc(res);
+        res = NULL;
+        /* Fallback, in case our error handler isn't called */
+        report_error(ncf, NETCF_EXSLTFAILED, NULL);
+    }
+
+error:
+    xsltFreeTransformContext(ctxt);
+    return res;
+}
 /* Callback for reporting RelaxNG errors */
 void rng_error(void *ctx, const char *format, ...) {
     struct netcf *ncf = ctx;
@@ -354,8 +392,8 @@ int dutil_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
     rng_validate(ncf, ncf_doc);
     ERR_BAIL(ncf);
 
-    // FIXME: Check for errors from ApplyStylesheet
-    aug_doc = xsltApplyStylesheet(ncf->driver->get, ncf_doc, NULL);
+    aug_doc = apply_stylesheet(ncf, ncf->driver->get, ncf_doc);
+    ERR_BAIL(ncf);
 
     xmlDocDumpFormatMemory(aug_doc, (xmlChar **) aug_xml, NULL, 1);
     ERR_COND_BAIL(*aug_xml == NULL, ncf, EXMLINVALID);
@@ -375,8 +413,8 @@ int dutil_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
     aug_doc = parse_xml(ncf, aug_xml);
     ERR_BAIL(ncf);
 
-    // FIXME: Check for errors from ApplyStylesheet
-    ncf_doc = xsltApplyStylesheet(ncf->driver->put, aug_doc, NULL);
+    ncf_doc = apply_stylesheet(ncf, ncf->driver->put, aug_doc);
+    ERR_BAIL(ncf);
 
     xmlDocDumpFormatMemory(ncf_doc, (xmlChar **) ncf_xml, NULL, 1);
     ERR_COND_BAIL(*ncf_xml == NULL, ncf, EXMLINVALID);

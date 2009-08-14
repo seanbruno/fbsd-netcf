@@ -48,8 +48,9 @@ typedef enum {
     NETCF_ENOENT,        /* Required entry in a tree is missing */
     NETCF_EEXEC,         /* external program execution failed or returned
                           * non-0 */
-    NETCF_EINUSE         /* attempt to close a netcf instance that is still
+    NETCF_EINUSE,        /* attempt to close a netcf instance that is still
                           * used by other data structures */
+    NETCF_EXSLTFAILED    /* XSLT transformation failed */
 } netcf_errcode_t;
 
 
