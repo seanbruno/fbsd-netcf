@@ -251,7 +251,7 @@ char *apply_stylesheet_to_string(struct netcf *ncf, xsltStylesheetPtr style,
     r = xsltSaveResultToString((xmlChar **) &result, &result_len,
                                doc_xfm, style);
     ERR_COND_BAIL(r < 0, ncf, ENOMEM);
-    xmlFree(doc_xfm);
+    xmlFreeDoc(doc_xfm);
     return result;
 
  error:

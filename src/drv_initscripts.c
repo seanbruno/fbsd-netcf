@@ -277,6 +277,7 @@ int drv_init(struct netcf *ncf) {
 void drv_close(struct netcf *ncf) {
     xsltFreeStylesheet(ncf->driver->get);
     xsltFreeStylesheet(ncf->driver->put);
+    xmlRelaxNGFree(ncf->driver->rng);
     if (ncf->driver->ioctl_fd >= 0)
         close(ncf->driver->ioctl_fd);
     aug_close(ncf->driver->augeas);
