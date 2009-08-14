@@ -68,6 +68,11 @@ xsltStylesheetPtr parse_stylesheet(struct netcf *ncf, const char *fname);
 xmlDocPtr apply_stylesheet(struct netcf *ncf, xsltStylesheetPtr style,
                            xmlDocPtr doc);
 
+/* Same as APPLY_STYLESHEET, but convert the resulting XML document into a
+ * string */
+char *apply_stylesheet_to_string(struct netcf *ncf, xsltStylesheetPtr style,
+                                 xmlDocPtr doc);
+
 /* Callback for reporting RelaxNG errors */
 void rng_error(void *ctx, const char *format, ...);
 

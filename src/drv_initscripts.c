@@ -43,6 +43,7 @@
 #include <libxslt/xslt.h>
 #include <libxslt/xsltInternals.h>
 #include <libxslt/transform.h>
+#include <libxslt/xsltutils.h>
 
 static const char *const ifcfg_path =
     "/files/etc/sysconfig/network-scripts/*";
@@ -498,10 +499,9 @@ char *drv_xml_desc(struct netcf_if *nif) {
     ERR_BAIL(ncf);
 
     aug_xml = aug_get_xml(ncf, nint, intf);
-    ncf_xml = apply_stylesheet(ncf, ncf->driver->put, aug_xml);
-    ERR_BAIL(ncf);
 
-    xmlDocDumpFormatMemory(ncf_xml, (xmlChar **) &result, NULL, 1);
+    result = apply_stylesheet_to_string(ncf, ncf->driver->put, aug_xml);
+    ERR_BAIL(ncf);
 
  done:
     free_matches(nint, &intf);

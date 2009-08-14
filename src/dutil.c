@@ -238,6 +238,28 @@ error:
     xsltFreeTransformContext(ctxt);
     return res;
 }
+
+char *apply_stylesheet_to_string(struct netcf *ncf, xsltStylesheetPtr style,
+                                 xmlDocPtr doc) {
+    xmlDocPtr doc_xfm = NULL;
+    char *result = NULL;
+    int r, result_len;
+
+    doc_xfm = apply_stylesheet(ncf, style, doc);
+    ERR_BAIL(ncf);
+
+    r = xsltSaveResultToString((xmlChar **) &result, &result_len,
+                               doc_xfm, style);
+    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    xmlFree(doc_xfm);
+    return result;
+
+ error:
+    FREE(result);
+    xmlFreeDoc(doc_xfm);
+    return NULL;
+}
+
 /* Callback for reporting RelaxNG errors */
 void rng_error(void *ctx, const char *format, ...) {
     struct netcf *ncf = ctx;
@@ -392,11 +414,9 @@ int dutil_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
     rng_validate(ncf, ncf_doc);
     ERR_BAIL(ncf);
 
-    aug_doc = apply_stylesheet(ncf, ncf->driver->get, ncf_doc);
+    *aug_xml = apply_stylesheet_to_string(ncf, ncf->driver->get, ncf_doc);
     ERR_BAIL(ncf);
 
-    xmlDocDumpFormatMemory(aug_doc, (xmlChar **) aug_xml, NULL, 1);
-    ERR_COND_BAIL(*aug_xml == NULL, ncf, EXMLINVALID);
     /* fallthrough intentional */
     result = 0;
  error:
@@ -413,11 +433,9 @@ int dutil_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
     aug_doc = parse_xml(ncf, aug_xml);
     ERR_BAIL(ncf);
 
-    ncf_doc = apply_stylesheet(ncf, ncf->driver->put, aug_doc);
+    *ncf_xml = apply_stylesheet_to_string(ncf, ncf->driver->put, aug_doc);
     ERR_BAIL(ncf);
 
-    xmlDocDumpFormatMemory(ncf_doc, (xmlChar **) ncf_xml, NULL, 1);
-    ERR_COND_BAIL(*ncf_xml == NULL, ncf, EXMLINVALID);
     /* fallthrough intentional */
     result = 0;
  error:
