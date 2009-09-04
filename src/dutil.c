@@ -100,11 +100,12 @@ struct augeas *get_augeas(struct netcf *ncf) {
          * errors, we need to return an error.
         */
         r = aug_match(aug, "/augeas//error", NULL);
-        if (r > 0) {
+        if (r > 0 && NCF_DEBUG(ncf)) {
             fprintf(stderr, "warning: augeas initialization had errors\n");
             fprintf(stderr, "please file a bug with the following lines in the bug report:\n");
             aug_print(aug, stderr, "/augeas//error");
         }
+        ERR_THROW(r > 0, ncf, EOTHER, "errors in augeas initialization");
     } else {
         if (ncf->driver->load_augeas) {
             struct augeas *aug = ncf->driver->augeas;

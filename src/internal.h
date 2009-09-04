@@ -130,6 +130,7 @@ struct netcf {
     netcf_errcode_t  errcode;
     char            *errdetails;          /* Error details */
     struct driver   *driver;              /* Driver specific data */
+    unsigned int     debug;
 };
 
 struct netcf_if {
@@ -141,6 +142,8 @@ struct netcf_if {
 };
 
 void free_netcf_if(struct netcf_if *nif);
+
+#define NCF_DEBUG(ncf) ((ncf)->debug)
 
 /*
  * Error reporting
