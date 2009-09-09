@@ -31,6 +31,7 @@
 
 #include "internal.h"
 #include "netcf.h"
+#include "dutil.h"
 
 /* Clear error code and details */
 #define API_ENTRY(ncf)                          \
@@ -81,7 +82,12 @@ int ncf_init(struct netcf **ncf, const char *root) {
         goto oom;
     if (root == NULL)
         root = "/";
-    (*ncf)->root = strdup(root);
+    if (root[strlen(root)-1] == '/') {
+        (*ncf)->root = strdup(root);
+    } else {
+        if (xasprintf(&(*ncf)->root, "%s/", root) < 0)
+            goto oom;
+    }
     if ((*ncf)->root == NULL)
         goto oom;
     (*ncf)->data_dir = getenv("NETCF_DATADIR");
