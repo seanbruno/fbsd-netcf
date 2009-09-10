@@ -63,6 +63,50 @@ int xasprintf(char **strp, const char *format, ...) {
   return result;
 }
 
+int add_augeas_xfm_table(struct netcf *ncf,
+                         const struct augeas_xfm_table *xfm) {
+    int slot, r;
+    struct driver *d = ncf->driver;
+
+    if (d->augeas_xfm_num_tables == 0) {
+        slot = 0;
+        r = ALLOC(d->augeas_xfm_tables);
+        ERR_NOMEM(r < 0, ncf);
+        d->augeas_xfm_num_tables = 1;
+    } else {
+        for (slot =0;
+             slot < d->augeas_xfm_num_tables
+                 && d->augeas_xfm_tables[slot] != NULL;
+             slot++);
+        if (slot == d->augeas_xfm_num_tables) {
+            r = REALLOC_N(ncf->driver->augeas_xfm_tables, slot + 1);
+            ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+            d->augeas_xfm_num_tables = slot + 1;
+        }
+    }
+
+    ncf->driver->augeas_xfm_tables[slot] = xfm;
+    ncf->driver->copy_augeas_xfm = 1;
+    return 0;
+ error:
+    return -1;
+}
+
+int remove_augeas_xfm_table(struct netcf *ncf,
+                            const struct augeas_xfm_table *xfm) {
+    int slot;
+    const int last = ncf->driver->augeas_xfm_num_tables;
+    const struct augeas_xfm_table **tables =
+        ncf->driver->augeas_xfm_tables;
+
+    for (slot = 0; slot < last && tables[slot] != xfm; slot++);
+    if (tables[slot] == xfm) {
+        tables[slot] = NULL;
+        ncf->driver->copy_augeas_xfm = 1;
+    }
+    return 0;
+}
+
 /* Get the Augeas instance; if we already initialized it, just return
  * it. Otherwise, create a new one and return that.
  */
@@ -80,17 +124,39 @@ struct augeas *get_augeas(struct netcf *ncf) {
         FREE(path);
         ERR_THROW(aug == NULL, ncf, EOTHER, "aug_init failed");
         ncf->driver->augeas = aug;
+        ncf->driver->copy_augeas_xfm = 1;
+    }
+
+    if (ncf->driver->copy_augeas_xfm) {
+        struct augeas *aug = ncf->driver->augeas;
         /* Only look at a few config files */
         r = aug_rm(aug, "/augeas/load/*");
         ERR_THROW(r < 0, ncf, EOTHER, "aug_rm failed in get_augeas");
 
-        for (int i=0; i < ncf->driver->augeas_xfm_size; i++) {
-            r = aug_set(aug, ncf->driver->augeas_xfm[i].path,
-                    ncf->driver->augeas_xfm[i].value);
-            ERR_THROW(r < 0, ncf, EOTHER,
-                      "transform setup failed to set %s",
-                      ncf->driver->augeas_xfm[i].path);
+        for (int slot = 0; slot < ncf->driver->augeas_xfm_num_tables; slot++) {
+            const struct augeas_xfm_table *t =
+                ncf->driver->augeas_xfm_tables[slot];
+            if (t == NULL)
+                continue;
+            for (int i=0; i < t->size; i++) {
+                r = aug_set(aug, t->pv[i].path, t->pv[i].value);
+                ERR_THROW(r < 0, ncf, EOTHER,
+                          "transform setup failed to set %s",
+                          t->pv[i].path);
+            }
         }
+        ncf->driver->copy_augeas_xfm = 0;
+        ncf->driver->load_augeas = 1;
+    }
+
+    if (ncf->driver->load_augeas) {
+        struct augeas *aug = ncf->driver->augeas;
+        /* Undefine all our variables to work around bug 79 in Augeas */
+        aug_defvar(aug, "iptables", NULL);
+        aug_defvar(aug, "fw", NULL);
+        aug_defvar(aug, "fw_custom", NULL);
+        aug_defvar(aug, "ipt_filter", NULL);
+
         r = aug_load(aug);
         ERR_THROW(r < 0, ncf, EOTHER, "failed to load config files");
 
@@ -105,20 +171,8 @@ struct augeas *get_augeas(struct netcf *ncf) {
             fprintf(stderr, "please file a bug with the following lines in the bug report:\n");
             aug_print(aug, stderr, "/augeas//error");
         }
-        ERR_THROW(r > 0, ncf, EOTHER, "errors in augeas initialization");
-    } else {
-        if (ncf->driver->load_augeas) {
-            struct augeas *aug = ncf->driver->augeas;
-            /* Undefine all our variables to work around bug 79 in Augeas */
-            aug_defvar(aug, "iptables", NULL);
-            aug_defvar(aug, "fw", NULL);
-            aug_defvar(aug, "fw_custom", NULL);
-            aug_defvar(aug, "ipt_filter", NULL);
-
-            r = aug_load(ncf->driver->augeas);
-            ERR_THROW(r < 0, ncf, EOTHER, "failed to reload config files");
-            ncf->driver->load_augeas = 0;
-        }
+        ERR_THROW(r > 0, ncf, EOTHER, "errors in loading some config files");
+        ncf->driver->load_augeas = 0;
     }
     return ncf->driver->augeas;
  error:

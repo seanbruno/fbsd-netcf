@@ -33,8 +33,9 @@ struct driver {
     xmlRelaxNGPtr      rng;
     int                ioctl_fd;
     unsigned int       load_augeas : 1;
-    unsigned int augeas_xfm_size;
-    const struct augeas_pv *augeas_xfm;
+    unsigned int       copy_augeas_xfm : 1;
+    unsigned int       augeas_xfm_num_tables;
+    const struct augeas_xfm_table **augeas_xfm_tables;
 };
 
 struct augeas_pv {
@@ -42,8 +43,21 @@ struct augeas_pv {
     const char *const value;
 };
 
+struct augeas_xfm_table {
+    unsigned int            size;
+    const struct augeas_pv *pv;
+};
+
 /* Like asprintf, but set *STRP to NULL on error */
 int xasprintf(char **strp, const char *format, ...);
+
+/* Add a table of transformations that the next GET_AUGEAS should run */
+int add_augeas_xfm_table(struct netcf *ncf,
+                         const struct augeas_xfm_table *table);
+
+/* Remove a table of transformations that the next GET_AUGEAS should run */
+int remove_augeas_xfm_table(struct netcf *ncf,
+                            const struct augeas_xfm_table *table);
 
 /* Get or create the augeas instance from NCF */
 struct augeas *get_augeas(struct netcf *ncf);

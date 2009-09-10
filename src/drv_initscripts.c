@@ -52,7 +52,7 @@ static const char *const ifcfg_path =
     "/files/etc/sysconfig/network-scripts/*";
 
 /* Augeas should only load the files we are interested in */
-static const struct augeas_pv augeas_xfm[] = {
+static const struct augeas_pv augeas_xfm_common_pv[] = {
     /* Ifcfg files */
     { "/augeas/load/Ifcfg/lens", "Shellvars.lns" },
     { "/augeas/load/Ifcfg/incl",
@@ -84,6 +84,10 @@ static const struct augeas_pv augeas_xfm[] = {
     { "/augeas/load/Sysfs/lens", "Netcf.id" },
     { "/augeas/load/Sysfs/incl", "/sys/class/net/*/address" }
 };
+
+static const struct augeas_xfm_table augeas_xfm_common =
+    { .size = ARRAY_CARDINALITY(augeas_xfm_common_pv),
+      .pv = augeas_xfm_common_pv };
 
 static const char *const prog_lokkit = "/usr/sbin/lokkit";
 static const char *const lokkit_custom_rules =
@@ -447,12 +451,16 @@ static void bridge_physdevs(struct netcf *ncf) {
 }
 
 int drv_init(struct netcf *ncf) {
+    int r;
+
     if (ALLOC(ncf->driver) < 0)
         return -1;
 
     ncf->driver->ioctl_fd = -1;
-    ncf->driver->augeas_xfm_size = ARRAY_CARDINALITY(augeas_xfm);
-    ncf->driver->augeas_xfm = augeas_xfm;
+
+    r = add_augeas_xfm_table(ncf, &augeas_xfm_common);
+    if (r < 0)
+        goto error;
 
     // FIXME: Check for errors
     xsltInit();
@@ -471,6 +479,7 @@ int drv_init(struct netcf *ncf) {
  error:
     if (ncf->driver->ioctl_fd >= 0)
         close(ncf->driver->ioctl_fd);
+    FREE(ncf->driver->augeas_xfm_tables);
     FREE(ncf->driver);
     return -1;
 }
@@ -482,6 +491,7 @@ void drv_close(struct netcf *ncf) {
     if (ncf->driver->ioctl_fd >= 0)
         close(ncf->driver->ioctl_fd);
     aug_close(ncf->driver->augeas);
+    FREE(ncf->driver->augeas_xfm_tables);
     FREE(ncf->driver);
 }
 
