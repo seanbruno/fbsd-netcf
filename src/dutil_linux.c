@@ -46,7 +46,7 @@ int aug_match_mac(struct netcf *ncf, const char *mac, char ***matches) {
     char *path = NULL, *mac_lower = NULL;
 
     mac_lower = strdup(mac);
-    ERR_COND_BAIL(mac_lower == NULL, ncf, ENOMEM);
+    ERR_NOMEM(mac_lower == NULL, ncf);
     for (char *s = mac_lower; *s != '\0'; s++)
         *s = c_tolower(*s);
 
@@ -61,7 +61,7 @@ int aug_match_mac(struct netcf *ncf, const char *mac, char ***matches) {
 
         /* Replace with freeable copy */
         n = strdup(n);
-        ERR_COND_BAIL(n == NULL, ncf, ENOMEM);
+        ERR_NOMEM(n == NULL, ncf);
 
         free((*matches)[i]);
         (*matches)[i] = n;
@@ -82,7 +82,7 @@ int aug_get_mac(struct netcf *ncf, const char *intf, const char **mac) {
     struct augeas *aug = get_augeas(ncf);
 
     r = xasprintf(&path, "/files/sys/class/net/%s/address/content", intf);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
 
     r = aug_get(aug, path, mac);
     /* Messages for a aug_match-fail are handled outside this function */
@@ -112,7 +112,7 @@ void modprobed_alias_bond(struct netcf *ncf, const char *name) {
            in Augeas, it's too convoluted */
         r = xasprintf(&path,
                       "/files/etc/modprobe.d/netcf.conf/alias[last()]", name);
-        ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+        ERR_NOMEM(r < 0, ncf);
         nmatches = aug_match(aug, path, NULL);
         if (nmatches > 0) {
             r = aug_insert(aug, path, "alias", 0);
@@ -125,7 +125,7 @@ void modprobed_alias_bond(struct netcf *ncf, const char *name) {
     r = xasprintf(&path,
                   "/files/etc/modprobe.d/*/alias[ . = '%s']/modulename",
                   name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
 
     r = aug_set(aug, path, "bonding");
     ERR_COND_BAIL(r < 0, ncf, EOTHER);
@@ -143,7 +143,7 @@ void modprobed_unalias_bond(struct netcf *ncf, const char *name) {
     r = xasprintf(&path,
          "/files/etc/modprobe.d/*/alias[ . = '%s'][modulename = 'bonding']",
                   name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
 
     r = aug_rm(aug, path);
     ERR_COND_BAIL(r < 0, ncf, EOTHER);

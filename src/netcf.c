@@ -247,7 +247,7 @@ int run_program(struct netcf *ncf, const char *const *argv) {
     char *argv_str = argv_to_string(argv);
     int ret = -1;
 
-    ERR_COND_BAIL(argv_str == NULL, ncf, ENOMEM);
+    ERR_NOMEM(argv_str == NULL, ncf);
 
     /* BIG FIXME!!!  Before any general release, this *must* be
      * replaced with a call to a function similar to libVirt's

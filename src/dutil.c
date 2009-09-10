@@ -74,7 +74,7 @@ struct augeas *get_augeas(struct netcf *ncf) {
         char *path;
 
         r = xasprintf(&path, "%s/lenses", ncf->data_dir);
-        ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+        ERR_NOMEM(r < 0, ncf);
 
         aug = aug_init(ncf->root, path, AUG_NO_MODL_AUTOLOAD);
         FREE(path);
@@ -140,7 +140,7 @@ int defnode(struct netcf *ncf, const char *name, const char *value,
     va_end (ap);
     if (r < 0)
         expr = NULL;
-    ERR_THROW(r < 0, ncf, ENOMEM, "failed to format node expression");
+    ERR_NOMEM(r < 0, ncf);
 
     r = aug_defnode(aug, name, expr, value, &created);
     ERR_THROW(r < 0, ncf, EOTHER, "failed to define node %s", name);
@@ -165,7 +165,7 @@ int aug_fmt_match(struct netcf *ncf, char ***matches, const char *fmt, ...) {
     va_end(args);
     if (r < 0) {
         path = NULL;
-        ERR_COND_BAIL(1, ncf, ENOMEM);
+        ERR_NOMEM(1, ncf);
     }
 
     r = aug_match(aug, path, matches);
@@ -193,7 +193,7 @@ xsltStylesheetPtr parse_stylesheet(struct netcf *ncf,
     int r;
 
     r = xasprintf(&path, "%s/xml/%s", ncf->data_dir, fname);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
 
     // FIXME: Error checking ??
     result = xsltParseStylesheetFile(BAD_CAST path);
@@ -219,12 +219,12 @@ xmlDocPtr apply_stylesheet(struct netcf *ncf, xsltStylesheetPtr style,
     int r;
 
     ctxt = xsltNewTransformContext(style, doc);
-    ERR_COND_BAIL(ctxt == NULL, ncf, ENOMEM);
+    ERR_NOMEM(ctxt == NULL, ncf);
 
     xsltSetTransformErrorFunc(ctxt, ncf, apply_stylesheet_error);
 
     r = xslt_register_exts(ctxt);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
 
     res = xsltApplyStylesheetUser(style, doc, NULL, NULL, NULL, ctxt);
     if ((ctxt->state == XSLT_STATE_ERROR) ||
@@ -251,7 +251,7 @@ char *apply_stylesheet_to_string(struct netcf *ncf, xsltStylesheetPtr style,
 
     r = xsltSaveResultToString((xmlChar **) &result, &result_len,
                                doc_xfm, style);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
     xmlFreeDoc(doc_xfm);
     return result;
 
@@ -278,7 +278,7 @@ xmlRelaxNGPtr rng_parse(struct netcf *ncf, const char *fname) {
     int r;
 
     r = xasprintf(&path, "%s/xml/%s", ncf->data_dir, fname);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
 
     ctxt = xmlRelaxNGNewParserCtxt(path);
     xmlRelaxNGSetParserErrors(ctxt, rng_error, rng_error, ncf);
@@ -329,7 +329,7 @@ xmlDocPtr parse_xml(struct netcf *ncf, const char *xml_str) {
 
     /* Set up a parser context so we can catch the details of XML errors. */
     pctxt = xmlNewParserCtxt();
-    ERR_COND_BAIL(pctxt == NULL || pctxt->sax == NULL, ncf, ENOMEM);
+    ERR_NOMEM(pctxt == NULL || pctxt->sax == NULL, ncf);
 
     pctxt->sax->error = catch_xml_error;
     pctxt->_private = ncf;
@@ -392,7 +392,7 @@ struct netcf_if *make_netcf_if(struct netcf *ncf, char *name) {
     struct netcf_if *result = NULL;
 
     r = make_ref(result);
-    ERR_THROW(r < 0, ncf, ENOMEM, NULL);
+    ERR_NOMEM(r < 0, ncf);
     result->ncf = ref(ncf);
     result->name = name;
     return result;

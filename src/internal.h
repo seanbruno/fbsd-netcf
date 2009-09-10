@@ -112,6 +112,15 @@
     ERR_BAIL(ncf);                              \
     } while(0)
 
+/* Special version of ERR_COND_BAIL(cond, ncf, ENOMEM) to avoid
+ * problems since ENOMEM is defined in errno.h
+ */
+#define ERR_NOMEM(cond, ncf)                         \
+    if (cond) {                                      \
+        (ncf)->errcode = NETCF_ENOMEM;               \
+        goto error;                                  \
+    }
+
 #define ERR_THROW(cond, ncf, err, fmt ...)           \
     do {                                             \
         if (cond) {                                  \

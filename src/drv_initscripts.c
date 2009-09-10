@@ -201,7 +201,7 @@ static char *find_ifcfg_path(struct netcf *ncf, const char *name) {
 
     /* if ifcfg-NAME exists, use that */
     r = xasprintf(&path, "%s/ifcfg-%s", network_scripts_path, name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
 
     nmatches = aug_match(aug, path, NULL);
     ERR_COND_BAIL(nmatches < 0, ncf, EOTHER);
@@ -247,7 +247,7 @@ static int uniq_ifcfg_paths(struct netcf *ncf,
 
     /* List unique device names */
     r = ALLOC_N(devnames, ndevs);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
 
     for (int i=0; i < ndevs; i++) {
         const char *name = NULL;
@@ -266,7 +266,7 @@ static int uniq_ifcfg_paths(struct netcf *ncf,
 
     /* Find canonical config for each device name */
     r = ALLOC_N(*intf, ndevnames);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
     for (int i= 0; i < ndevnames; i++) {
         (*intf)[i] = find_ifcfg_path(ncf, devnames[i]);
         ERR_BAIL(ncf);
@@ -526,7 +526,7 @@ static int list_interface_ids(struct netcf *ncf,
             if (is_qualified) {
                 if (names) {
                     names[nqualified] = strdup(name);
-                    ERR_COND_BAIL(names[nqualified] == NULL, ncf, ENOMEM);
+                    ERR_NOMEM(names[nqualified] == NULL, ncf);
                 }
                 nqualified++;
             }
@@ -566,7 +566,7 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
         goto done;
 
     name_dup = strdup(name);
-    ERR_COND_BAIL(name_dup == NULL, ncf, ENOMEM);
+    ERR_NOMEM(name_dup == NULL, ncf);
 
     nif = make_netcf_if(ncf, name_dup);
     ERR_BAIL(ncf);
@@ -656,7 +656,7 @@ static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml) {
                 toplevel = 0;
             }
             r = xasprintf(&lpath, "%s/%s", path, label);
-            ERR_THROW(r < 0, ncf, ENOMEM, NULL);
+            ERR_NOMEM(r < 0, ncf);
 
             r = aug_set(aug, lpath, value);
             ERR_THROW(r < 0, ncf, EOTHER,
@@ -765,7 +765,7 @@ static int bridge_slaves(struct netcf *ncf, const char *name, char ***slaves) {
 
         (*slaves)[i] = strdup(dev);
         free(p);
-        ERR_COND_BAIL(slaves[i] == NULL, ncf, ENOMEM);
+        ERR_NOMEM(slaves[i] == NULL, ncf);
     }
     return nslaves;
  error:
@@ -793,7 +793,7 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     r = xasprintf(&path,
           "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
           ifcfg_path, name, name, name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
 
     r = aug_rm(aug, path);
     ERR_COND_BAIL(r < 0, ncf, EOTHER);
@@ -842,7 +842,7 @@ int drv_undefine(struct netcf_if *nif) {
     r = xasprintf(&path,
           "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
           ifcfg_path, nif->name, nif->name, nif->name);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
 
     r = aug_rm(aug, path);
     ERR_COND_BAIL(r < 0, ncf, EOTHER);
@@ -881,12 +881,12 @@ int drv_lookup_by_mac_string(struct netcf *ncf, const char *mac,
     }
 
     r = ALLOC_N(names, nmatches);
-    ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+    ERR_NOMEM(r < 0, ncf);
 
     int cnt = 0;
     for (int i = 0; i < nmatches; i++) {
         r = xasprintf(&ifcfg, "%s[DEVICE = '%s']", ifcfg_path, matches[i]);
-        ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+        ERR_NOMEM(r < 0, ncf);
 
         if (! is_slave(ncf, ifcfg))
             names[cnt++] = matches[i];
@@ -894,7 +894,7 @@ int drv_lookup_by_mac_string(struct netcf *ncf, const char *mac,
     }
     for (int i=0; i < cnt && i < maxifaces; i++) {
         char *name = strdup(names[i]);
-        ERR_COND_BAIL(name == NULL, ncf, ENOMEM);
+        ERR_NOMEM(name == NULL, ncf);
         ifaces[i] = make_netcf_if(ncf, name);
         ERR_BAIL(ncf);
     }
@@ -924,7 +924,7 @@ const char *drv_mac_string(struct netcf_if *nif) {
     if (nif->mac == NULL || STRNEQ(nif->mac, mac)) {
         FREE(nif->mac);
         nif->mac = strdup(mac);
-        ERR_COND_BAIL(nif->mac == NULL, ncf, ENOMEM);
+        ERR_NOMEM(nif->mac == NULL, ncf);
     }
     /* fallthrough intentional */
  error:
