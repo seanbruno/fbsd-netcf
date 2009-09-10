@@ -53,7 +53,8 @@ static const char *const errmsgs[] = {
     "required entry missing",             /* ENOENT */
     "failed to execute external program", /* EEXEC */
     "instance still in use",              /* EINUSE */
-    "XSLT transformation failed"          /* EXSLTFAILED */
+    "XSLT transformation failed",         /* EXSLTFAILED */
+    "File operation failed"               /* EFILE */
 };
 
 static void free_netcf(struct netcf *ncf) {

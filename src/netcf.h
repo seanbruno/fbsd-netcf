@@ -50,7 +50,8 @@ typedef enum {
                           * non-0 */
     NETCF_EINUSE,        /* attempt to close a netcf instance that is still
                           * used by other data structures */
-    NETCF_EXSLTFAILED    /* XSLT transformation failed */
+    NETCF_EXSLTFAILED,   /* XSLT transformation failed */
+    NETCF_EFILE          /* Some file access failed */
 } netcf_errcode_t;
 
 

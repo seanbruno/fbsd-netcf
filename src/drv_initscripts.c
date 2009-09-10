@@ -65,9 +65,6 @@ static const struct augeas_pv augeas_xfm_common_pv[] = {
     { "/augeas/load/Ifcfg/excl[6]", "*.rpmsave" },
     { "/augeas/load/Ifcfg/excl[7]", "*.augnew" },
     { "/augeas/load/Ifcfg/excl[8]", "*.augsave" },
-    /* iptables config */
-    { "/augeas/load/Iptables/lens", "Iptables.lns" },
-    { "/augeas/load/Iptables/incl", "/etc/sysconfig/iptables" },
     /* modprobe config */
     { "/augeas/load/Modprobe/lens", "Modprobe.lns" },
     { "/augeas/load/Modprobe/incl[1]", "/etc/modprobe.d/*" },
@@ -77,9 +74,6 @@ static const struct augeas_pv augeas_xfm_common_pv[] = {
     { "/augeas/load/Modprobe/excl[3]", "*.rpmsave" },
     { "/augeas/load/Modprobe/excl[4]", "*.rpmnew" },
     { "/augeas/load/Modprobe/excl[5]", "*~" },
-    /* lokkit */
-    { "/augeas/load/Lokkit/lens", "Lokkit.lns" },
-    { "/augeas/load/Lokkit/incl", "/etc/sysconfig/system-config-firewall" },
     /* sysfs (choice entries from /class/net) */
     { "/augeas/load/Sysfs/lens", "Netcf.id" },
     { "/augeas/load/Sysfs/incl", "/sys/class/net/*/address" }
@@ -88,6 +82,19 @@ static const struct augeas_pv augeas_xfm_common_pv[] = {
 static const struct augeas_xfm_table augeas_xfm_common =
     { .size = ARRAY_CARDINALITY(augeas_xfm_common_pv),
       .pv = augeas_xfm_common_pv };
+
+static const struct augeas_pv augeas_xfm_iptables_pv[] = {
+    /* iptables config */
+    { "/augeas/load/Iptables/lens", "Iptables.lns" },
+    { "/augeas/load/Iptables/incl", "/etc/sysconfig/iptables" },
+    /* lokkit */
+    { "/augeas/load/Lokkit/lens", "Lokkit.lns" },
+    { "/augeas/load/Lokkit/incl", "/etc/sysconfig/system-config-firewall" },
+};
+
+static const struct augeas_xfm_table augeas_xfm_iptables =
+    { .size = ARRAY_CARDINALITY(augeas_xfm_iptables_pv),
+      .pv = augeas_xfm_iptables_pv };
 
 static const char *const prog_lokkit = "/usr/sbin/lokkit";
 static const char *const lokkit_custom_rules =
@@ -347,7 +354,14 @@ static void bridge_physdevs(struct netcf *ncf) {
     int have_lokkit, use_lokkit;
     int r, nmatches;
 
+    /* If bridge packets never hit iptables, nothing to worry about */
+    if (! bridge_nf_call_iptables(ncf))
+        return;
+    ERR_BAIL(ncf);
+
     MEMZERO(argv, ARRAY_CARDINALITY(argv));
+
+    add_augeas_xfm_table(ncf, &augeas_xfm_iptables);
 
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
@@ -359,7 +373,7 @@ static void bridge_physdevs(struct netcf *ncf) {
       "$iptables/table[ . = 'filter']/*[. = 'FORWARD'][match = 'physdev']", NULL);
     ERR_THROW(nmatches < 0, ncf, EOTHER, "failed to look for bridge");
     if (nmatches > 0)
-        return;
+        goto error;
 
     have_lokkit = access(prog_lokkit, X_OK) == 0;
     use_lokkit = aug_match(aug,
@@ -445,6 +459,7 @@ static void bridge_physdevs(struct netcf *ncf) {
         ERR_BAIL(ncf);
     }
  error:
+    remove_augeas_xfm_table(ncf, &augeas_xfm_iptables);
     free(path);
     free(p);
     return;
@@ -467,7 +482,6 @@ int drv_init(struct netcf *ncf) {
     ncf->driver->get = parse_stylesheet(ncf, "initscripts-get.xsl");
     ncf->driver->put = parse_stylesheet(ncf, "initscripts-put.xsl");
     ncf->driver->rng = rng_parse(ncf, "interface.rng");
-    /* We undconditionally bridge physdevs; could be more discriminating */
     bridge_physdevs(ncf);
 
     /* open a socket for interface ioctls */

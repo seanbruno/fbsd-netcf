@@ -32,6 +32,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <c-ctype.h>
+#include <errno.h>
 
 #include "safe-alloc.h"
 #include "ref.h"
@@ -149,6 +150,31 @@ void modprobed_unalias_bond(struct netcf *ncf, const char *name) {
     ERR_COND_BAIL(r < 0, ncf, EOTHER);
  error:
     FREE(path);
+}
+
+bool bridge_nf_call_iptables(struct netcf *ncf) {
+    static const char *const proc_bridge_nf_call_iptables =
+        "proc/sys/net/bridge/bridge-nf-call-iptables";
+    char *path = NULL;
+    FILE *proc = NULL;
+    int r, c;
+
+    r = xasprintf(&path, "%s%s", ncf->root, proc_bridge_nf_call_iptables);
+    ERR_NOMEM(r < 0, ncf);
+
+    proc = fopen(path, "r");
+    ERR_THROW(proc == NULL, ncf, EFILE, "can not open %s: %s",
+              path, strerror(errno));
+    c = fgetc(proc);
+    ERR_THROW(c == EOF, ncf, EFILE, "nothing to read from %s: %s",
+              path, strerror(errno));
+    fclose(proc);
+    return c == '1';
+ error:
+    FREE(path);
+    if (proc != NULL)
+        fclose(proc);
+    return false;
 }
 
 /*
