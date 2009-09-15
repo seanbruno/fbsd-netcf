@@ -171,9 +171,14 @@
         </xsl:when>
         <xsl:when test="$uses_static">
           <ip address="{node[@label = 'IPADDR']/@value}">
-            <xsl:if test="node[@label = 'NETMASK']">
-              <xsl:attribute name="prefix"><xsl:value-of select="ipcalc:prefix(node[@label = 'NETMASK']/@value)"/></xsl:attribute>
-            </xsl:if>
+            <xsl:choose>
+              <xsl:when test="node[@label = 'PREFIX']">
+                <xsl:attribute name="prefix"><xsl:value-of select="node[@label = 'PREFIX']/@value"/></xsl:attribute>
+              </xsl:when>
+              <xsl:when test="node[@label = 'NETMASK']">
+                <xsl:attribute name="prefix"><xsl:value-of select="ipcalc:prefix(node[@label = 'NETMASK']/@value)"/></xsl:attribute>
+              </xsl:when>
+            </xsl:choose>
           </ip>
           <xsl:if test="node[@label = 'GATEWAY']">
             <route gateway="{node[@label = 'GATEWAY']/@value}"/>
