@@ -978,6 +978,7 @@ int drv_if_up(struct netcf_if *nif) {
         }
     }
     run1(ncf, ifup, nif->name);
+    ERR_BAIL(ncf);
     result = 0;
  error:
     free_matches(nslaves, &slaves);
@@ -992,6 +993,7 @@ int drv_if_down(struct netcf_if *nif) {
     int result = -1;
 
     run1(ncf, ifdown, nif->name);
+    ERR_BAIL(ncf);
     if (is_bridge(ncf, nif->name)) {
         /* Bring up bridge slaves after the bridge */
         nslaves = bridge_slaves(ncf, nif->name, &slaves);
