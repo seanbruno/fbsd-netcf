@@ -797,9 +797,31 @@ static int bridge_slaves(struct netcf *ncf, const char *name, char ***slaves) {
     return -1;
 }
 
+
+/* For an interface NAME, remove the ifcfg-* files for that interface and
+ * all its slaves. */
+static void rm_interface(struct netcf *ncf, const char *name) {
+    int r;
+    char *path = NULL;
+    struct augeas *aug = NULL;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    r = xasprintf(&path,
+          "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
+          ifcfg_path, name, name, name);
+    ERR_NOMEM(r < 0, ncf);
+
+    r = aug_rm(aug, path);
+    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+ error:
+    FREE(path);
+}
+
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     xmlDocPtr ncf_xml = NULL, aug_xml = NULL;
-    char *name = NULL, *path = NULL;
+    char *name = NULL;
     struct netcf_if *result = NULL;
     int r;
     struct augeas *aug = get_augeas(ncf);
@@ -813,14 +835,8 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     name = device_name_from_xml(ncf_xml);
     ERR_COND_BAIL(name == NULL, ncf, EINTERNAL);
 
-    /* Clean out existing definitions */
-    r = xasprintf(&path,
-          "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
-          ifcfg_path, name, name, name);
-    ERR_NOMEM(r < 0, ncf);
-
-    r = aug_rm(aug, path);
-    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+    rm_interface(ncf, name);
+    ERR_BAIL(ncf);
 
     aug_xml = apply_stylesheet(ncf, ncf->driver->get, ncf_xml);
     ERR_BAIL(ncf);
@@ -840,7 +856,6 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     ERR_BAIL(ncf);
 
  done:
-    free(path);
     xmlFreeDoc(ncf_xml);
     xmlFreeDoc(aug_xml);
     return result;
@@ -853,7 +868,6 @@ int drv_undefine(struct netcf_if *nif) {
     struct augeas *aug = NULL;
     struct netcf *ncf = nif->ncf;
     int r;
-    char *path = NULL;
 
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
@@ -863,21 +877,14 @@ int drv_undefine(struct netcf_if *nif) {
         ERR_BAIL(ncf);
     }
 
-    r = xasprintf(&path,
-          "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
-          ifcfg_path, nif->name, nif->name, nif->name);
-    ERR_NOMEM(r < 0, ncf);
-
-    r = aug_rm(aug, path);
-    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+    rm_interface(ncf, nif->name);
+    ERR_BAIL(ncf);
 
     r = aug_save(aug);
     ERR_COND_BAIL(r < 0, ncf, EOTHER);
 
-    FREE(path);
     return 0;
  error:
-    FREE(path);
     return -1;
 }
 
