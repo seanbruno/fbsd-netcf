@@ -244,11 +244,9 @@ int ncf_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
 
 int run_program(struct netcf *ncf, const char *const *argv) {
 
-    int command_return;
+    int status, success;
     char *argv_str = argv_to_string(argv);
     int ret = -1;
-
-    ERR_NOMEM(argv_str == NULL, ncf);
 
     /* BIG FIXME!!!  Before any general release, this *must* be
      * replaced with a call to a function similar to libVirt's
@@ -256,9 +254,11 @@ int run_program(struct netcf *ncf, const char *const *argv) {
      * program produced on stderr or stdout should be placed in
      * ncf->errdetails.
      */
-    command_return = system(argv_str);
-
-    ERR_COND_BAIL(command_return != WEXITSTATUS (0), ncf, EEXEC);
+    status = system(argv_str);
+    success = WIFEXITED(status) && WEXITSTATUS(status) == 0;
+    ERR_THROW(!success, ncf, EEXEC,
+              "Running '%s' failed with error code %d",
+              argv_str == NULL ? argv[0] : argv_str, WEXITSTATUS(status));
 
     ret = 0;
 error:
