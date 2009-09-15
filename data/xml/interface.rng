@@ -123,6 +123,7 @@
           <choice>
             <ref name="bare-ethernet-interface"/>
             <ref name="bare-vlan-interface"/>
+            <ref v:since="2" name="bare-bond-interface"/>
           </choice>
         </zeroOrMore>
       </element>
@@ -135,90 +136,105 @@
   <!--
       Bonds
   -->
+  <define name="bond-interface-common">
+    <attribute name="type">
+      <value>bond</value>
+    </attribute>
+    <ref name="name-attr"/>
+  </define>
+
+  <define name="bond-element">
+    <element name="bond">
+      <optional>
+        <attribute name="mode">
+          <choice>
+            <value>balance-rr</value>
+            <!-- The primary interface is the first interface child
+                 of the bond element -->
+            <value>active-backup</value>
+            <value>balance-xor</value>
+            <value>broadcast</value>
+            <value>802.3ad</value>
+            <value>balance-tlb</value>
+            <value>balance-alb</value>
+          </choice>
+        </attribute>
+      </optional>
+
+      <!-- FIXME: add more attributes
+
+           mode == 802.3ad
+             ad_select
+             lacp_rate
+             xmit_hash_policy
+
+           mode == active-backup
+             fail_over_mac
+             num_grat_arp when mode == active-backup (since 3.3.0)
+             num_unsol_na when mode == active-backup (ipv6, since 3.4.0)
+
+           mode == balance-xor
+             xmit_hash_policy       (since 2.6.3/3.2.2)
+      -->
+
+      <choice>
+        <element name="miimon">
+          <!-- miimon frequency in ms -->
+          <attribute name="freq"><ref name="uint"/></attribute>
+          <optional>
+            <attribute name="downdelay"><ref name="uint"/></attribute>
+          </optional>
+          <optional>
+            <attribute name="updelay"><ref name="uint"/></attribute>
+          </optional>
+          <optional>
+            <!-- use_carrier -->
+            <attribute name="carrier">
+              <choice>
+                <!-- use MII/ETHTOOL ioctl -->
+                <value>ioctl</value>
+                <!-- use netif_carrier_ok() -->
+                <value>netif</value>
+              </choice>
+            </attribute>
+          </optional>
+        </element>
+        <element name="arpmon">
+          <attribute name="interval"><ref name="uint"/></attribute>
+          <attribute name="target"><ref name="ipv4-addr"/></attribute>
+          <optional>
+            <attribute name="validate">
+              <choice>
+                <value>none</value>
+                <value>active</value>
+                <value>backup</value>
+                <value>all</value>
+              </choice>
+            </attribute>
+          </optional>
+        </element>
+      </choice>
+      <oneOrMore>
+        <!-- The slave interfaces -->
+        <ref name="bare-ethernet-interface"/>
+      </oneOrMore>
+    </element>
+  </define>
+
+  <define name="bare-bond-interface">
+    <element name="interface">
+      <ref name="bond-interface-common"/>
+      <ref name="bond-element"/>
+    </element>
+  </define>
+
   <define name="bond-interface">
     <element name="interface">
-      <attribute name="type">
-        <value>bond</value>
-      </attribute>
-      <ref name="name-attr"/>
+      <ref name="bond-interface-common"/>
       <ref name="startmode"/>
       <ref name="mtu"/>
       <ref name="interface-addressing"/>
-      <element name="bond">
-        <optional>
-          <attribute name="mode">
-            <choice>
-              <value>balance-rr</value>
-              <!-- The primary interface is the first interface child
-                   of the bond element -->
-              <value>active-backup</value>
-              <value>balance-xor</value>
-              <value>broadcast</value>
-              <value>802.3ad</value>
-              <value>balance-tlb</value>
-              <value>balance-alb</value>
-            </choice>
-          </attribute>
-        </optional>
-
-        <!-- FIXME: add more attributes
-
-             mode == 802.3ad
-               ad_select
-               lacp_rate
-               xmit_hash_policy
-
-             mode == active-backup
-               fail_over_mac
-               num_grat_arp when mode == active-backup (since 3.3.0)
-               num_unsol_na when mode == active-backup (ipv6, since 3.4.0)
-
-             mode == balance-xor
-               xmit_hash_policy       (since 2.6.3/3.2.2)
-        -->
-
-        <choice>
-          <element name="miimon">
-            <!-- miimon frequency in ms -->
-            <attribute name="freq"><ref name="uint"/></attribute>
-            <optional>
-              <attribute name="downdelay"><ref name="uint"/></attribute>
-            </optional>
-            <optional>
-              <attribute name="updelay"><ref name="uint"/></attribute>
-            </optional>
-            <optional>
-              <!-- use_carrier -->
-              <attribute name="carrier">
-                <choice>
-                  <!-- use MII/ETHTOOL ioctl -->
-                  <value>ioctl</value>
-                  <!-- use netif_carrier_ok() -->
-                  <value>netif</value>
-                </choice>
-              </attribute>
-            </optional>
-          </element>
-          <element name="arpmon">
-            <attribute name="interval"><ref name="uint"/></attribute>
-            <attribute name="target"><ref name="ipv4-addr"/></attribute>
-            <optional>
-              <attribute name="validate">
-                <choice>
-                  <value>none</value>
-                  <value>active</value>
-                  <value>backup</value>
-                  <value>all</value>
-                </choice>
-              </attribute>
-            </optional>
-          </element>
-        </choice>
-        <oneOrMore>
-          <!-- The slave interfaces -->
-          <ref name="bare-ethernet-interface"/>
-        </oneOrMore>
-      </element>
+      <ref name="bond-element"/>
     </element>
   </define>
 

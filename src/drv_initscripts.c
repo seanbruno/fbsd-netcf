@@ -715,8 +715,9 @@ char *drv_xml_desc(struct netcf_if *nif) {
     ERR_BAIL(ncf);
 
     ndevs = aug_fmt_match(ncf, &devs,
-              "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']/DEVICE",
-              ifcfg_path, nif->name, nif->name, nif->name);
+              "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s'"
+              "    or MASTER = ../*[BRIDGE = '%s']/DEVICE ]/DEVICE",
+              ifcfg_path, nif->name, nif->name, nif->name, nif->name);
     ERR_BAIL(ncf);
 
     nint = uniq_ifcfg_paths(ncf, ndevs, devs, &intf);
@@ -808,9 +809,12 @@ static void rm_interface(struct netcf *ncf, const char *name) {
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
+    /* The last or clause catches slaves of a bond that are enslaved to
+     * a bridge NAME */
     r = xasprintf(&path,
-          "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s']",
-          ifcfg_path, name, name, name);
+          "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s' "
+          "    or MASTER = ../*[BRIDGE = '%s']/DEVICE ]",
+                  ifcfg_path, name, name, name, name);
     ERR_NOMEM(r < 0, ncf);
 
     r = aug_rm(aug, path);
@@ -849,6 +853,41 @@ static void rm_all_interfaces(struct netcf *ncf, xmlDocPtr ncf_xml) {
     xmlXPathFreeContext(context);
 }
 
+/* Dig through interface NAME and all its subinterfaces for bonds
+ * and either add aliases in modprobe.conf for it (ALIAS == true), or
+ * remove such aliases (ALIAS == false)
+ */
+static void bond_setup(struct netcf *ncf, const char *name, bool alias) {
+    void (*setup)(struct netcf *ncf, const char *name);
+    int nslaves = 0;
+    char **slaves = NULL;
+
+    if (alias)
+        setup = modprobed_alias_bond;
+    else
+        setup = modprobed_unalias_bond;
+
+    if (is_bond(ncf, name)) {
+        setup(ncf, name);
+        ERR_BAIL(ncf);
+    }
+
+    if (is_bridge(ncf, name)) {
+        nslaves = bridge_slaves(ncf, name, &slaves);
+        ERR_BAIL(ncf);
+        for (int i=0; i < nslaves; i++) {
+            if (is_bond(ncf, slaves[i])) {
+                setup(ncf, slaves[i]);
+                ERR_BAIL(ncf);
+            }
+        }
+    }
+
+ error:
+    free_matches(nslaves, &slaves);
+    return;
+}
+
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     xmlDocPtr ncf_xml = NULL, aug_xml = NULL;
     char *name = NULL;
@@ -874,10 +913,8 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     aug_put_xml(ncf, aug_xml);
     ERR_BAIL(ncf);
 
-    if (is_bond(ncf, name)) {
-        modprobed_alias_bond(ncf, name);
-        ERR_BAIL(ncf);
-    }
+    bond_setup(ncf, name, true);
+    ERR_BAIL(ncf);
 
     r = aug_save(aug);
     ERR_THROW(r < 0, ncf, EOTHER, "aug_save failed");
@@ -902,10 +939,8 @@ int drv_undefine(struct netcf_if *nif) {
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
-    if (is_bond(ncf, nif->name)) {
-        modprobed_unalias_bond(ncf, nif->name);
-        ERR_BAIL(ncf);
-    }
+    bond_setup(ncf, nif->name, false);
+    ERR_BAIL(ncf);
 
     rm_interface(ncf, nif->name);
     ERR_BAIL(ncf);

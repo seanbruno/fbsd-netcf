@@ -82,8 +82,11 @@
           <xsl:attribute name="delay"><xsl:value-of select="node[@label = 'DELAY']/@value"/></xsl:attribute>
         </xsl:if>
         <xsl:for-each select="/descendant-or-self::*[node[@label = 'BRIDGE' and @value = $iface]]">
-          <xsl:if test="count(node[@label = 'VLAN']) = 0">
+          <xsl:if test="count(node[@label = 'VLAN' or @label = 'BONDING_OPTS']) = 0">
             <xsl:call-template name="bare-ethernet-interface"/>
+          </xsl:if>
+          <xsl:if test="count(node[@label = 'BONDING_OPTS']) > 0">
+            <xsl:call-template name="bare-bond-interface"/>
           </xsl:if>
           <xsl:if test="count(node[@label = 'VLAN']) > 0">
             <xsl:call-template name="bare-vlan-interface"/>
@@ -96,27 +99,38 @@
   <!--
       Bond
   -->
-  <xsl:template name="bond-interface"
-                match="tree[node[@label = 'DEVICE'][@value = //tree/node[@label = 'MASTER']/@value]]">
+  <xsl:template name="bond-element">
+    <xsl:variable name="iface" select="node[@label= 'DEVICE']/@value"/>
+    <bond>
+      <xsl:variable name="opts" select="node[@label = 'BONDING_OPTS']/@value"/>
+      <xsl:call-template name="bonding-opts">
+        <xsl:with-param name="opts" select="$opts"/>
+      </xsl:call-template>
+      <xsl:variable name="primary" select="bond:option($opts, 'primary')"/>
+      <xsl:for-each select="/descendant-or-self::*[node[@label = 'MASTER' and @value = $iface]][node[@label = 'DEVICE' and @value = $primary]]">
+        <xsl:call-template name='bare-ethernet-interface'/>
+      </xsl:for-each>
+      <xsl:for-each select="/descendant-or-self::*[node[@label = 'MASTER' and @value = $iface]][node[@label = 'DEVICE' and @value != $primary]]">
+        <xsl:call-template name='bare-ethernet-interface'/>
+      </xsl:for-each>
+    </bond>
+  </xsl:template>
+
+  <xsl:template name="bare-bond-interface">
     <interface type="bond">
-      <xsl:variable name="iface" select="node[@label= 'DEVICE']/@value"/>
+      <xsl:call-template name="name-attr"/>
+      <xsl:call-template name="bond-element"/>
+    </interface>
+  </xsl:template>
+
+  <xsl:template name="bond-interface"
+                match="tree[node[@label = 'DEVICE'][@value = //tree/node[@label = 'MASTER']/@value]][count(node[@label = 'BRIDGE']) = 0]">
+    <interface type="bond">
       <xsl:call-template name="name-attr"/>
       <xsl:call-template name="startmode"/>
       <xsl:call-template name="mtu"/>
       <xsl:call-template name="interface-addressing"/>
-      <bond>
-        <xsl:variable name="opts" select="node[@label = 'BONDING_OPTS']/@value"/>
-        <xsl:call-template name="bonding-opts">
-          <xsl:with-param name="opts" select="$opts"/>
-        </xsl:call-template>
-        <xsl:variable name="primary" select="bond:option($opts, 'primary')"/>
-        <xsl:for-each select="/descendant-or-self::*[node[@label = 'MASTER' and @value = $iface]][node[@label = 'DEVICE' and @value = $primary]]">
-          <xsl:call-template name='bare-ethernet-interface'/>
-        </xsl:for-each>
-        <xsl:for-each select="/descendant-or-self::*[node[@label = 'MASTER' and @value = $iface]][node[@label = 'DEVICE' and @value != $primary]]">
-          <xsl:call-template name='bare-ethernet-interface'/>
-        </xsl:for-each>
-      </bond>
+      <xsl:call-template name="bond-element"/>
     </interface>
   </xsl:template>
 

@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<forest>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-br0">
+    <node label="DEVICE" value="br0"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="MTU" value="1500"/>
+    <node label="TYPE" value="Bridge"/>
+    <node label="STP" value="off"/>
+  </tree>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth2">
+    <node label="DEVICE" value="eth2"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="MTU" value="1500"/>
+    <node label="BRIDGE" value="br0"/>
+  </tree>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-bond0">
+    <node label="DEVICE" value="bond0"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="MTU" value="1500"/>
+    <node label="BONDING_OPTS" value="'mode=active-backup primary=eth1 miimon=100 updelay=10 use_carrier=0'"/>
+    <node label="BRIDGE" value="br0"/>
+  </tree>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth1">
+    <node label="DEVICE" value="eth1"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="MTU" value="1500"/>
+    <node label="MASTER" value="bond0"/>
+    <node label="SLAVE" value="yes"/>
+  </tree>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth0">
+    <node label="DEVICE" value="eth0"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="MTU" value="1500"/>
+    <node label="MASTER" value="bond0"/>
+    <node label="SLAVE" value="yes"/>
+  </tree>
+</forest>

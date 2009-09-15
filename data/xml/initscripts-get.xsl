@@ -84,26 +84,21 @@
         <xsl:if test="@type = 'vlan'">
           <xsl:call-template name="bare-vlan-interface"/>
         </xsl:if>
+        <xsl:if test="@type = 'bond'">
+          <xsl:call-template name="bare-bond-interface"/>
+        </xsl:if>
         <node label="BRIDGE" value="{../../@name}"/>
       </tree>
+      <xsl:if test="@type = 'bond'">
+        <xsl:call-template name="bond-slaves"/>
+      </xsl:if>
     </xsl:for-each>
   </xsl:template>
 
   <!--
       Bond
   -->
-  <xsl:template match="/interface[@type = 'bond']">
-    <tree>
-      <xsl:call-template name="name-attr"/>
-      <xsl:call-template name="startmode"/>
-      <xsl:call-template name="mtu"/>
-      <xsl:call-template name="interface-addressing"/>
-      <node label="BONDING_OPTS">
-        <xsl:attribute name="value">
-          <xsl:call-template name="bonding-opts"/>
-        </xsl:attribute>
-      </node>
-    </tree>
+  <xsl:template name="bond-slaves">
     <xsl:for-each select='bond/interface'>
       <tree>
         <xsl:call-template name="bare-ethernet-interface"/>
@@ -111,6 +106,32 @@
         <node label="SLAVE" value="yes"/>
       </tree>
     </xsl:for-each>
+  </xsl:template>
+
+  <xsl:template name="bonding-opts-node">
+    <node label="BONDING_OPTS">
+      <xsl:attribute name="value">
+        <xsl:call-template name="bonding-opts"/>
+      </xsl:attribute>
+    </node>
+  </xsl:template>
+
+  <xsl:template name="bare-bond-interface">
+    <xsl:call-template name="name-attr"/>
+    <xsl:call-template name="startmode"/>
+    <xsl:call-template name="mtu"/>
+    <xsl:call-template name="bonding-opts-node"/>
+  </xsl:template>
+
+  <xsl:template match="/interface[@type = 'bond']">
+    <tree>
+      <xsl:call-template name="name-attr"/>
+      <xsl:call-template name="startmode"/>
+      <xsl:call-template name="mtu"/>
+      <xsl:call-template name="interface-addressing"/>
+      <xsl:call-template name="bonding-opts-node"/>
+    </tree>
+    <xsl:call-template name="bond-slaves"/>
   </xsl:template>
 
   <!--
