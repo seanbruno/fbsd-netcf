@@ -49,6 +49,7 @@ struct augeas_xfm_table {
 };
 
 /* Like asprintf, but set *STRP to NULL on error */
+ATTRIBUTE_FORMAT(printf, 2, 3)
 int xasprintf(char **strp, const char *format, ...);
 
 /* Add a table of transformations that the next GET_AUGEAS should run */

@@ -111,8 +111,7 @@ void modprobed_alias_bond(struct netcf *ncf, const char *name) {
     if (nmatches == 0) {
         /* Add a new alias node; this probably deserves better API support
            in Augeas, it's too convoluted */
-        r = xasprintf(&path,
-                      "/files/etc/modprobe.d/netcf.conf/alias[last()]", name);
+        r = xasprintf(&path, "/files/etc/modprobe.d/netcf.conf/alias[last()]");
         ERR_NOMEM(r < 0, ncf);
         nmatches = aug_match(aug, path, NULL);
         if (nmatches > 0) {
