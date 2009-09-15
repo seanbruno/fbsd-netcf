@@ -819,6 +819,36 @@ static void rm_interface(struct netcf *ncf, const char *name) {
     FREE(path);
 }
 
+/* Remove all interfaces and their slaves mentioned in NCF_XML.  We need to
+ * remove interfaces one by one when we define an interface, since what
+ * will become a subinterface may not be related to the new toplevel
+ * interface, and calling RM_INTERFACE on the toplevel interface is
+ * therefore not enough.
+ */
+static void rm_all_interfaces(struct netcf *ncf, xmlDocPtr ncf_xml) {
+    xmlXPathContextPtr context = NULL;
+	xmlXPathObjectPtr obj = NULL;
+
+	context = xmlXPathNewContext(ncf_xml);
+    ERR_NOMEM(context == NULL, ncf);
+
+	obj = xmlXPathEvalExpression(BAD_CAST "//interface", context);
+    ERR_NOMEM(obj == NULL, ncf);
+
+
+    xmlNodeSetPtr ns = obj->nodesetval;
+    for (int i=0; i < ns->nodeNr; i++) {
+        xmlChar *name = xmlGetProp(ns->nodeTab[i], BAD_CAST "name");
+        ERR_NOMEM(name == NULL, ncf);
+        rm_interface(ncf, (char *) name);
+        xmlFree(name);
+        ERR_BAIL(ncf);
+	}
+ error:
+    xmlXPathFreeObject(obj);
+    xmlXPathFreeContext(context);
+}
+
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     xmlDocPtr ncf_xml = NULL, aug_xml = NULL;
     char *name = NULL;
@@ -835,7 +865,7 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     name = device_name_from_xml(ncf_xml);
     ERR_COND_BAIL(name == NULL, ncf, EINTERNAL);
 
-    rm_interface(ncf, name);
+    rm_all_interfaces(ncf, ncf_xml);
     ERR_BAIL(ncf);
 
     aug_xml = apply_stylesheet(ncf, ncf->driver->get, ncf_xml);
