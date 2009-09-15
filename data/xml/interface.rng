@@ -119,12 +119,12 @@
         <optional v:since="2">
           <attribute name="delay"><ref name="timeval"/></attribute>
         </optional>
-        <oneOrMore>
+        <zeroOrMore>
           <choice>
             <ref name="bare-ethernet-interface"/>
             <ref name="bare-vlan-interface"/>
           </choice>
-        </oneOrMore>
+        </zeroOrMore>
       </element>
     </element>
   </define>

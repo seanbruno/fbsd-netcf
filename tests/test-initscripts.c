@@ -177,6 +177,7 @@ static void testTransforms(CuTest *tc) {
     assert_transforms(tc, "bridge");
     assert_transforms(tc, "bridge-no-address");
     assert_transforms(tc, "bridge-vlan");
+    assert_transforms(tc, "bridge-empty");
     assert_transforms(tc, "ethernet-static");
     assert_transforms(tc, "ethernet-static-no-prefix");
     assert_transforms(tc, "ethernet-dhcp");
