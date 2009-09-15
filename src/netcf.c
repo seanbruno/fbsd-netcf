@@ -207,7 +207,6 @@ void ncf_if_free(struct netcf_if *nif) {
     if (nif == NULL)
         return;
 
-    API_ENTRY(nif->ncf);
     unref(nif, netcf_if);
 }
 
