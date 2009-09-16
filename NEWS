@@ -1,3 +1,26 @@
+0.1.1 - 2009-09-16
+  - Bridge: allow setting forward delay
+  - Bridge: allow bridges with nothing enslaved
+  - Bridge: allow enslaving a bond
+  - Bond: properly translate numeric modes into textual modes
+  - Lookup MAC's without regarding case (bz 512955)
+  - Fix initialization of libxslt-1.1.24; this works around a threading bug
+    in libxslt exposed by using netcf with libvirt (Daniel Veillard)
+  - Print augeas initialization errors only when the environment variable
+    NETCF_DEBUG exists (bz 513212)
+  - Ignore the same backup etc. files ignored by the initscripts (bz 512950)
+  - Search interface config files in the same manner as initscripts'
+    need_config (bz 512950)
+  - Only read/modify iptables and system-config-firewall when
+    net.bridge.bridge-nf-call-iptables sysctl is 1 (bz 517617)
+  - Respect PREFIX in ifcfg file; if it's not there, continue to derive it
+    from NETMASK
+  - Properly propagate errors from running ifup/ifdown
+  - ncf_define: fix removal of old interface config before redefining it
+  - ncf_define: do not crash when defining a VLAN interface without a name
+    (commit fb0543cc)
+  - Move code around for upcoming SuSe driver (Jonas Eriksson)
+
 0.1.0 - 2009-07-14
   - Stable API and XML schema; from now on, API and XML schema will only
     change in backwards compatible ways

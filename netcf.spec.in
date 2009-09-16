@@ -73,6 +73,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/netcf.pc
 
 %changelog
+* Wed Sep 16 2009 David Lutterkort <lutter@redhat.com> - 0.1.1-1
+- New Version
+
 * Mon Jul 13 2009 David Lutterkort <lutter@redhat.com> - 0.1.0-1
 - BR on augeas-0.5.2
 - Drop explicit requires for augeas-libs

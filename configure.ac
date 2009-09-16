@@ -1,11 +1,11 @@
-AC_INIT(netcf, 0.1.0)
+AC_INIT(netcf, 0.1.1)
 AC_CONFIG_SRCDIR([src/netcf.c])
 AC_CONFIG_AUX_DIR([build/aux])
 AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([-Wno-portability 1.11 color-tests parallel-tests])
 AM_SILENT_RULES([yes]) # make --enable-silent-rules the default.
 
-AC_SUBST([LIBNETCF_VERSION_INFO], [1:0:0])
+AC_SUBST([LIBNETCF_VERSION_INFO], [2:0:1])
 
 AC_GNU_SOURCE
 
