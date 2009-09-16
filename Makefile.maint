@@ -35,7 +35,7 @@ upload:
 	scp $(tarball) $(tarball).sig $(rel_dir)
 
 tag-release:
-	@git-tag release-$(VERSION)
+	@git tag release-$(VERSION)
 
 # This is how I run autogen locally. YMMV
 autogen:
