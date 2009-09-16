@@ -3,12 +3,8 @@
 * TODO
 ** ipv4 and ipv6 addressing
    including setting non-default routes (see DV's sketch for RelaxNG)
-** using bonds in bridges
-   settle on XML format for nesting
 ** support of additional bonding modes
-** remove requirement for at least one element in bridge
 ** validate that name on vlan interface is consistent with base device + tag
-** generate name attr if there is none (device_name_from_xml)
 
 * From email on libvir-list
 
