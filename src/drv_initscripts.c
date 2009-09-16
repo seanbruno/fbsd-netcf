@@ -739,15 +739,45 @@ char *drv_xml_desc(struct netcf_if *nif) {
     goto done;
 }
 
-/* Get the content of /interface/@name. Result must be freed with xmlFree() */
-static char *device_name_from_xml(xmlDocPtr xml) {
-    xmlNodePtr iface;
-    char *result;
+/* Get the content of /interface/@name. Result must be freed with xmlFree()
+ *
+ * The name on VLAN interfaces is optional; if there is no
+ * /interface/@name, construct a name for the VLAN interface and set
+ * /interface/@name in NCF_XML to it. This way, other code can assume we
+ * always have a name on the interface.
+ */
+static char *device_name_from_xml(struct netcf *ncf, xmlDocPtr ncf_xml) {
+    xmlXPathContextPtr context = NULL;
+	xmlXPathObjectPtr obj = NULL;
+    char *result = NULL;
 
-    iface = xmlDocGetRootElement(xml);
-    if (iface == NULL) return NULL;
+	context = xmlXPathNewContext(ncf_xml);
+    ERR_NOMEM(context == NULL, ncf);
 
-    result = xml_prop(iface, "name");
+	obj = xmlXPathEvalExpression(BAD_CAST "string(/interface/@name)", context);
+    ERR_NOMEM(obj == NULL, ncf);
+    assert(obj->type == XPATH_STRING);
+
+    if (xmlStrlen(obj->stringval) == 0) {
+        xmlXPathFreeObject(obj);
+        obj = xmlXPathEvalExpression(BAD_CAST
+         "concat(/interface/vlan/interface/@name, '.', /interface/vlan/@tag)",
+        context);
+        ERR_NOMEM(obj == NULL, ncf);
+        ERR_COND_BAIL(xmlStrlen(obj->stringval) == 0, ncf, EINTERNAL);
+        assert(obj->type == XPATH_STRING);
+
+        xmlNodePtr iface;
+        iface = xmlDocGetRootElement(ncf_xml);
+        ERR_COND_BAIL(iface == NULL, ncf, EINTERNAL);
+        xmlSetProp(iface, BAD_CAST "name", BAD_CAST result);
+    }
+
+    result = (char *) xmlStrdup(obj->stringval);
+    fprintf(stderr, "result %s %d", result, ncf->errcode);
+ error:
+    xmlXPathFreeObject(obj);
+    xmlXPathFreeContext(context);
     return result;
 }
 
@@ -901,7 +931,7 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     rng_validate(ncf, ncf_xml);
     ERR_BAIL(ncf);
 
-    name = device_name_from_xml(ncf_xml);
+    name = device_name_from_xml(ncf, ncf_xml);
     ERR_COND_BAIL(name == NULL, ncf, EINTERNAL);
 
     rm_all_interfaces(ncf, ncf_xml);
