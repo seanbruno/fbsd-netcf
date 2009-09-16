@@ -9,7 +9,18 @@
     <xsl:variable name="mode" select="bond:option($opts, 'mode')"/>
     <xsl:if test="string-length($mode) > 0">
       <xsl:attribute name="mode">
-        <xsl:value-of select="$mode"/>
+        <xsl:choose>
+          <xsl:when test="$mode = '0'">balance-rr</xsl:when>
+          <xsl:when test="$mode = '1'">active-backup</xsl:when>
+          <xsl:when test="$mode = '2'">balance-xor</xsl:when>
+          <xsl:when test="$mode = '3'">broadcast</xsl:when>
+          <xsl:when test="$mode = '4'">802.3ad</xsl:when>
+          <xsl:when test="$mode = '5'">balance-tlb</xsl:when>
+          <xsl:when test="$mode = '6'">balance-alb</xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="$mode"/>
+          </xsl:otherwise>
+        </xsl:choose>
       </xsl:attribute>
     </xsl:if>
     <xsl:if test="bond:option($opts, 'miimon')">
