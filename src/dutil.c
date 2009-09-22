@@ -428,7 +428,7 @@ error:
     return -1;
 }
 
-int is_active(struct netcf *ncf, const char *intf) {
+int if_is_active(struct netcf *ncf, const char *intf) {
     struct ifreq ifr;
 
     MEMZERO(&ifr, 1);

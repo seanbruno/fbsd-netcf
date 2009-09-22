@@ -539,9 +539,9 @@ static int list_interface_ids(struct netcf *ncf,
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
 
             if (!is_qualified) {
-                int if_is_active = is_active(ncf, name);
-                if ((if_is_active && (flags & NETCF_IFACE_ACTIVE))
-                    || ((!if_is_active) && (flags & NETCF_IFACE_INACTIVE))) {
+                int is_active = if_is_active(ncf, name);
+                if ((is_active && (flags & NETCF_IFACE_ACTIVE))
+                    || ((!is_active) && (flags & NETCF_IFACE_INACTIVE))) {
 
                     is_qualified = 1;
                 }

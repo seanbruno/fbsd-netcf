@@ -109,8 +109,8 @@ char *xml_prop(xmlNodePtr node, const char *name);
 /* Get a file descriptor to a ioctl socket */
 int init_ioctl_fd(struct netcf *ncf);
 
-/* Check if the interface INTF is up using a ioctl call */
-int is_active(struct netcf *ncf, const char *intf);
+/* Check if the interface INTF is up using an ioctl call */
+int if_is_active(struct netcf *ncf, const char *intf);
 
 /* Create a new netcf if instance for interface NAME */
 struct netcf_if *make_netcf_if(struct netcf *ncf, char *name);
