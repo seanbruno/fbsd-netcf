@@ -707,7 +707,7 @@ char *drv_xml_desc(struct netcf_if *nif) {
     struct augeas *aug;
     struct netcf *ncf;
     char **devs = NULL, **intf = NULL;
-    xmlDocPtr aug_xml = NULL, ncf_xml = NULL;
+    xmlDocPtr aug_xml = NULL;
     int ndevs = 0, nint = 0;
 
     ncf = nif->ncf;
@@ -732,7 +732,6 @@ char *drv_xml_desc(struct netcf_if *nif) {
     free_matches(ndevs, &devs);
     free_matches(nint, &intf);
     xmlFreeDoc(aug_xml);
-    xmlFreeDoc(ncf_xml);
     return result;
  error:
     FREE(result);
