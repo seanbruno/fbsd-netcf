@@ -45,6 +45,8 @@
 #include <libxslt/transform.h>
 #include <libxslt/xsltutils.h>
 
+#include <libexslt/exslt.h>
+
 static const char *const network_scripts_path =
     "/files/etc/sysconfig/network-scripts";
 
@@ -479,6 +481,7 @@ int drv_init(struct netcf *ncf) {
 
     // FIXME: Check for errors
     xsltInit();
+    exsltStrRegister();
     ncf->driver->get = parse_stylesheet(ncf, "initscripts-get.xsl");
     ncf->driver->put = parse_stylesheet(ncf, "initscripts-put.xsl");
     ncf->driver->rng = rng_parse(ncf, "interface.rng");

@@ -176,6 +176,9 @@
     <xsl:for-each select="protocol[@family='ipv4']">
       <xsl:call-template name="protocol-ipv4"/>
     </xsl:for-each>
+    <xsl:for-each select="protocol[@family='ipv6']">
+      <xsl:call-template name="protocol-ipv6"/>
+    </xsl:for-each>
   </xsl:template>
 
   <xsl:template name="protocol-ipv4">
@@ -198,4 +201,45 @@
       </xsl:when>
     </xsl:choose>
   </xsl:template>
+
+  <xsl:template name="protocol-ipv6">
+    <node label="IPV6INIT" value="yes"/>
+    <xsl:if test="count(autoconf) > 0">
+      <node label="IPV6_AUTOCONF" value="yes"/>
+    </xsl:if>
+    <xsl:if test="count(autoconf) = 0">
+      <node label="IPV6_AUTOCONF" value="no"/>
+    </xsl:if>
+    <xsl:if test="count(dhcp) > 0">
+      <node label="DHCPV6" value="yes"/>
+    </xsl:if>
+    <xsl:if test="count(dhcp) = 0">
+      <node label="DHCPV6" value="no"/>
+    </xsl:if>
+    <xsl:if test="count(ip) > 0">
+      <node label="IPV6ADDR">
+        <xsl:attribute name="value">
+          <xsl:value-of select="ip[1]/@address"/><xsl:if test="ip[1]/@prefix">/<xsl:value-of select="ip[1]/@prefix"/></xsl:if>
+        </xsl:attribute>
+      </node>
+    </xsl:if>
+    <xsl:if test="count(ip) > 1">
+      <node label="IPV6ADDR_SECONDARIES">
+        <xsl:attribute name="value">
+          <xsl:text>'</xsl:text>
+          <xsl:for-each select="ip[1]/following-sibling::ip[following-sibling::ip]">
+            <xsl:value-of select="@address"/><xsl:if test="@prefix">/<xsl:value-of select="@prefix"/></xsl:if><xsl:value-of select="string(' ')"/>
+          </xsl:for-each>
+          <xsl:for-each select="ip[last()]">
+            <xsl:value-of select="@address"/><xsl:if test="@prefix">/<xsl:value-of select="@prefix"/></xsl:if>
+          </xsl:for-each>
+          <xsl:text>'</xsl:text>
+        </xsl:attribute>
+      </node>
+    </xsl:if>
+    <xsl:if test="route">
+      <node label="IPV6_DEFAULTGW" value="{route/@gateway}"/>
+    </xsl:if>
+  </xsl:template>
+
 </xsl:stylesheet>

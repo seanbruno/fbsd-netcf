@@ -2,7 +2,8 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:ipcalc = "http://redhat.com/xslt/netcf/ipcalc/1.0"
                 xmlns:bond = "http://redhat.com/xslt/netcf/bond/1.0"
-                extension-element-prefixes="bond ipcalc"
+                xmlns:str="http://exslt.org/strings"
+                extension-element-prefixes="bond ipcalc str"
                 version="1.0">
 
   <xsl:import href="util-put.xsl"/>
@@ -165,6 +166,7 @@
 
   <xsl:template name="interface-addressing">
     <xsl:call-template name="protocol-ipv4"/>
+    <xsl:call-template name="protocol-ipv6"/>
   </xsl:template>
 
   <xsl:template name="protocol-ipv4">
@@ -200,6 +202,60 @@
         </xsl:when>
       </xsl:choose>
     </protocol>
+    </xsl:if>
+  </xsl:template>
+
+  <xsl:template name="protocol-ipv6">
+    <xsl:if test="node[@label = 'IPV6INIT'][@value = 'yes']">
+      <protocol family="ipv6">
+        <xsl:if test="node[@label = 'IPV6_AUTOCONF'][@value = 'yes']">
+          <autoconf/>
+        </xsl:if>
+        <xsl:if test="node[@label = 'DHCPV6'][@value = 'yes']">
+          <dhcp/>
+        </xsl:if>
+        <xsl:if test="node[@label = 'IPV6ADDR']">
+          <xsl:call-template name="ipv6-address">
+            <xsl:with-param name="value"
+                            select="node[@label = 'IPV6ADDR']/@value"/>
+          </xsl:call-template>
+        </xsl:if>
+        <xsl:if test="node[@label = 'IPV6ADDR_SECONDARIES']">
+          <!-- Strip surrounding single quotes from $s -->
+          <xsl:variable name="s"
+                        select="node[@label = 'IPV6ADDR_SECONDARIES']/@value"/>
+          <xsl:variable name="q">'</xsl:variable>
+          <xsl:variable name="sec">
+            <xsl:choose>
+              <xsl:when test="starts-with($s, $q)">
+                <xsl:value-of select="substring($s, 2, string-length($s)-2)"/>
+              </xsl:when>
+              <xsl:otherwise>
+                <xsl:value-of select="$s"/>
+              </xsl:otherwise>
+            </xsl:choose>
+          </xsl:variable>
+          <xsl:for-each select="str:split($sec)">
+            <xsl:call-template name="ipv6-address">
+              <xsl:with-param name="value" select="."/>
+            </xsl:call-template>
+          </xsl:for-each>
+        </xsl:if>
+      </protocol>
+    </xsl:if>
+  </xsl:template>
+
+  <xsl:template name="ipv6-address">
+    <xsl:param name="value"/>
+    <xsl:variable name="address" select="substring-before($value, '/')"/>
+    <xsl:variable name="prefix" select="substring-after($value, '/')"/>
+    <ip address="{$address}">
+      <xsl:if test="$prefix != ''">
+        <xsl:attribute name="prefix"><xsl:value-of select="$prefix"/></xsl:attribute>
+      </xsl:if>
+    </ip>
+    <xsl:if test="node[@label = 'IPV6_DEFAULTGW']">
+      <route gateway="{node[@label = 'IPV6_DEFAULTGW']/@value}"/>
     </xsl:if>
   </xsl:template>
 
