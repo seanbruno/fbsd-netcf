@@ -773,7 +773,6 @@ static char *device_name_from_xml(struct netcf *ncf, xmlDocPtr ncf_xml) {
     }
 
     result = (char *) xmlStrdup(obj->stringval);
-    fprintf(stderr, "result %s %d", result, ncf->errcode);
  error:
     xmlXPathFreeObject(obj);
     xmlXPathFreeContext(context);
