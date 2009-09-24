@@ -183,6 +183,13 @@ static void testTransforms(CuTest *tc) {
     assert_transforms(tc, "ethernet-static-no-prefix");
     assert_transforms(tc, "ethernet-dhcp");
     assert_transforms(tc, "vlan");
+
+    assert_transforms(tc, "ipv6-local");
+    assert_transforms(tc, "ipv6-static");
+    assert_transforms(tc, "ipv6-dhcp");
+    assert_transforms(tc, "ipv6-autoconf");
+    assert_transforms(tc, "ipv6-autoconf-dhcp");
+    assert_transforms(tc, "ipv6-static-multi");
 }
 
 int main(void) {

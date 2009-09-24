@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<forest>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth0">
+    <node label="DEVICE" value="eth0"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="IPV6INIT" value="yes"/>
+    <node label="IPV6_AUTOCONF" value="no"/>
+    <node label="DHCPV6" value="no"/>
+    <node label="IPV6ADDR" value="3ffe:ffff:0:5::1/128"/>
+    <node label="IPV6ADDR_SECONDARIES" value="'3ffe:ffff:0:5::3/128 3ffe:ffff:0:5::5/128'"/>
+  </tree>
+</forest>
