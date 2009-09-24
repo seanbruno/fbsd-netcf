@@ -945,6 +945,10 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     ERR_BAIL(ncf);
 
     r = aug_save(aug);
+    if (r < 0 && NCF_DEBUG(ncf)) {
+        fprintf(stderr, "Errors from aug_save:\n");
+        aug_print(aug, stderr, "/augeas//error");
+    }
     ERR_THROW(r < 0, ncf, EOTHER, "aug_save failed");
 
     result = make_netcf_if(ncf, name);
