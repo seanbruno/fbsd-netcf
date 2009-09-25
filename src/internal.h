@@ -179,6 +179,7 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name);
 int drv_lookup_by_mac_string(struct netcf *, const char *mac,
                              int maxifaces, struct netcf_if **ifaces);
 char *drv_xml_desc(struct netcf_if *);
+char *drv_xml_state(struct netcf_if *);
 const char *drv_mac_string(struct netcf_if *nif);
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml);
 int drv_undefine(struct netcf_if *nif);

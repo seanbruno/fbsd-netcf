@@ -35,6 +35,9 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 
 #include "safe-alloc.h"
 #include "ref.h"
@@ -435,9 +438,51 @@ int if_is_active(struct netcf *ncf, const char *intf) {
     strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
     ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
     if (ioctl(ncf->driver->ioctl_fd, SIOCGIFFLAGS, &ifr))  {
+        report_error(ncf, NETCF_EIOCTL, "Failed to get interface flags for %s", intf);
         return 0;
     }
     return ((ifr.ifr_flags & IFF_UP) == IFF_UP);
+}
+
+unsigned int if_ipv4_address(struct netcf *ncf, const char *intf) {
+    struct ifreq ifr;
+
+    MEMZERO(&ifr, 1);
+    strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
+    ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
+    if (ioctl(ncf->driver->ioctl_fd, SIOCGIFADDR, &ifr))  {
+        report_error(ncf, NETCF_EIOCTL, "Failed to get ipv4 address for %s", intf);
+        return 0;
+    }
+
+    return (((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
+}
+
+unsigned int if_ipv4_netmask(struct netcf *ncf, const char *intf) {
+    struct ifreq ifr;
+
+    MEMZERO(&ifr, 1);
+    strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
+    ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
+    if (ioctl(ncf->driver->ioctl_fd, SIOCGIFNETMASK, &ifr))  {
+        report_error(ncf, NETCF_EIOCTL, "Failed to get ipv4 netmask for %s", intf);
+        return 0;
+    }
+
+    return (((struct sockaddr_in *)&ifr.ifr_netmask)->sin_addr.s_addr);
+}
+
+
+int if_ipv4_prefix(struct netcf *ncf, const char *intf) {
+    unsigned int nmv4 = if_ipv4_netmask(ncf, intf);
+    int prefix = 0;
+
+    nmv4 = ntohl(nmv4);
+    while ((nmv4 & 0xFFFFFFFF) != 0) {
+        nmv4 <<= 1;
+        prefix++;
+    }
+    return prefix;
 }
 
 /* Create a new netcf if instance for interface NAME */
@@ -497,6 +542,80 @@ int dutil_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
     xmlFreeDoc(ncf_doc);
     xmlFreeDoc(aug_doc);
     return result;
+}
+
+/* Given an xml document that follows interface.rng, add the IP
+ * address and prefix under protocol/ip
+ */
+void add_state_to_xml_doc(xmlDocPtr doc, struct netcf *ncf ATTRIBUTE_UNUSED,
+                          unsigned int ipv4, int prefix) {
+
+    xmlNodePtr root = NULL, proto = NULL, ip = NULL, cur;
+    xmlAttrPtr prop = NULL;
+    char ip_str[48], prefix_str[16];
+
+
+    root = xmlDocGetRootElement(doc);
+    ERR_THROW((root == NULL), ncf, EINTERNAL,
+              "failed to get document root element");
+
+    ERR_THROW(!xmlStrEqual(root->name, BAD_CAST "interface"),
+              ncf, EINTERNAL, "root document is not an interface");
+
+    for (cur = root->children; cur != NULL; cur = cur->next) {
+        if ((cur->type == XML_ELEMENT_NODE) &&
+            xmlStrEqual(cur->name, BAD_CAST "protocol")) {
+            xmlChar *family = xmlGetProp(cur, BAD_CAST "family");
+            if (family != NULL) {
+                if (xmlStrEqual(family, BAD_CAST "ipv4"))
+                    proto = cur;
+                xmlFree(family);
+                if (proto != NULL) {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (proto == NULL) {
+        proto = xmlNewDocNode(doc, NULL, BAD_CAST "protocol", NULL);
+        ERR_NOMEM(proto == NULL, ncf);
+
+        cur = xmlAddChild(root, proto);
+        ERR_NOMEM(cur == NULL, ncf);
+        prop = xmlSetProp(proto, BAD_CAST "family", BAD_CAST "ipv4");
+        ERR_NOMEM(prop == NULL, ncf);
+
+    }
+
+    for (cur = proto->children; cur != NULL; cur = cur->next) {
+        if ((cur->type == XML_ELEMENT_NODE) &&
+            xmlStrEqual(cur->name, BAD_CAST "ip")) {
+            break;
+        }
+    }
+
+    if (ip == NULL) {
+        ip = xmlNewDocNode(doc, NULL, BAD_CAST "ip", NULL);
+        ERR_NOMEM(ip == NULL, ncf);
+
+        cur = xmlAddChild(proto, ip);
+        ERR_NOMEM(cur == NULL, ncf);
+    }
+
+    inet_ntop(AF_INET, (struct in_addr *)&ipv4, ip_str, sizeof(ip_str));
+    prop = xmlSetProp(ip, BAD_CAST "address", BAD_CAST ip_str);
+    ERR_NOMEM(prop == NULL, ncf);
+
+    snprintf(prefix_str, sizeof(prefix_str), "%d", prefix);
+    prop = xmlSetProp(ip, BAD_CAST "prefix", BAD_CAST prefix_str);
+    ERR_NOMEM(prop == NULL, ncf);
+
+    prop = xmlSetProp(ip, BAD_CAST "source", BAD_CAST "device");
+    ERR_NOMEM(prop == NULL, ncf);
+
+error:
+    return;
 }
 
 /*

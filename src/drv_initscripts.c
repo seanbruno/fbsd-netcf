@@ -705,18 +705,16 @@ static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml) {
     return result;
 }
 
-char *drv_xml_desc(struct netcf_if *nif) {
-    char *result = NULL;
-    struct augeas *aug;
+/* given a netcf_if, get the config for an interface in the simple
+ * Augeas format
+ */
+static xmlDocPtr aug_get_xml_for_nif(struct netcf_if *nif) {
     struct netcf *ncf;
     char **devs = NULL, **intf = NULL;
     xmlDocPtr aug_xml = NULL;
     int ndevs = 0, nint = 0;
 
     ncf = nif->ncf;
-    aug = get_augeas(ncf);
-    ERR_BAIL(ncf);
-
     ndevs = aug_fmt_match(ncf, &devs,
               "%s[ DEVICE = '%s' or BRIDGE = '%s' or MASTER = '%s'"
               "    or MASTER = ../*[BRIDGE = '%s']/DEVICE ]/DEVICE",
@@ -728,12 +726,64 @@ char *drv_xml_desc(struct netcf_if *nif) {
 
     aug_xml = aug_get_xml(ncf, nint, intf);
 
-    result = apply_stylesheet_to_string(ncf, ncf->driver->put, aug_xml);
-    ERR_BAIL(ncf);
-
- done:
+ error:
     free_matches(ndevs, &devs);
     free_matches(nint, &intf);
+    return aug_xml;
+}
+
+/* return the current static configuration (as saved on disk) */
+char *drv_xml_desc(struct netcf_if *nif) {
+    char *result = NULL;
+    struct netcf *ncf;
+    xmlDocPtr aug_xml = NULL;
+
+    ncf = nif->ncf;
+    aug_xml = aug_get_xml_for_nif(nif);
+    ERR_BAIL(ncf);
+
+    result = apply_stylesheet_to_string(ncf, ncf->driver->put, aug_xml);
+
+ error:
+    xmlFreeDoc(aug_xml);
+    return result;
+}
+
+/* return the current live configuration state - a combination of
+ * drv_xml_desc + results of querying the interface directly */
+
+char *drv_xml_state(struct netcf_if *nif) {
+    char *result = NULL;
+    int r, result_len;
+    struct netcf *ncf;
+    xmlDocPtr aug_xml = NULL, ncf_xml = NULL;
+    unsigned int ipv4;
+    int prefix;
+
+    ncf = nif->ncf;
+    aug_xml = aug_get_xml_for_nif(nif);
+    ERR_BAIL(ncf);
+
+    ncf_xml = apply_stylesheet(ncf, ncf->driver->put, aug_xml);
+    ERR_BAIL(ncf);
+
+    /* get the current IP address. If it's non-zero, also get the
+     * current prefix, and add both to the document */
+    ipv4 = if_ipv4_address(ncf, nif->name);
+    ERR_BAIL(ncf);
+    if (ipv4 != 0) {
+        prefix = if_ipv4_prefix(ncf, nif->name);
+        ERR_BAIL(ncf);
+        add_state_to_xml_doc(ncf_xml, ncf, ipv4, prefix);
+        ERR_BAIL(ncf);
+    }
+
+    r = xsltSaveResultToString((xmlChar **)&result, &result_len,
+                               ncf_xml, ncf->driver->put);
+    ERR_NOMEM(r < 0, ncf);
+
+done:
+    xmlFreeDoc(ncf_xml);
     xmlFreeDoc(aug_xml);
     return result;
  error:

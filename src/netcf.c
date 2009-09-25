@@ -200,6 +200,16 @@ char *ncf_if_xml_desc(struct netcf_if *nif) {
     return drv_xml_desc(nif);
 }
 
+/* Produce an XML description of the current live state of the
+ * interface, in the same format that NCF_DEFINE expects, but
+ * potentially with extra info not contained in the static config (ie
+ * the current IP address of an interface that uses DHCP)
+ */
+char *ncf_if_xml_state(struct netcf_if *nif) {
+    API_ENTRY(nif->ncf);
+    return drv_xml_state(nif);
+}
+
 /* Release any resources used by this NETCF_IF; the pointer is invalid
  * after this call
  */

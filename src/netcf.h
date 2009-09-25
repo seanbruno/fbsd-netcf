@@ -51,7 +51,8 @@ typedef enum {
     NETCF_EINUSE,        /* attempt to close a netcf instance that is still
                           * used by other data structures */
     NETCF_EXSLTFAILED,   /* XSLT transformation failed */
-    NETCF_EFILE          /* Some file access failed */
+    NETCF_EFILE,         /* Some file access failed */
+    NETCF_EIOCTL         /* An ioctl call failed */
 } netcf_errcode_t;
 
 
@@ -149,10 +150,17 @@ int ncf_if_down(struct netcf_if *);
 /* Delete the definition */
 int ncf_if_undefine(struct netcf_if *);
 
-/* Produce an XML description for the interface, in the same format that
- * NCF_DEFINE expects
+/* Produce an XML description for the static (stored) interface
+ * config, in the same format that NCF_DEFINE expects
  */
 char *ncf_if_xml_desc(struct netcf_if *);
+
+/* Produce an XML description of the current live state of the
+ * interface, in the same format that NCF_DEFINE expects, but
+ * potentially with extra info not contained in the static config (ie
+ * the current IP address of an interface that uses DHCP)
+ */
+char *ncf_if_xml_state(struct netcf_if *);
 
 /* Release any resources used by this NETCF_IF; the pointer is invalid
  * after this call

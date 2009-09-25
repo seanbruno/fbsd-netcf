@@ -228,7 +228,11 @@ static int cmd_dump_xml(const struct command *cmd) {
         goto done;
     }
 
-    xml = ncf_if_xml_desc(nif);
+    if (opt_present(cmd, "live")) {
+        xml = ncf_if_xml_state(nif);
+    } else {
+        xml = ncf_if_xml_desc(nif);
+    }
     if (xml == NULL)
         goto done;
 
@@ -244,6 +248,8 @@ static int cmd_dump_xml(const struct command *cmd) {
 static const struct command_opt_def cmd_dump_xml_opts[] = {
     { .tag = CMD_OPT_BOOL, .name = "mac",
       .help = "interpret the name as a MAC address" },
+    { .tag = CMD_OPT_BOOL, .name = "live",
+      .help = "include information about the live interface" },
     { .tag = CMD_OPT_ARG, .name = "name",
       .help = "the name of the interface" },
     CMD_OPT_DEF_LAST

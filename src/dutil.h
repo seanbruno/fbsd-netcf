@@ -112,6 +112,17 @@ int init_ioctl_fd(struct netcf *ncf);
 /* Check if the interface INTF is up using an ioctl call */
 int if_is_active(struct netcf *ncf, const char *intf);
 
+/* Get the current IPv4 address of INTF as an unsigned int using an ioctl call */
+unsigned int if_ipv4_address(struct netcf *ncf, const char *intf);
+
+/* get the current IPv4 netmask of INTF as an unsigned int using an ioctl call */
+unsigned int if_ipv4_netmask(struct netcf *ncf, const char *intf);
+
+/* get the current IPv4 prefix (#bits of netmask) of INTF as an
+ * int using an ioctl call */
+
+int if_ipv4_prefix(struct netcf *ncf, const char *intf);
+
 /* Create a new netcf if instance for interface NAME */
 struct netcf_if *make_netcf_if(struct netcf *ncf, char *name);
 
@@ -120,6 +131,9 @@ int dutil_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml);
 
 /* Transform the Augeas XML AUG_XML into interface XML NCF_XML */
 int dutil_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml);
+
+/* add the given state (currently IP + netmask) to the interface's xml document */
+void add_state_to_xml_doc(xmlDocPtr doc, struct netcf *ncf, unsigned int ipv4, int prefix);
 
 /* Run the program PROG with the single argument ARG */
 void run1(struct netcf *ncf, const char *prog, const char *arg);
