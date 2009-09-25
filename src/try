@@ -1,0 +1,47 @@
+#! /bin/bash
+
+# This script most likely only works on my machine, YMMV
+
+topdir=$(cd $(dirname $0)/.. && pwd)
+#export LD_LIBRARY_PATH=/tmp/augeas-inst/lib
+export NETCF_DATADIR=$topdir/data
+
+ncf_root=$topdir/build/try
+ncftool="$topdir/src/ncftool"
+
+ncfcmds=/tmp/ncfcmds.txt
+gdbcmds=/tmp/gdbcmds.txt
+
+rm -rf $ncf_root
+cp -pr ${topdir}/tests/root $ncf_root
+
+if [[ ! -f $ncfcmds ]] ; then
+    cat > $ncfcmds <<EOF
+list
+EOF
+fi
+
+cat > $gdbcmds <<EOF
+set annotate 3
+run -r $ncf_root < $ncfcmds
+EOF
+
+if [[ "x$1" == "xgdb" ]] ; then
+    libtool --mode=execute gdb -x $gdbcmds $ncftool
+elif [[ "x$1" == "xvalgrind" ]] ; then
+    libtool --mode=execute valgrind --leak-check=full $ncftool -r $ncf_root < $ncfcmds
+elif [[ "x$1" == "xcli" ]] ; then
+    shift
+    $ncftool -r $ncf_root "$@"
+else
+    $ncftool -r $ncf_root "$@" < $ncfcmds
+    echo
+    for f in $(find $ncfroot -name \*.augsave); do
+        echo "File ${f%.augsave}"
+        if [ ! -f "${f%.augsave}" ] ; then
+            echo "  removed"
+        else
+            diff -u $f ${f%.augsave}
+        fi
+    done
+fi
