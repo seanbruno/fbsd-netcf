@@ -1,3 +1,8 @@
+0.1.2 - 2009-09-25
+  - Configure IPv6 addresses on interfaces (see tests/interface/ipv6-*.xml)
+  - ncf_if_xml_state: new API call to get currently assigned IP of an
+    interface (Laine Stump)
+
 0.1.1 - 2009-09-16
   - Bridge: allow setting forward delay
   - Bridge: allow bridges with nothing enslaved

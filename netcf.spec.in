@@ -73,6 +73,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/netcf.pc
 
 %changelog
+* Fri Sep 25 2009 David Lutterkort <lutter@redhat.com> - 0.1.2-1
+- New Version
+
 * Wed Sep 16 2009 David Lutterkort <lutter@redhat.com> - 0.1.1-1
 - New Version
 
