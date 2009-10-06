@@ -271,63 +271,75 @@
        different protocols
   -->
   <define name="interface-addressing">
-    <optional>
-      <element name="protocol">
-        <ref name="protocol-ipv4"/>
-      </element>
-    </optional>
-    <optional v:since="3">
-      <element name="protocol">
-        <ref name="protocol-ipv6"/>
-      </element>
-    </optional>
-  </define>
-
-  <define name="protocol-ipv4">
-    <attribute name="family">
-      <value>ipv4</value>
-    </attribute>
     <choice>
-      <ref name="dhcp-element"/>
       <group>
-        <element name="ip">
-          <attribute name="address"><ref name="ipv4-addr"/></attribute>
-          <optional>
-            <attribute name="prefix"><ref name="ipv4-prefix"/></attribute>
-          </optional>
-        </element>
         <optional>
-          <element name="route">
-            <attribute name="gateway"><ref name="ipv4-addr"/></attribute>
-          </element>
+          <ref name="protocol-ipv4"/>
+        </optional>
+        <optional v:since="3">
+          <ref name="protocol-ipv6"/>
+        </optional>
+      </group>
+      <group>
+        <optional v:since="3">
+          <ref name="protocol-ipv6"/>
+        </optional>
+        <optional>
+          <ref name="protocol-ipv4"/>
         </optional>
       </group>
     </choice>
   </define>
 
+  <define name="protocol-ipv4">
+    <element name="protocol">
+      <attribute name="family">
+        <value>ipv4</value>
+      </attribute>
+      <choice>
+        <ref name="dhcp-element"/>
+        <group>
+          <element name="ip">
+            <attribute name="address"><ref name="ipv4-addr"/></attribute>
+            <optional>
+              <attribute name="prefix"><ref name="ipv4-prefix"/></attribute>
+            </optional>
+          </element>
+          <optional>
+            <element name="route">
+              <attribute name="gateway"><ref name="ipv4-addr"/></attribute>
+            </element>
+          </optional>
+        </group>
+      </choice>
+    </element>
+  </define>
+
   <define name="protocol-ipv6">
-    <attribute name="family">
-      <value>ipv6</value>
-    </attribute>
-    <optional>
-      <element name="autoconf"><empty/></element>
-    </optional>
-    <optional>
-      <ref name="dhcp-element"/>
-    </optional>
-    <zeroOrMore>
-      <element name="ip">
-        <attribute name="address"><ref name="ipv6-addr"/></attribute>
-        <optional>
-          <attribute name="prefix"><ref name="ipv6-prefix"/></attribute>
-        </optional>
-      </element>
-    </zeroOrMore>
-    <optional>
-      <element name="route">
-        <attribute name="gateway"><ref name="ipv6-addr"/></attribute>
-      </element>
-    </optional>
+    <element name="protocol">
+      <attribute name="family">
+        <value>ipv6</value>
+      </attribute>
+      <optional>
+        <element name="autoconf"><empty/></element>
+      </optional>
+      <optional>
+        <ref name="dhcp-element"/>
+      </optional>
+      <zeroOrMore>
+        <element name="ip">
+          <attribute name="address"><ref name="ipv6-addr"/></attribute>
+          <optional>
+            <attribute name="prefix"><ref name="ipv6-prefix"/></attribute>
+          </optional>
+        </element>
+      </zeroOrMore>
+      <optional>
+        <element name="route">
+          <attribute name="gateway"><ref name="ipv6-addr"/></attribute>
+        </element>
+      </optional>
+    </element>
   </define>
 
   <define name="dhcp-element">
