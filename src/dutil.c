@@ -591,7 +591,7 @@ void add_state_to_xml_doc(xmlDocPtr doc, struct netcf *ncf ATTRIBUTE_UNUSED,
         }
     }
 
-    if (proto == NULL) {
+    if ((ipv4 != 0) && (proto == NULL)) {
         proto = xmlNewDocNode(doc, NULL, BAD_CAST "protocol", NULL);
         ERR_NOMEM(proto == NULL, ncf);
 
@@ -602,31 +602,36 @@ void add_state_to_xml_doc(xmlDocPtr doc, struct netcf *ncf ATTRIBUTE_UNUSED,
 
     }
 
-    for (cur = proto->children; cur != NULL; cur = cur->next) {
+    if (proto == NULL)
+        return;
+
+    /* remove all existing ip nodes from the protocol node - we only
+     * want addresses retrieved from the device in the output.
+     */
+    cur = proto->children;
+    while(cur != NULL) {
+        xmlNodePtr next = cur->next;
         if ((cur->type == XML_ELEMENT_NODE) &&
-            xmlStrEqual(cur->name, BAD_CAST "ip")) {
-            break;
+            (xmlStrEqual(cur->name, BAD_CAST "ip"))) {
+            xmlUnlinkNode(cur);
+            xmlFreeNode(cur);
         }
+        cur = next;
     }
 
-    if (ip == NULL) {
+    if (ipv4 != 0) {
         ip = xmlNewDocNode(doc, NULL, BAD_CAST "ip", NULL);
-        ERR_NOMEM(ip == NULL, ncf);
-
+        ERR_NOMEM((ip == NULL), ncf);
         cur = xmlAddChild(proto, ip);
-        ERR_NOMEM(cur == NULL, ncf);
+        ERR_NOMEM((cur == NULL), ncf);
+
+        inet_ntop(AF_INET, (struct in_addr *)&ipv4, ip_str, sizeof(ip_str));
+        prop = xmlSetProp(ip, BAD_CAST "address", BAD_CAST ip_str);
+        ERR_NOMEM((prop == NULL), ncf);
+        snprintf(prefix_str, sizeof(prefix_str), "%d", prefix);
+        prop = xmlSetProp(ip, BAD_CAST "prefix", BAD_CAST prefix_str);
+        ERR_NOMEM((prop == NULL), ncf);
     }
-
-    inet_ntop(AF_INET, (struct in_addr *)&ipv4, ip_str, sizeof(ip_str));
-    prop = xmlSetProp(ip, BAD_CAST "address", BAD_CAST ip_str);
-    ERR_NOMEM(prop == NULL, ncf);
-
-    snprintf(prefix_str, sizeof(prefix_str), "%d", prefix);
-    prop = xmlSetProp(ip, BAD_CAST "prefix", BAD_CAST prefix_str);
-    ERR_NOMEM(prop == NULL, ncf);
-
-    prop = xmlSetProp(ip, BAD_CAST "source", BAD_CAST "device");
-    ERR_NOMEM(prop == NULL, ncf);
 
 error:
     return;

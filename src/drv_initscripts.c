@@ -756,38 +756,45 @@ char *drv_xml_state(struct netcf_if *nif) {
     char *result = NULL;
     int r, result_len;
     struct netcf *ncf;
-    xmlDocPtr aug_xml = NULL, ncf_xml = NULL;
+    xmlDocPtr ncf_xml = NULL;
+    xmlNodePtr root;
+    xmlAttrPtr prop;
     unsigned int ipv4;
     int prefix;
 
     ncf = nif->ncf;
-    aug_xml = aug_get_xml_for_nif(nif);
-    ERR_BAIL(ncf);
 
-    ncf_xml = apply_stylesheet(ncf, ncf->driver->put, aug_xml);
-    ERR_BAIL(ncf);
+    /* start out with an empty tree rather than the config tree. Just
+     * put in the interface node and its name
+     */
+    ncf_xml = xmlNewDoc(BAD_CAST "1.0");
+    ERR_NOMEM(ncf_xml == NULL, ncf);
+    root = xmlNewNode(NULL, BAD_CAST "interface");
+    ERR_NOMEM(root == NULL, ncf);
+    xmlDocSetRootElement(ncf_xml, root);
+    prop = xmlNewProp(root, BAD_CAST "name", BAD_CAST nif->name);
+    ERR_NOMEM(prop == NULL, ncf);
 
-    /* get the current IP address. If it's non-zero, also get the
-     * current prefix, and add both to the document */
+    /* get the current IP address and prefix, and add both to the
+     * document.
+     */
     ipv4 = if_ipv4_address(ncf, nif->name);
     ERR_BAIL(ncf);
-    if (ipv4 != 0) {
-        prefix = if_ipv4_prefix(ncf, nif->name);
-        ERR_BAIL(ncf);
-        add_state_to_xml_doc(ncf_xml, ncf, ipv4, prefix);
-        ERR_BAIL(ncf);
-    }
+    prefix = if_ipv4_prefix(ncf, nif->name);
+    ERR_BAIL(ncf);
+    add_state_to_xml_doc(ncf_xml, ncf, ipv4, prefix);
+    ERR_BAIL(ncf);
 
     r = xsltSaveResultToString((xmlChar **)&result, &result_len,
                                ncf_xml, ncf->driver->put);
     ERR_NOMEM(r < 0, ncf);
 
-done:
+ done:
     xmlFreeDoc(ncf_xml);
-    xmlFreeDoc(aug_xml);
     return result;
  error:
     FREE(result);
+    result = 0;
     goto done;
 }
 
