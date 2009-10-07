@@ -31,6 +31,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -83,7 +84,7 @@ int add_augeas_xfm_table(struct netcf *ncf,
              slot++);
         if (slot == d->augeas_xfm_num_tables) {
             r = REALLOC_N(ncf->driver->augeas_xfm_tables, slot + 1);
-            ERR_COND_BAIL(r < 0, ncf, ENOMEM);
+            ERR_NOMEM(r < 0, ncf);
             d->augeas_xfm_num_tables = slot + 1;
         }
     }
@@ -447,11 +448,18 @@ int if_is_active(struct netcf *ncf, const char *intf) {
 unsigned int if_ipv4_address(struct netcf *ncf, const char *intf) {
     struct ifreq ifr;
 
+    if (!if_is_active(ncf, intf)) {
+        /* SIOCGIFADDR fails on a device that is down */
+        return 0;
+    }
     MEMZERO(&ifr, 1);
     strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
     ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
     if (ioctl(ncf->driver->ioctl_fd, SIOCGIFADDR, &ifr))  {
-        report_error(ncf, NETCF_EIOCTL, "Failed to get ipv4 address for %s", intf);
+        if (errno != EADDRNOTAVAIL) {
+            report_error(ncf, NETCF_EIOCTL, "Failed to get ipv4 address for %s - %s",
+                         intf, strerror(errno));
+        }
         return 0;
     }
 
@@ -461,17 +469,23 @@ unsigned int if_ipv4_address(struct netcf *ncf, const char *intf) {
 unsigned int if_ipv4_netmask(struct netcf *ncf, const char *intf) {
     struct ifreq ifr;
 
+    if (!if_is_active(ncf, intf)) {
+        /* SIOCGIFNETMASK fails on a device that is down */
+        return 0;
+    }
     MEMZERO(&ifr, 1);
     strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
     ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
     if (ioctl(ncf->driver->ioctl_fd, SIOCGIFNETMASK, &ifr))  {
-        report_error(ncf, NETCF_EIOCTL, "Failed to get ipv4 netmask for %s", intf);
+        if (errno != EADDRNOTAVAIL) {
+            report_error(ncf, NETCF_EIOCTL, "Failed to get ipv4 netmask for %s - %s",
+                         intf, strerror(errno));
+        }
         return 0;
     }
 
     return (((struct sockaddr_in *)&ifr.ifr_netmask)->sin_addr.s_addr);
 }
-
 
 int if_ipv4_prefix(struct netcf *ncf, const char *intf) {
     unsigned int nmv4 = if_ipv4_netmask(ncf, intf);
