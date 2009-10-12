@@ -439,7 +439,6 @@ int if_is_active(struct netcf *ncf, const char *intf) {
     strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
     ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
     if (ioctl(ncf->driver->ioctl_fd, SIOCGIFFLAGS, &ifr))  {
-        report_error(ncf, NETCF_EIOCTL, "Failed to get interface flags for %s", intf);
         return 0;
     }
     return ((ifr.ifr_flags & IFF_UP) == IFF_UP);

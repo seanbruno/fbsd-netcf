@@ -527,12 +527,14 @@ static int list_interface_ids(struct netcf *ncf,
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
     nint = list_interfaces(ncf, &intf);
+    ERR_BAIL(ncf);
     if (!names) {
         maxnames = nint;    /* if not returning list, ignore maxnames too */
     }
     for (result = 0; (result < nint) && (nqualified < maxnames); result++) {
         nmatches = aug_fmt_match(ncf, &matches,
                                  "%s/%s", intf[result], id_attr);
+        ERR_BAIL(ncf);
         if (nmatches > 0) {
             const char *name;
             int is_qualified = ((flags & (NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE))
