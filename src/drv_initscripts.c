@@ -761,6 +761,7 @@ char *drv_xml_state(struct netcf_if *nif) {
     xmlDocPtr ncf_xml = NULL;
     xmlNodePtr root;
     xmlAttrPtr prop;
+    const char *type;
     unsigned int ipv4;
     int prefix;
 
@@ -775,6 +776,11 @@ char *drv_xml_state(struct netcf_if *nif) {
     ERR_NOMEM(root == NULL, ncf);
     xmlDocSetRootElement(ncf_xml, root);
     prop = xmlNewProp(root, BAD_CAST "name", BAD_CAST nif->name);
+    ERR_NOMEM(prop == NULL, ncf);
+
+    type = if_type(ncf, nif->name);
+    ERR_BAIL(ncf);
+    prop = xmlSetProp(root, BAD_CAST "type", BAD_CAST type);
     ERR_NOMEM(prop == NULL, ncf);
 
     /* get the current IP address and prefix, and add both to the

@@ -498,6 +498,40 @@ int if_ipv4_prefix(struct netcf *ncf, const char *intf) {
     return prefix;
 }
 
+const char *if_type(struct netcf *ncf, const char *intf) {
+    char *path;
+    struct stat stats;
+    const char *ret = NULL;
+
+    xasprintf(&path, "/proc/net/vlan/%s", intf);
+    ERR_NOMEM(path == NULL, ncf);
+    if ((stat (path, &stats) == 0) && S_ISREG (stats.st_mode)) {
+        ret = "vlan";
+    }
+    FREE(path);
+
+    if (ret == NULL) {
+        xasprintf(&path, "/sys/class/net/%s/bridge", intf);
+        ERR_NOMEM(path == NULL, ncf);
+        if (stat (path, &stats) == 0 && S_ISDIR (stats.st_mode))
+            ret = "bridge";
+        FREE(path);
+    }
+    if (ret == NULL) {
+        xasprintf(&path, "/sys/class/net/%s/bonding", intf);
+        ERR_NOMEM(path == NULL, ncf);
+        if (stat (path, &stats) == 0 && S_ISDIR (stats.st_mode))
+            ret = "bond";
+        FREE(path);
+    }
+    if (ret == NULL)
+        ret = "ethernet";
+
+error:
+    FREE(path);
+    return ret;
+}
+
 /* Create a new netcf if instance for interface NAME */
 struct netcf_if *make_netcf_if(struct netcf *ncf, char *name) {
     int r;

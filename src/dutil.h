@@ -123,6 +123,11 @@ unsigned int if_ipv4_netmask(struct netcf *ncf, const char *intf);
 
 int if_ipv4_prefix(struct netcf *ncf, const char *intf);
 
+/* return the type of the interface - "ethernet" (physical device),
+ * "bridge", "bond", or "vlan"
+ */
+const char *if_type(struct netcf *ncf, const char *intf);
+
 /* Create a new netcf if instance for interface NAME */
 struct netcf_if *make_netcf_if(struct netcf *ncf, char *name);
 
