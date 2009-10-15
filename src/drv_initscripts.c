@@ -485,7 +485,10 @@ int drv_init(struct netcf *ncf) {
     ncf->driver->get = parse_stylesheet(ncf, "initscripts-get.xsl");
     ncf->driver->put = parse_stylesheet(ncf, "initscripts-put.xsl");
     ncf->driver->rng = rng_parse(ncf, "interface.rng");
+    ERR_BAIL(ncf);
+
     bridge_physdevs(ncf);
+    ERR_BAIL(ncf);
 
     /* open a socket for interface ioctls */
     ncf->driver->ioctl_fd = init_ioctl_fd(ncf);
