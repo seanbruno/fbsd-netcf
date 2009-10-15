@@ -157,6 +157,7 @@ bool bridge_nf_call_iptables(struct netcf *ncf) {
     char *path = NULL;
     FILE *proc = NULL;
     int r, c;
+    bool result = false;
 
     r = xasprintf(&path, "%s%s", ncf->root, proc_bridge_nf_call_iptables);
     ERR_NOMEM(r < 0, ncf);
@@ -167,13 +168,13 @@ bool bridge_nf_call_iptables(struct netcf *ncf) {
     c = fgetc(proc);
     ERR_THROW(c == EOF, ncf, EFILE, "nothing to read from %s: %s",
               path, strerror(errno));
-    fclose(proc);
-    return c == '1';
+    result = (c == '1');
+
  error:
     FREE(path);
     if (proc != NULL)
         fclose(proc);
-    return false;
+    return result;
 }
 
 /*
