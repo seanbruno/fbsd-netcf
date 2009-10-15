@@ -253,8 +253,17 @@ xsltStylesheetPtr parse_stylesheet(struct netcf *ncf,
     r = xasprintf(&path, "%s/xml/%s", ncf->data_dir, fname);
     ERR_NOMEM(r < 0, ncf);
 
-    // FIXME: Error checking ??
+    if (access(path, R_OK) < 0) {
+        report_error(ncf, NETCF_EFILE,
+                     "Stylesheet %s does not exist or is not readable",
+                     path);
+        goto error;
+    }
+
     result = xsltParseStylesheetFile(BAD_CAST path);
+    ERR_THROW(result == NULL, ncf, EFILE,
+              "Could not parse stylesheet %s", path);
+
  error:
     free(path);
     return result;
@@ -337,6 +346,12 @@ xmlRelaxNGPtr rng_parse(struct netcf *ncf, const char *fname) {
 
     r = xasprintf(&path, "%s/xml/%s", ncf->data_dir, fname);
     ERR_NOMEM(r < 0, ncf);
+
+    if (access(path, R_OK) < 0) {
+        report_error(ncf, NETCF_EFILE,
+                     "File %s does not exist or is not readable", path);
+        goto error;
+    }
 
     ctxt = xmlRelaxNGNewParserCtxt(path);
     xmlRelaxNGSetParserErrors(ctxt, rng_error, rng_error, ncf);
