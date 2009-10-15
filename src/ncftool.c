@@ -754,6 +754,8 @@ int main(int argc, char **argv) {
 
     if (ncf_init(&ncf, root) < 0) {
         fprintf(stderr, "Failed to initialize netcf\n");
+        if (ncf != NULL)
+            print_netcf_error();
         exit(EXIT_FAILURE);
     }
     readline_init();
