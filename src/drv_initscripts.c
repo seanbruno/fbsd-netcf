@@ -1118,12 +1118,16 @@ const char *drv_mac_string(struct netcf_if *nif) {
     int r;
 
     r = aug_get_mac(ncf, nif->name, &mac);
-    ERR_THROW(r <= 0, ncf, EOTHER, "could not lookup MAC of %s", nif->name);
+    ERR_THROW(r < 0, ncf, EOTHER, "could not lookup MAC of %s", nif->name);
 
-    if (nif->mac == NULL || STRNEQ(nif->mac, mac)) {
+    if (mac != NULL) {
+        if (nif->mac == NULL || STRNEQ(nif->mac, mac)) {
+            FREE(nif->mac);
+            nif->mac = strdup(mac);
+            ERR_NOMEM(nif->mac == NULL, ncf);
+        }
+    } else {
         FREE(nif->mac);
-        nif->mac = strdup(mac);
-        ERR_NOMEM(nif->mac == NULL, ncf);
     }
     /* fallthrough intentional */
  error:
