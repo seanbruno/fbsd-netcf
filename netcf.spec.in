@@ -11,6 +11,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires:  readline-devel augeas-devel >= 0.5.2
 BuildRequires:  libxml2-devel libxslt-devel
+BuildRequires:  libnl-devel
 Requires:       %{name}-libs = %{version}-%{release}
 
 %description
