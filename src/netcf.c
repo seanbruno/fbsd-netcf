@@ -54,7 +54,8 @@ static const char *const errmsgs[] = {
     "failed to execute external program", /* EEXEC */
     "instance still in use",              /* EINUSE */
     "XSLT transformation failed",         /* EXSLTFAILED */
-    "File operation failed"               /* EFILE */
+    "File operation failed",              /* EFILE */
+    "ioctl operation failed"              /* EIOCTL */
 };
 
 static void free_netcf(struct netcf *ncf) {
