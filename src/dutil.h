@@ -122,17 +122,6 @@ int netlink_close(struct netcf *ncf);
 /* Check if the interface INTF is up using an ioctl call */
 int if_is_active(struct netcf *ncf, const char *intf);
 
-/* Get the current IPv4 address of INTF as an unsigned int using an ioctl call */
-unsigned int if_ipv4_address(struct netcf *ncf, const char *intf);
-
-/* get the current IPv4 netmask of INTF as an unsigned int using an ioctl call */
-unsigned int if_ipv4_netmask(struct netcf *ncf, const char *intf);
-
-/* get the current IPv4 prefix (#bits of netmask) of INTF as an
- * int using an ioctl call */
-
-int if_ipv4_prefix(struct netcf *ncf, const char *intf);
-
 /* return the type of the interface - "ethernet" (physical device),
  * "bridge", "bond", or "vlan"
  */
@@ -146,9 +135,6 @@ int dutil_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml);
 
 /* Transform the Augeas XML AUG_XML into interface XML NCF_XML */
 int dutil_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml);
-
-/* add the given state (currently IP + netmask) to the interface's xml document */
-void add_ipv4_state_to_xml_doc(xmlDocPtr doc, struct netcf *ncf, unsigned int ipv4, int prefix);
 
 /* Add the state of the interface (currently all addresses + netmasks)
  * to its xml document.
