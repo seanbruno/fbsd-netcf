@@ -46,6 +46,11 @@
 #include "netcf.h"
 #include "dutil.h"
 
+#include <netlink/socket.h>
+#include <netlink/cache.h>
+#include <netlink/route/addr.h>
+#include <netlink/route/link.h>
+
 #include <libxml/parser.h>
 #include <libxml/relaxng.h>
 #include <libxml/tree.h>
@@ -447,6 +452,51 @@ error:
     return -1;
 }
 
+int netlink_init(struct netcf *ncf) {
+
+    ncf->driver->nl_sock = nl_handle_alloc();
+    if (ncf->driver->nl_sock == NULL)
+        goto error;
+    if (nl_connect(ncf->driver->nl_sock, NETLINK_ROUTE) < 0) {
+        goto error;
+    }
+
+    ncf->driver->link_cache = rtnl_link_alloc_cache(ncf->driver->nl_sock);
+    if (ncf->driver->link_cache == NULL) {
+        goto error;
+    }
+    nl_cache_mngt_provide(ncf->driver->link_cache);
+
+    ncf->driver->addr_cache = rtnl_addr_alloc_cache(ncf->driver->nl_sock);
+    if (ncf->driver->addr_cache == NULL) {
+        goto error;
+    }
+    nl_cache_mngt_provide(ncf->driver->addr_cache);
+
+    return 0;
+
+error:
+    netlink_close(ncf);
+    return -1;
+}
+
+int netlink_close(struct netcf *ncf) {
+
+    if (ncf->driver->addr_cache) {
+        nl_cache_free(ncf->driver->addr_cache);
+        ncf->driver->addr_cache = NULL;
+    }
+    if (ncf->driver->link_cache) {
+        nl_cache_free(ncf->driver->link_cache);
+        ncf->driver->link_cache = NULL;
+    }
+    if (ncf->driver->nl_sock) {
+        nl_close(ncf->driver->nl_sock);
+        ncf->driver->nl_sock = NULL;
+    }
+    return 0;
+}
+
 int if_is_active(struct netcf *ncf, const char *intf) {
     struct ifreq ifr;
 
@@ -609,7 +659,7 @@ int dutil_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
 /* Given an xml document that follows interface.rng, add the IP
  * address and prefix under protocol/ip
  */
-void add_state_to_xml_doc(xmlDocPtr doc, struct netcf *ncf ATTRIBUTE_UNUSED,
+void add_ipv4_state_to_xml_doc(xmlDocPtr doc, struct netcf *ncf ATTRIBUTE_UNUSED,
                           unsigned int ipv4, int prefix) {
 
     xmlNodePtr root = NULL, proto = NULL, ip = NULL, cur;
@@ -682,6 +732,153 @@ void add_state_to_xml_doc(xmlDocPtr doc, struct netcf *ncf ATTRIBUTE_UNUSED,
     }
 
 error:
+    return;
+}
+
+/* Data that needs to be preserved between calls to the libnl iterator
+ * callback.
+ */
+struct nl_callback_data {
+    xmlDocPtr doc;
+    xmlNodePtr root;
+    xmlNodePtr protov4;
+    xmlNodePtr protov6;
+    struct netcf_if *nif;
+};
+
+/* add all ip addresses for the given interface to the xml document
+*/
+static void _add_ips_cb(struct nl_object *obj, void *arg) {
+    struct nl_callback_data *cb_data = arg;
+    struct rtnl_addr *addr = (struct rtnl_addr *)obj;
+    struct netcf *ncf = cb_data->nif->ncf;
+
+    struct nl_addr *local_addr;
+    int family, prefix;
+    const char *family_str;
+    char ip_str[48];
+    char prefix_str[16];
+    xmlNodePtr *proto, ip_node, cur;
+    xmlAttrPtr prop = NULL;
+
+    local_addr = rtnl_addr_get_local(addr);
+    family = nl_addr_get_family(local_addr);
+    switch (family) {
+    case AF_INET:
+        family_str = "ipv4";
+        proto = &cb_data->protov4;
+        break;
+    case AF_INET6:
+        family_str = "ipv6";
+        proto = &cb_data->protov6;
+        break;
+
+    default:
+        /* Nothing that interests us in this entry */
+        return;
+    }
+
+    inet_ntop(family, nl_addr_get_binary_addr(local_addr),
+              ip_str, sizeof(ip_str));
+    prefix = nl_addr_get_prefixlen(local_addr);
+
+    if (*proto == NULL) {
+        /* We haven't dont anything with this proto yet. Search for an
+         * existing node.
+         */
+        for (cur = cb_data->root->children; cur != NULL; cur = cur->next) {
+            if ((cur->type == XML_ELEMENT_NODE) &&
+                xmlStrEqual(cur->name, BAD_CAST "protocol")) {
+                xmlChar *node_family = xmlGetProp(cur, BAD_CAST "family");
+                if (node_family != NULL) {
+                    if (xmlStrEqual(node_family, BAD_CAST family_str))
+                        *proto = cur;
+                    xmlFree(node_family);
+                    if (*proto != NULL) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (*proto == NULL) {
+        /* No node exists for this protocol family. Create one.
+         */
+        *proto = xmlNewDocNode(cb_data->doc, NULL, BAD_CAST "protocol", NULL);
+        ERR_NOMEM(*proto == NULL, ncf);
+
+        cur = xmlAddChild(cb_data->root, *proto);
+        if (cur == NULL) {
+            xmlFreeNode(*proto);
+            *proto = NULL;
+            report_error(ncf, NETCF_ENOMEM, NULL);
+            goto error;
+        }
+        prop = xmlSetProp(*proto, BAD_CAST "family", BAD_CAST family_str);
+        ERR_NOMEM(prop == NULL, ncf);
+
+    }
+
+    /* Create a new ip node for this address/prefix, and set the
+     * properties
+     */
+    ip_node = xmlNewDocNode(cb_data->doc, NULL, BAD_CAST "ip", NULL);
+    ERR_NOMEM((ip_node == NULL), ncf);
+    cur = xmlAddChild(*proto, ip_node);
+    if (cur == NULL) {
+        xmlFreeNode(ip_node);
+        report_error(ncf, NETCF_ENOMEM, NULL);
+        goto error;
+    }
+    prop = xmlSetProp(ip_node, BAD_CAST "address", BAD_CAST ip_str);
+    ERR_NOMEM((prop == NULL), ncf);
+    snprintf(prefix_str, sizeof(prefix_str), "%d", prefix);
+    prop = xmlSetProp(ip_node, BAD_CAST "prefix", BAD_CAST prefix_str);
+    ERR_NOMEM((prop == NULL), ncf);
+
+error:
+    return;
+}
+
+void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
+
+    struct nl_callback_data cb_data = { doc, NULL, NULL, NULL, nif };
+    struct rtnl_addr *filter_addr = NULL;
+    int ifindex, code;
+
+    cb_data.root = xmlDocGetRootElement(doc);
+    ERR_THROW((cb_data.root == NULL), nif->ncf, EINTERNAL,
+              "failed to get document root element");
+    ERR_THROW(!xmlStrEqual(cb_data.root->name, BAD_CAST "interface"),
+              nif->ncf, EINTERNAL, "root document is not an interface");
+
+    /* Build an rtnl_addr with the interface name set. This is used by
+     * the iterator to filter the contents of the address cache.
+     */
+    filter_addr = rtnl_addr_alloc();
+    ERR_NOMEM((filter_addr == NULL), nif->ncf);
+
+    code = nl_cache_refill(nif->ncf->driver->nl_sock,
+                           nif->ncf->driver->link_cache);
+    ERR_THROW((code < 0), nif->ncf, ENETLINK,
+              "failed to refill interface index cache");
+    code = nl_cache_refill(nif->ncf->driver->nl_sock,
+                           nif->ncf->driver->addr_cache);
+    ERR_THROW((code < 0), nif->ncf, ENETLINK,
+              "failed to refill interface address cache");
+
+    ifindex = rtnl_link_name2i(nif->ncf->driver->link_cache, nif->name);
+    ERR_THROW((ifindex == RTNL_LINK_NOT_FOUND), nif->ncf, ENETLINK,
+              "Could find ifindex for interface `%s`", nif->name);
+    rtnl_addr_set_ifindex(filter_addr, ifindex);
+
+    nl_cache_foreach_filter(nif->ncf->driver->addr_cache,
+                            OBJ_CAST(filter_addr), _add_ips_cb,
+                            &cb_data);
+error:
+    if (filter_addr)
+        rtnl_addr_put(filter_addr);
     return;
 }
 

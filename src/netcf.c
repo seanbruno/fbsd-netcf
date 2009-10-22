@@ -55,7 +55,8 @@ static const char *const errmsgs[] = {
     "instance still in use",              /* EINUSE */
     "XSLT transformation failed",         /* EXSLTFAILED */
     "File operation failed",              /* EFILE */
-    "ioctl operation failed"              /* EIOCTL */
+    "ioctl operation failed",             /* EIOCTL */
+    "NETLINK socket operation failed"     /* ENETLINK */
 };
 
 static void free_netcf(struct netcf *ncf) {

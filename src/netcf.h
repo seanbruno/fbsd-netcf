@@ -52,7 +52,8 @@ typedef enum {
                           * used by other data structures */
     NETCF_EXSLTFAILED,   /* XSLT transformation failed */
     NETCF_EFILE,         /* Some file access failed */
-    NETCF_EIOCTL         /* An ioctl call failed */
+    NETCF_EIOCTL,        /* An ioctl call failed */
+    NETCF_ENETLINK       /* something related to the netlink socket failed */
 } netcf_errcode_t;
 
 

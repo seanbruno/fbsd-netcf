@@ -494,9 +494,12 @@ int drv_init(struct netcf *ncf) {
     ncf->driver->ioctl_fd = init_ioctl_fd(ncf);
     if (ncf->driver->ioctl_fd < 0)
         goto error;
+    if (netlink_init(ncf) < 0)
+        goto error;
     return 0;
 
  error:
+    netlink_close(ncf);
     if (ncf->driver->ioctl_fd >= 0)
         close(ncf->driver->ioctl_fd);
     FREE(ncf->driver->augeas_xfm_tables);
@@ -508,6 +511,7 @@ void drv_close(struct netcf *ncf) {
     xsltFreeStylesheet(ncf->driver->get);
     xsltFreeStylesheet(ncf->driver->put);
     xmlRelaxNGFree(ncf->driver->rng);
+    netlink_close(ncf);
     if (ncf->driver->ioctl_fd >= 0)
         close(ncf->driver->ioctl_fd);
     aug_close(ncf->driver->augeas);
@@ -765,8 +769,6 @@ char *drv_xml_state(struct netcf_if *nif) {
     xmlNodePtr root;
     xmlAttrPtr prop;
     const char *type;
-    unsigned int ipv4;
-    int prefix;
 
     ncf = nif->ncf;
 
@@ -789,11 +791,7 @@ char *drv_xml_state(struct netcf_if *nif) {
     /* get the current IP address and prefix, and add both to the
      * document.
      */
-    ipv4 = if_ipv4_address(ncf, nif->name);
-    ERR_BAIL(ncf);
-    prefix = if_ipv4_prefix(ncf, nif->name);
-    ERR_BAIL(ncf);
-    add_state_to_xml_doc(ncf_xml, ncf, ipv4, prefix);
+    add_state_to_xml_doc(nif, ncf_xml);
     ERR_BAIL(ncf);
 
     r = xsltSaveResultToString((xmlChar **)&result, &result_len,

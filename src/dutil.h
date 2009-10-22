@@ -25,6 +25,7 @@
 
 #include <libxml/relaxng.h>
 #include <libxslt/xsltInternals.h>
+#include <netlink/netlink.h>
 
 struct driver {
     struct augeas     *augeas;
@@ -32,6 +33,9 @@ struct driver {
     xsltStylesheetPtr  get;
     xmlRelaxNGPtr      rng;
     int                ioctl_fd;
+    struct nl_handle  *nl_sock;
+    struct nl_cache   *link_cache;
+    struct nl_cache   *addr_cache;
     unsigned int       load_augeas : 1;
     unsigned int       copy_augeas_xfm : 1;
     unsigned int       augeas_xfm_num_tables;
@@ -109,6 +113,12 @@ char *xml_prop(xmlNodePtr node, const char *name);
 /* Get a file descriptor to a ioctl socket */
 int init_ioctl_fd(struct netcf *ncf);
 
+/* setup the netlink socket */
+int netlink_init(struct netcf *ncf);
+
+/*shutdown the netlink socket and release its resources */
+int netlink_close(struct netcf *ncf);
+
 /* Check if the interface INTF is up using an ioctl call */
 int if_is_active(struct netcf *ncf, const char *intf);
 
@@ -138,7 +148,12 @@ int dutil_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml);
 int dutil_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml);
 
 /* add the given state (currently IP + netmask) to the interface's xml document */
-void add_state_to_xml_doc(xmlDocPtr doc, struct netcf *ncf, unsigned int ipv4, int prefix);
+void add_ipv4_state_to_xml_doc(xmlDocPtr doc, struct netcf *ncf, unsigned int ipv4, int prefix);
+
+/* Add the state of the interface (currently all addresses + netmasks)
+ * to its xml document.
+ */
+void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc);
 
 /* Run the program PROG with the single argument ARG */
 void run1(struct netcf *ncf, const char *prog, const char *arg);
