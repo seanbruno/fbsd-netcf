@@ -212,6 +212,14 @@ char *ncf_if_xml_state(struct netcf_if *nif) {
     return drv_xml_state(nif);
 }
 
+/* Report various status info about the interface as bits in
+ * "flags". Returns 0 on success, -1 on failure
+ */
+int ncf_if_status(struct netcf_if *nif, unsigned int *flags) {
+    API_ENTRY(nif->ncf);
+    return drv_if_status(nif, flags);
+}
+
 /* Release any resources used by this NETCF_IF; the pointer is invalid
  * after this call
  */

@@ -163,6 +163,12 @@ char *ncf_if_xml_desc(struct netcf_if *);
  */
 char *ncf_if_xml_state(struct netcf_if *);
 
+/* Report various status info about the interface as bits in
+ * "flags". The meaning of the bits is in the enum type netcf_if_flag_t.
+ * Returns 0 on success, -1 on failure
+ */
+int ncf_if_status(struct netcf_if *nif, unsigned int *flags);
+
 /* Release any resources used by this NETCF_IF; the pointer is invalid
  * after this call
  */

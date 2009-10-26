@@ -807,6 +807,24 @@ char *drv_xml_state(struct netcf_if *nif) {
     goto done;
 }
 
+/* Report various status info about the interface as bits in
+ * "flags". Returns 0 on success, -1 on failure
+ */
+int drv_if_status(struct netcf_if *nif, unsigned int *flags) {
+    int is_active;
+
+    ERR_THROW(flags == NULL, nif->ncf, EOTHER, "NULL pointer for flags in ncf_if_status");
+    *flags = 0;
+    is_active = if_is_active(nif->ncf, nif->name);
+    if (is_active)
+        *flags |= NETCF_IFACE_ACTIVE;
+    else
+        *flags |= NETCF_IFACE_INACTIVE;
+    return 0;
+error:
+    return -1;
+}
+
 /* Get the content of /interface/@name. Result must be freed with xmlFree()
  *
  * The name on VLAN interfaces is optional; if there is no

@@ -23,3 +23,8 @@ NETCF_1.2.0 {
     global:
       ncf_if_xml_state;
 } NETCF_1.0.0;
+
+NETCF_1.3.0 {
+    global:
+      ncf_if_status;
+} NETCF_1.2.0;
