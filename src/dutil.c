@@ -616,7 +616,7 @@ struct nl_callback_data {
 
 /* add all ip addresses for the given interface to the xml document
 */
-static void _add_ips_cb(struct nl_object *obj, void *arg) {
+static void add_ips_cb(struct nl_object *obj, void *arg) {
     struct nl_callback_data *cb_data = arg;
     struct rtnl_addr *addr = (struct rtnl_addr *)obj;
     struct netcf *ncf = cb_data->nif->ncf;
@@ -807,7 +807,7 @@ void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
     rtnl_addr_set_ifindex(filter_addr, ifindex);
 
     nl_cache_foreach_filter(nif->ncf->driver->addr_cache,
-                            OBJ_CAST(filter_addr), _add_ips_cb,
+                            OBJ_CAST(filter_addr), add_ips_cb,
                             &cb_data);
 error:
     if (filter_addr)
