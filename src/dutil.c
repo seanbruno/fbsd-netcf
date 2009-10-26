@@ -610,6 +610,7 @@ struct nl_callback_data {
     xmlNodePtr root;
     xmlNodePtr protov4;
     xmlNodePtr protov6;
+    xmlNodePtr mac;
     struct netcf_if *nif;
 };
 
@@ -708,10 +709,60 @@ error:
     return;
 }
 
+static void add_mac_cb(struct nl_object *obj, void *arg) {
+    struct nl_callback_data *cb_data = arg;
+    struct rtnl_link *iflink = (struct rtnl_link *)obj;
+    struct netcf *ncf = cb_data->nif->ncf;
+
+    struct nl_addr *addr;
+    char mac_str[64];
+    xmlNodePtr cur;
+    xmlAttrPtr prop = NULL;
+
+    if (cb_data->mac != NULL)
+        return;
+
+    addr = rtnl_link_get_addr(iflink);
+    if ((addr == NULL) || nl_addr_iszero(addr))
+        return;
+
+    nl_addr2str(addr, mac_str, sizeof(mac_str));
+
+    for (cur = cb_data->root->children; cur != NULL; cur = cur->next) {
+        if ((cur->type == XML_ELEMENT_NODE) &&
+            xmlStrEqual(cur->name, BAD_CAST "mac")) {
+            cb_data->mac = cur;
+            break;
+        }
+    }
+
+    if (cb_data->mac == NULL) {
+        /* No mac node exists in the document, create a new one.
+         */
+        cb_data->mac = xmlNewDocNode(cb_data->doc, NULL, BAD_CAST "mac", NULL);
+        ERR_NOMEM(cb_data->mac == NULL, ncf);
+
+        cur = xmlAddChild(cb_data->root, cb_data->mac);
+        if (cur == NULL) {
+            xmlFreeNode(cb_data->mac);
+            cb_data->mac = NULL;
+            report_error(ncf, NETCF_ENOMEM, NULL);
+            goto error;
+        }
+    }
+
+    prop = xmlSetProp(cb_data->mac, BAD_CAST "address", BAD_CAST mac_str);
+    ERR_NOMEM(prop == NULL, ncf);
+
+error:
+    return;
+}
+
 void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
 
-    struct nl_callback_data cb_data = { doc, NULL, NULL, NULL, nif };
+    struct nl_callback_data cb_data = { doc, NULL, NULL, NULL, NULL, nif };
     struct rtnl_addr *filter_addr = NULL;
+    struct rtnl_link *filter_link = NULL;
     int ifindex, code;
 
     cb_data.root = xmlDocGetRootElement(doc);
@@ -735,6 +786,18 @@ void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
     ERR_THROW((ifindex == RTNL_LINK_NOT_FOUND), nif->ncf, ENETLINK,
               "Could find ifindex for interface `%s`", nif->name);
 
+    /* Build an rtnl_link with the interface index set, and use it to
+     * find the entry for this interface and extract the mac
+     * address.
+     */
+    filter_link = rtnl_link_alloc();
+    ERR_NOMEM((filter_link == NULL), nif->ncf);
+
+    rtnl_link_set_ifindex(filter_link, ifindex);
+    nl_cache_foreach_filter(nif->ncf->driver->link_cache,
+                            OBJ_CAST(filter_link), add_mac_cb,
+                            &cb_data);
+
     /* Build an rtnl_addr with the interface name set. This is used by
      * the iterator to filter the contents of the address cache.
      */
@@ -749,6 +812,8 @@ void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
 error:
     if (filter_addr)
         rtnl_addr_put(filter_addr);
+    if (filter_link)
+        rtnl_link_put(filter_link);
     return;
 }
 
