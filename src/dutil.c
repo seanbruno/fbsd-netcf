@@ -720,12 +720,7 @@ void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
     ERR_THROW(!xmlStrEqual(cb_data.root->name, BAD_CAST "interface"),
               nif->ncf, EINTERNAL, "root document is not an interface");
 
-    /* Build an rtnl_addr with the interface name set. This is used by
-     * the iterator to filter the contents of the address cache.
-     */
-    filter_addr = rtnl_addr_alloc();
-    ERR_NOMEM((filter_addr == NULL), nif->ncf);
-
+    /* Update the caches with any recent changes */
     code = nl_cache_refill(nif->ncf->driver->nl_sock,
                            nif->ncf->driver->link_cache);
     ERR_THROW((code < 0), nif->ncf, ENETLINK,
@@ -735,9 +730,17 @@ void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
     ERR_THROW((code < 0), nif->ncf, ENETLINK,
               "failed to refill interface address cache");
 
+    /* The addr cache only knows about ifindex, not name */
     ifindex = rtnl_link_name2i(nif->ncf->driver->link_cache, nif->name);
     ERR_THROW((ifindex == RTNL_LINK_NOT_FOUND), nif->ncf, ENETLINK,
               "Could find ifindex for interface `%s`", nif->name);
+
+    /* Build an rtnl_addr with the interface name set. This is used by
+     * the iterator to filter the contents of the address cache.
+     */
+    filter_addr = rtnl_addr_alloc();
+    ERR_NOMEM((filter_addr == NULL), nif->ncf);
+
     rtnl_addr_set_ifindex(filter_addr, ifindex);
 
     nl_cache_foreach_filter(nif->ncf->driver->addr_cache,
