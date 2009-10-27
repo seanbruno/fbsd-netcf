@@ -7,7 +7,7 @@
        is released. The current version is indicated with the v:serial
        attribute on the start element.
   -->
-  <start v:serial="3">
+  <start v:serial="4">
     <choice>
       <ref name="ethernet-interface"/>
       <ref name="bridge-interface"/>

@@ -1,3 +1,17 @@
+0.1.3 - 2009-10-27
+  - The interface.rng schema now allows specifying IPv4 and IPv6 addresses
+    in any order
+  - ncf_if_status: new API call
+  - ncf_if_xml_state: only report information about the live interface, and
+    none of the information from configuration files; report interface
+    type; report all addresses assigned to an interface; report MAC address
+    of an interface
+  - ncf_list_interfaces, ncf_num_interfaces, ncf_if_xml_state: fix bugs
+    when dealing with interfaces that are down
+  - ncf_if_mac_string: do not report error when MAC is not known, simply
+    return NULL
+  - use libnl to determine information about live interfaces
+
 0.1.2 - 2009-09-25
   - Configure IPv6 addresses on interfaces (see tests/interface/ipv6-*.xml)
   - ncf_if_xml_state: new API call to get currently assigned IP of an
