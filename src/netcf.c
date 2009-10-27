@@ -100,6 +100,7 @@ int ncf_init(struct netcf **ncf, const char *root) {
     return drv_init(*ncf);
  oom:
     ncf_close(*ncf);
+    *ncf = NULL;
     return -2;
 }
 
