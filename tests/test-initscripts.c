@@ -192,6 +192,19 @@ static void testTransforms(CuTest *tc) {
     assert_transforms(tc, "ipv6-static-multi");
 }
 
+static void testCorruptedSetup(CuTest *tc) {
+    int r;
+
+    ncf_close(ncf);
+    ncf = NULL;
+
+    r = ncf_init(&ncf, "/dev/null");
+    CuAssertIntEquals(tc, -1, r);
+    CuAssertPtrNotNull(tc, ncf);
+    r = ncf_error(ncf, NULL, NULL);
+    CuAssertIntEquals(tc, NETCF_EFILE, r);
+}
+
 int main(void) {
     char *output = NULL;
     CuSuite* suite = CuSuiteNew();
@@ -221,6 +234,7 @@ int main(void) {
     SUITE_ADD_TEST(suite, testLookupByMAC);
     SUITE_ADD_TEST(suite, testDefineUndefine);
     SUITE_ADD_TEST(suite, testTransforms);
+    SUITE_ADD_TEST(suite, testCorruptedSetup);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, &output);

@@ -508,6 +508,8 @@ int drv_init(struct netcf *ncf) {
 }
 
 void drv_close(struct netcf *ncf) {
+    if (ncf == NULL || ncf->driver == NULL)
+        return;
     xsltFreeStylesheet(ncf->driver->get);
     xsltFreeStylesheet(ncf->driver->put);
     xmlRelaxNGFree(ncf->driver->rng);
