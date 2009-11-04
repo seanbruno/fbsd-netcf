@@ -122,10 +122,23 @@ int netlink_close(struct netcf *ncf);
 /* Check if the interface INTF is up using an ioctl call */
 int if_is_active(struct netcf *ncf, const char *intf);
 
-/* return the type of the interface - "ethernet" (physical device),
- * "bridge", "bond", or "vlan"
+/* Interface types recognized by netcf. */
+typedef enum {
+    NETCF_IFACE_TYPE_NONE = 0,  /* not yet determined */
+    NETCF_IFACE_TYPE_ETHERNET,  /* any physical device is "ethernet" */
+    NETCF_IFACE_TYPE_BOND,
+    NETCF_IFACE_TYPE_BRIDGE,
+    NETCF_IFACE_TYPE_VLAN,
+} netcf_if_type_t;
+
+/* Return the type of the interface.
  */
-const char *if_type(struct netcf *ncf, const char *intf);
+netcf_if_type_t if_type(struct netcf *ncf, const char *intf);
+
+/* Given a netcf_if_type_t enum value, return a const char *representation
+ * This pointer has an indefinite life, and shouldn't be / can't be free'd.
+ */
+const char *if_type_str(netcf_if_type_t type);
 
 /* Create a new netcf if instance for interface NAME */
 struct netcf_if *make_netcf_if(struct netcf *ncf, char *name);

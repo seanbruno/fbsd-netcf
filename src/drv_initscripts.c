@@ -769,8 +769,6 @@ char *drv_xml_state(struct netcf_if *nif) {
     struct netcf *ncf;
     xmlDocPtr ncf_xml = NULL;
     xmlNodePtr root;
-    xmlAttrPtr prop;
-    const char *type;
 
     ncf = nif->ncf;
 
@@ -782,17 +780,8 @@ char *drv_xml_state(struct netcf_if *nif) {
     root = xmlNewNode(NULL, BAD_CAST "interface");
     ERR_NOMEM(root == NULL, ncf);
     xmlDocSetRootElement(ncf_xml, root);
-    prop = xmlNewProp(root, BAD_CAST "name", BAD_CAST nif->name);
-    ERR_NOMEM(prop == NULL, ncf);
 
-    type = if_type(ncf, nif->name);
-    ERR_BAIL(ncf);
-    prop = xmlSetProp(root, BAD_CAST "type", BAD_CAST type);
-    ERR_NOMEM(prop == NULL, ncf);
-
-    /* get the current IP address and prefix, and add both to the
-     * document.
-     */
+    /* add all info we can gather from the kernel/sysfs/procfs */
     add_state_to_xml_doc(nif, ncf_xml);
     ERR_BAIL(ncf);
 

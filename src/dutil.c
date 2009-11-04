@@ -50,6 +50,10 @@
 #include <netlink/cache.h>
 #include <netlink/route/addr.h>
 #include <netlink/route/link.h>
+/* For some reason, the headers for libnl vlan functions aren't installed */
+extern int rtnl_link_vlan_get_id(struct rtnl_link *link);
+
+#include <dirent.h>
 
 #include <libxml/parser.h>
 #include <libxml/relaxng.h>
@@ -432,6 +436,46 @@ char *xml_prop(xmlNodePtr node, const char *name) {
     return (char *) xmlGetProp(node, BAD_CAST name);
 }
 
+/* Create a new node and link it into the document, even if one of the
+ * same name already exists. A NULL return means there was a memory
+ * failure, and it needs to be reported by the caller.
+ */
+static xmlNodePtr xml_new_node(xmlDocPtr doc,
+                               xmlNodePtr parent, const char *name) {
+    xmlNodePtr cur, ret = NULL;
+
+    ret = xmlNewDocNode(doc, NULL, BAD_CAST name, NULL);
+    if (ret != NULL) {
+        cur = xmlAddChild(parent, ret);
+        if (cur == NULL) {
+            xmlFreeNode(ret);
+            ret = NULL;
+        }
+    }
+    return ret;
+}
+
+/* Find existing node of given name within parent, or create and link
+ * in a new one if not found.
+ */
+static xmlNodePtr xml_node(xmlDocPtr doc,
+                           xmlNodePtr parent, const char *name) {
+    xmlNodePtr cur, ret = NULL;
+
+    for (cur = parent->children; cur != NULL; cur = cur->next) {
+        if ((cur->type == XML_ELEMENT_NODE)
+            && xmlStrEqual(cur->name, BAD_CAST name)) {
+            ret = cur;
+            break;
+        }
+    }
+    if (ret == NULL) {
+        /* node not found, create a new one */
+        ret = xml_new_node(doc, parent, name);
+    }
+    return ret;
+}
+
 int init_ioctl_fd(struct netcf *ncf) {
     int ioctl_fd;
     int flags;
@@ -509,38 +553,104 @@ int if_is_active(struct netcf *ncf, const char *intf) {
     return ((ifr.ifr_flags & IFF_UP) == IFF_UP);
 }
 
-const char *if_type(struct netcf *ncf, const char *intf) {
+netcf_if_type_t if_type(struct netcf *ncf, const char *intf) {
     char *path;
     struct stat stats;
-    const char *ret = NULL;
+    netcf_if_type_t ret = NETCF_IFACE_TYPE_NONE;
 
     xasprintf(&path, "/proc/net/vlan/%s", intf);
     ERR_NOMEM(path == NULL, ncf);
     if ((stat (path, &stats) == 0) && S_ISREG (stats.st_mode)) {
-        ret = "vlan";
+        ret = NETCF_IFACE_TYPE_VLAN;
     }
     FREE(path);
 
-    if (ret == NULL) {
+    if (ret == NETCF_IFACE_TYPE_NONE) {
         xasprintf(&path, "/sys/class/net/%s/bridge", intf);
         ERR_NOMEM(path == NULL, ncf);
         if (stat (path, &stats) == 0 && S_ISDIR (stats.st_mode))
-            ret = "bridge";
+            ret = NETCF_IFACE_TYPE_BRIDGE;
         FREE(path);
     }
-    if (ret == NULL) {
+    if (ret == NETCF_IFACE_TYPE_NONE) {
         xasprintf(&path, "/sys/class/net/%s/bonding", intf);
         ERR_NOMEM(path == NULL, ncf);
         if (stat (path, &stats) == 0 && S_ISDIR (stats.st_mode))
-            ret = "bond";
+            ret = NETCF_IFACE_TYPE_BOND;
         FREE(path);
     }
-    if (ret == NULL)
-        ret = "ethernet";
+    if (ret == NETCF_IFACE_TYPE_NONE)
+        ret = NETCF_IFACE_TYPE_ETHERNET;
 
 error:
     FREE(path);
     return ret;
+}
+
+/* Given a netcf_if_type_t, return a const char * representation */
+const char *if_type_str(netcf_if_type_t type) {
+    switch (type) {
+        case NETCF_IFACE_TYPE_ETHERNET:
+            return "ethernet";
+        case NETCF_IFACE_TYPE_BOND:
+            return "bond";
+        case NETCF_IFACE_TYPE_BRIDGE:
+            return "bridge";
+        case NETCF_IFACE_TYPE_VLAN:
+            return "vlan";
+        default:
+            return NULL;
+    }
+}
+
+static int if_bridge_phys_name(struct netcf *ncf,
+                               const char *intf, char ***phys_names) {
+    /* We can learn the name of the physical interface associated with
+     * this bridge by looking for the names of the links in
+     * /sys/class/net/$ifname/brif.
+     *
+     * The caller of this function must free the array of strings that is
+     * returned.
+     *
+     */
+    int r, ii, ret = 0;
+    char *dirpath = NULL;
+    DIR *dir = NULL;
+
+    *phys_names = NULL;
+
+    xasprintf(&dirpath, "/sys/class/net/%s/brif", intf);
+    ERR_NOMEM(dirpath == NULL, ncf);
+
+    dir = opendir(dirpath);
+    if (dir != NULL) {
+        struct dirent *d;
+
+        while ((d = readdir (dir)) != NULL) {
+            if (STRNEQ(d->d_name, ".") && STRNEQ(d->d_name, "..")) {
+                r = REALLOC_N(*phys_names, ret + 1);
+                ERR_NOMEM(r < 0, ncf);
+                ret++;
+                xasprintf(&((*phys_names)[ret - 1]), "%s", d->d_name);
+                ERR_NOMEM((*phys_names)[ret - 1] == NULL, ncf);
+            }
+        }
+    }
+    goto done;
+
+error:
+    for (ii = 0; ii < ret; ii++)
+        FREE((*phys_names)[ii]);
+    FREE(*phys_names);
+    *phys_names = NULL;
+    ret = -1;
+
+done:
+    if (dir)
+        closedir (dir);
+    FREE(dirpath);
+    return ret;
+
 }
 
 /* Create a new netcf if instance for interface NAME */
@@ -602,24 +712,28 @@ int dutil_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
     return result;
 }
 
+
+static void add_type_specific_info(struct netcf *ncf,
+                                   const char *ifname, int ifindex,
+                                   xmlDocPtr doc, xmlNodePtr root);
+
 /* Data that needs to be preserved between calls to the libnl iterator
  * callback.
  */
-struct nl_callback_data {
+struct nl_ip_callback_data {
     xmlDocPtr doc;
     xmlNodePtr root;
     xmlNodePtr protov4;
     xmlNodePtr protov6;
-    xmlNodePtr mac;
-    struct netcf_if *nif;
+    struct netcf *ncf;
 };
 
 /* add all ip addresses for the given interface to the xml document
 */
-static void add_ips_cb(struct nl_object *obj, void *arg) {
-    struct nl_callback_data *cb_data = arg;
+static void add_ip_info_cb(struct nl_object *obj, void *arg) {
+    struct nl_ip_callback_data *cb_data = arg;
     struct rtnl_addr *addr = (struct rtnl_addr *)obj;
-    struct netcf *ncf = cb_data->nif->ncf;
+    struct netcf *ncf = cb_data->ncf;
 
     struct nl_addr *local_addr;
     int family, prefix;
@@ -673,16 +787,8 @@ static void add_ips_cb(struct nl_object *obj, void *arg) {
     if (*proto == NULL) {
         /* No node exists for this protocol family. Create one.
          */
-        *proto = xmlNewDocNode(cb_data->doc, NULL, BAD_CAST "protocol", NULL);
+        *proto = xml_new_node(cb_data->doc, cb_data->root, "protocol");
         ERR_NOMEM(*proto == NULL, ncf);
-
-        cur = xmlAddChild(cb_data->root, *proto);
-        if (cur == NULL) {
-            xmlFreeNode(*proto);
-            *proto = NULL;
-            report_error(ncf, NETCF_ENOMEM, NULL);
-            goto error;
-        }
         prop = xmlSetProp(*proto, BAD_CAST "family", BAD_CAST family_str);
         ERR_NOMEM(prop == NULL, ncf);
 
@@ -691,84 +797,319 @@ static void add_ips_cb(struct nl_object *obj, void *arg) {
     /* Create a new ip node for this address/prefix, and set the
      * properties
      */
-    ip_node = xmlNewDocNode(cb_data->doc, NULL, BAD_CAST "ip", NULL);
-    ERR_NOMEM((ip_node == NULL), ncf);
-    cur = xmlAddChild(*proto, ip_node);
-    if (cur == NULL) {
-        xmlFreeNode(ip_node);
-        report_error(ncf, NETCF_ENOMEM, NULL);
-        goto error;
-    }
+    ip_node = xml_new_node(cb_data->doc, *proto, "ip");
+    ERR_NOMEM(ip_node == NULL, ncf);
     prop = xmlSetProp(ip_node, BAD_CAST "address", BAD_CAST ip_str);
-    ERR_NOMEM((prop == NULL), ncf);
+    ERR_NOMEM(prop == NULL, ncf);
     snprintf(prefix_str, sizeof(prefix_str), "%d", prefix);
     prop = xmlSetProp(ip_node, BAD_CAST "prefix", BAD_CAST prefix_str);
-    ERR_NOMEM((prop == NULL), ncf);
-
-error:
-    return;
-}
-
-static void add_mac_cb(struct nl_object *obj, void *arg) {
-    struct nl_callback_data *cb_data = arg;
-    struct rtnl_link *iflink = (struct rtnl_link *)obj;
-    struct netcf *ncf = cb_data->nif->ncf;
-
-    struct nl_addr *addr;
-    char mac_str[64];
-    xmlNodePtr cur;
-    xmlAttrPtr prop = NULL;
-
-    if (cb_data->mac != NULL)
-        return;
-
-    addr = rtnl_link_get_addr(iflink);
-    if ((addr == NULL) || nl_addr_iszero(addr))
-        return;
-
-    nl_addr2str(addr, mac_str, sizeof(mac_str));
-
-    for (cur = cb_data->root->children; cur != NULL; cur = cur->next) {
-        if ((cur->type == XML_ELEMENT_NODE) &&
-            xmlStrEqual(cur->name, BAD_CAST "mac")) {
-            cb_data->mac = cur;
-            break;
-        }
-    }
-
-    if (cb_data->mac == NULL) {
-        /* No mac node exists in the document, create a new one.
-         */
-        cb_data->mac = xmlNewDocNode(cb_data->doc, NULL, BAD_CAST "mac", NULL);
-        ERR_NOMEM(cb_data->mac == NULL, ncf);
-
-        cur = xmlAddChild(cb_data->root, cb_data->mac);
-        if (cur == NULL) {
-            xmlFreeNode(cb_data->mac);
-            cb_data->mac = NULL;
-            report_error(ncf, NETCF_ENOMEM, NULL);
-            goto error;
-        }
-    }
-
-    prop = xmlSetProp(cb_data->mac, BAD_CAST "address", BAD_CAST mac_str);
     ERR_NOMEM(prop == NULL, ncf);
 
 error:
     return;
 }
 
-void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
-
-    struct nl_callback_data cb_data = { doc, NULL, NULL, NULL, NULL, nif };
+static void add_ip_info(struct netcf *ncf,
+                        const char *ifname ATTRIBUTE_UNUSED, int ifindex,
+                        xmlDocPtr doc, xmlNodePtr root) {
+    struct nl_ip_callback_data cb_data
+        = { doc, root, NULL, NULL, ncf };
     struct rtnl_addr *filter_addr = NULL;
+
+    filter_addr = rtnl_addr_alloc();
+    ERR_NOMEM(filter_addr == NULL, ncf);
+
+    rtnl_addr_set_ifindex(filter_addr, ifindex);
+    nl_cache_foreach_filter(ncf->driver->addr_cache,
+                            OBJ_CAST(filter_addr), add_ip_info_cb,
+                            &cb_data);
+error:
+    if (filter_addr)
+        rtnl_addr_put(filter_addr);
+    return;
+}
+
+
+struct nl_ethernet_callback_data {
+    xmlDocPtr doc;
+    xmlNodePtr root;
+    xmlNodePtr mac;
+    struct netcf *ncf;
+};
+
+static void add_ethernet_info_cb(struct nl_object *obj, void *arg) {
+    struct nl_ethernet_callback_data *cb_data = arg;
+    struct rtnl_link *iflink = (struct rtnl_link *)obj;
+    struct netcf *ncf = cb_data->ncf;
+
+    struct nl_addr *addr;
+    xmlAttrPtr prop = NULL;
+
+    if ((cb_data->mac == NULL)
+        && ((addr = rtnl_link_get_addr(iflink)) != NULL)
+        && !nl_addr_iszero(addr)) {
+
+        char mac_str[64];
+
+        nl_addr2str(addr, mac_str, sizeof(mac_str));
+        cb_data->mac = xml_node(cb_data->doc, cb_data->root, "mac");
+        ERR_NOMEM(cb_data->mac == NULL, ncf);
+        prop = xmlSetProp(cb_data->mac, BAD_CAST "address", BAD_CAST mac_str);
+        ERR_NOMEM(prop == NULL, ncf);
+    }
+error:
+    return;
+}
+
+static void add_ethernet_info(struct netcf *ncf,
+                              const char *ifname ATTRIBUTE_UNUSED, int ifindex,
+                              xmlDocPtr doc, xmlNodePtr root) {
+    struct nl_ethernet_callback_data cb_data
+        = { doc, root, NULL, ncf };
     struct rtnl_link *filter_link = NULL;
+
+    filter_link = rtnl_link_alloc();
+    ERR_NOMEM(filter_link == NULL, ncf);
+
+    rtnl_link_set_ifindex(filter_link, ifindex);
+    nl_cache_foreach_filter(ncf->driver->link_cache,
+                            OBJ_CAST(filter_link), add_ethernet_info_cb,
+                            &cb_data);
+error:
+    if (filter_link)
+        rtnl_link_put(filter_link);
+    return;
+}
+
+struct nl_vlan_callback_data {
+    xmlDocPtr doc;
+    xmlNodePtr root;
+    xmlNodePtr vlan;
+    struct netcf *ncf;
+};
+
+static void add_vlan_info_cb(struct nl_object *obj, void *arg) {
+    struct nl_vlan_callback_data *cb_data = arg;
+    struct rtnl_link *iflink = (struct rtnl_link *)obj;
+    struct netcf *ncf = cb_data->ncf;
+
+    struct rtnl_link *master_link;
+    char *master_name = NULL;
+    int l_link, vlan_id, master_ifindex;
+    char vlan_id_str[16];
+    char *link_type;
+    xmlNodePtr interface_node;
+    xmlAttrPtr prop = NULL;
+
+    /* If this really is a vlan link, get the master interface and vlan id.
+     */
+    if (cb_data->vlan != NULL)
+        return;
+
+    link_type = rtnl_link_get_info_type(iflink);
+    if ((link_type == NULL) || STRNEQ(link_type, "vlan"))
+        return;
+
+    l_link = rtnl_link_get_link(iflink);
+    if (l_link == RTNL_LINK_NOT_FOUND)
+        return;
+
+    master_link = rtnl_link_get(nl_object_get_cache(obj), l_link);
+    if (master_link == NULL)
+        return;
+
+    master_name = rtnl_link_get_name(master_link);
+    if (master_name == NULL)
+        return;
+
+
+    cb_data->vlan = xml_node(cb_data->doc, cb_data->root, "vlan");
+    ERR_NOMEM(cb_data->vlan == NULL, ncf);
+
+    vlan_id = rtnl_link_vlan_get_id(iflink);
+    snprintf(vlan_id_str, sizeof(vlan_id_str), "%d", vlan_id);
+    prop = xmlSetProp(cb_data->vlan, BAD_CAST "tag", BAD_CAST vlan_id_str);
+    ERR_NOMEM(prop == NULL, ncf);
+
+    interface_node = xml_new_node(cb_data->doc, cb_data->vlan, "interface");
+    ERR_NOMEM(interface_node == NULL, ncf);
+
+    /* Add in type-specific info of master interface */
+    master_ifindex = rtnl_link_name2i(ncf->driver->link_cache, master_name);
+    ERR_THROW((master_ifindex == RTNL_LINK_NOT_FOUND), ncf, ENETLINK,
+              "couldn't find ifindex for vlan master interface `%s`",
+              master_name);
+    add_type_specific_info(ncf, master_name, master_ifindex,
+                           cb_data->doc, interface_node);
+
+error:
+    return;
+}
+
+static void add_vlan_info(struct netcf *ncf,
+                          const char *ifname ATTRIBUTE_UNUSED, int ifindex,
+                          xmlDocPtr doc, xmlNodePtr root) {
+    struct nl_vlan_callback_data cb_data
+        = { doc, root, NULL, ncf };
+    struct rtnl_link *filter_link = NULL;
+
+    filter_link = rtnl_link_alloc();
+    ERR_NOMEM(filter_link == NULL, ncf);
+
+    rtnl_link_set_ifindex(filter_link, ifindex);
+    nl_cache_foreach_filter(ncf->driver->link_cache,
+                            OBJ_CAST(filter_link), add_vlan_info_cb,
+                            &cb_data);
+    ERR_BAIL(ncf);
+error:
+    if (filter_link)
+        rtnl_link_put(filter_link);
+    return;
+}
+
+static void add_bridge_info(struct netcf *ncf,
+                            const char *ifname, int ifindex ATTRIBUTE_UNUSED,
+                            xmlDocPtr doc, xmlNodePtr root) {
+    char **phys_names;
+    int  nphys, ii;
+    xmlNodePtr bridge_node = NULL, interface_node = NULL;
+
+    nphys = if_bridge_phys_name(ncf, ifname, &phys_names);
+    if (nphys <= 0)
+        return;
+
+    bridge_node = xml_node(doc, root, "bridge");
+    ERR_NOMEM(bridge_node == NULL, ncf);
+
+    for (ii = 0; ii < nphys; ii++) {
+        int   phys_ifindex;
+
+        interface_node = xml_new_node(doc, bridge_node, "interface");
+        ERR_NOMEM(interface_node == NULL, ncf);
+
+        /* Add in type-specific info of physical interface */
+        phys_ifindex =
+            rtnl_link_name2i(ncf->driver->link_cache, phys_names[ii]);
+        ERR_THROW((phys_ifindex == RTNL_LINK_NOT_FOUND), ncf, ENETLINK,
+          "couldn't find ifindex for physical interface `%s` of bridge %s",
+                  phys_names[ii], ifname);
+
+        add_type_specific_info(ncf, phys_names[ii], phys_ifindex, doc,
+                               interface_node);
+    }
+
+error:
+    for (ii = 0; ii < nphys; ii++)
+        FREE(phys_names[ii]);
+    FREE(phys_names);
+}
+
+
+struct nl_bond_callback_data {
+    xmlDocPtr doc;
+    xmlNodePtr root;
+    xmlNodePtr bond;
+    int master_ifindex;
+    struct netcf *ncf;
+};
+
+static void add_bond_info_cb(struct nl_object *obj,
+                             void *arg ATTRIBUTE_UNUSED) {
+    struct nl_bond_callback_data *cb_data = arg;
+    struct rtnl_link *iflink = (struct rtnl_link *)obj;
+    struct netcf *ncf = cb_data->ncf;
+
+    xmlNodePtr interface_node;
+
+    /* If this is a slave link, and the master is master_ifindex, add the
+     * interface info to the bond.
+     */
+
+    if (!(rtnl_link_get_flags(iflink) & IFF_SLAVE)
+        || rtnl_link_get_master(iflink) != cb_data->master_ifindex)
+        return;
+
+    cb_data->bond = xml_node(cb_data->doc, cb_data->root, "bond");
+    ERR_NOMEM(cb_data->bond == NULL, ncf);
+
+    /* XXX - if we learn where to get bridge "mode" property, set it here */
+
+    /* XXX - need to add node like one of these:
+     *
+     *    <miimon freq="100" updelay="10" carrier="ioctl"/>
+     *        or
+     *    <arpmode interval='something' target='something'>
+     */
+
+    /* add a new interface node */
+    interface_node = xml_new_node(cb_data->doc, cb_data->bond, "interface");
+    ERR_NOMEM(interface_node == NULL, ncf);
+
+    /* Add in type-specific info of this slave interface */
+    add_type_specific_info(ncf, rtnl_link_get_name(iflink),
+                           rtnl_link_get_ifindex(iflink),
+                           cb_data->doc, interface_node);
+error:
+    return;
+}
+
+static void add_bond_info(struct netcf *ncf,
+                          const char *ifname ATTRIBUTE_UNUSED, int ifindex,
+                          xmlDocPtr doc, xmlNodePtr root) {
+    struct nl_bond_callback_data cb_data
+        = { doc, root, NULL, ifindex, ncf };
+
+    nl_cache_foreach(ncf->driver->link_cache, add_bond_info_cb, &cb_data);
+}
+
+
+static void add_type_specific_info(struct netcf *ncf,
+                                   const char *ifname, int ifindex,
+                                   xmlDocPtr doc, xmlNodePtr root) {
+    xmlAttrPtr prop;
+    netcf_if_type_t iftype;
+    const char *iftype_str;
+
+    prop = xmlNewProp(root, BAD_CAST "name", BAD_CAST ifname);
+    ERR_NOMEM(prop == NULL, ncf);
+
+    iftype = if_type(ncf, ifname);
+    ERR_BAIL(ncf);
+    iftype_str = if_type_str(iftype);
+
+    if (iftype_str) {
+        prop = xmlSetProp(root, BAD_CAST "type", BAD_CAST if_type_str(iftype));
+        ERR_NOMEM(prop == NULL, ncf);
+    }
+
+    switch (iftype) {
+        case NETCF_IFACE_TYPE_ETHERNET:
+            add_ethernet_info(ncf, ifname, ifindex, doc, root);
+            break;
+        case NETCF_IFACE_TYPE_BRIDGE:
+            add_bridge_info(ncf, ifname, ifindex, doc, root);
+            break;
+        case NETCF_IFACE_TYPE_VLAN:
+            add_vlan_info(ncf, ifname, ifindex, doc, root);
+            break;
+        case NETCF_IFACE_TYPE_BOND:
+            add_bond_info(ncf, ifname, ifindex, doc, root);
+            break;
+        default:
+            break;
+    }
+error:
+    return;
+}
+
+void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
+    xmlNodePtr root;
     int ifindex, code;
 
-    cb_data.root = xmlDocGetRootElement(doc);
-    ERR_THROW((cb_data.root == NULL), nif->ncf, EINTERNAL,
+    root = xmlDocGetRootElement(doc);
+    ERR_THROW((root == NULL), nif->ncf, EINTERNAL,
               "failed to get document root element");
-    ERR_THROW(!xmlStrEqual(cb_data.root->name, BAD_CAST "interface"),
+    ERR_THROW(!xmlStrEqual(root->name, BAD_CAST "interface"),
               nif->ncf, EINTERNAL, "root document is not an interface");
 
     /* Update the caches with any recent changes */
@@ -781,39 +1122,17 @@ void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
     ERR_THROW((code < 0), nif->ncf, ENETLINK,
               "failed to refill interface address cache");
 
-    /* The addr cache only knows about ifindex, not name */
     ifindex = rtnl_link_name2i(nif->ncf->driver->link_cache, nif->name);
     ERR_THROW((ifindex == RTNL_LINK_NOT_FOUND), nif->ncf, ENETLINK,
-              "Could find ifindex for interface `%s`", nif->name);
+              "couldn't find ifindex for interface `%s`", nif->name);
 
-    /* Build an rtnl_link with the interface index set, and use it to
-     * find the entry for this interface and extract the mac
-     * address.
-     */
-    filter_link = rtnl_link_alloc();
-    ERR_NOMEM((filter_link == NULL), nif->ncf);
+    add_type_specific_info(nif->ncf, nif->name, ifindex, doc, root);
+    ERR_BAIL(nif->ncf);
 
-    rtnl_link_set_ifindex(filter_link, ifindex);
-    nl_cache_foreach_filter(nif->ncf->driver->link_cache,
-                            OBJ_CAST(filter_link), add_mac_cb,
-                            &cb_data);
+    add_ip_info(nif->ncf, nif->name, ifindex, doc, root);
+    ERR_BAIL(nif->ncf);
 
-    /* Build an rtnl_addr with the interface name set. This is used by
-     * the iterator to filter the contents of the address cache.
-     */
-    filter_addr = rtnl_addr_alloc();
-    ERR_NOMEM((filter_addr == NULL), nif->ncf);
-
-    rtnl_addr_set_ifindex(filter_addr, ifindex);
-
-    nl_cache_foreach_filter(nif->ncf->driver->addr_cache,
-                            OBJ_CAST(filter_addr), add_ips_cb,
-                            &cb_data);
 error:
-    if (filter_addr)
-        rtnl_addr_put(filter_addr);
-    if (filter_link)
-        rtnl_link_put(filter_link);
     return;
 }
 
