@@ -1,3 +1,10 @@
+0.1.4 - 2009-11-05
+  - ncf_if_xml_state: fill in details for bridge, bond, and vlan. The
+    returned XML will now validate against interface.rng (except bonds,
+    which are still missing the miimon or arpmon elements)
+  - ncf_close: allow passing in a NULL ncf, or a partially initialized ncf
+  - ncf_init: set *ncf to NULL when returning -2
+
 0.1.3 - 2009-10-27
   - The interface.rng schema now allows specifying IPv4 and IPv6 addresses
     in any order
