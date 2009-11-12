@@ -163,6 +163,11 @@ bool bridge_nf_call_iptables(struct netcf *ncf) {
     ERR_NOMEM(r < 0, ncf);
 
     proc = fopen(path, "r");
+    /* If the file does not exist, assume the bridge module is not loaded
+     * and just report that no bridge packets will hit iptables */
+    if (proc == NULL && errno == ENOENT)
+        goto error;
+
     ERR_THROW(proc == NULL, ncf, EFILE, "can not open %s: %s",
               path, strerror(errno));
     c = fgetc(proc);
