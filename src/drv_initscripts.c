@@ -499,11 +499,7 @@ int drv_init(struct netcf *ncf) {
     return 0;
 
  error:
-    netlink_close(ncf);
-    if (ncf->driver->ioctl_fd >= 0)
-        close(ncf->driver->ioctl_fd);
-    FREE(ncf->driver->augeas_xfm_tables);
-    FREE(ncf->driver);
+    drv_close(ncf);
     return -1;
 }
 
