@@ -536,6 +536,7 @@ int netlink_close(struct netcf *ncf) {
     }
     if (ncf->driver->nl_sock) {
         nl_close(ncf->driver->nl_sock);
+        nl_handle_destroy(ncf->driver->nl_sock);
         ncf->driver->nl_sock = NULL;
     }
     return 0;
