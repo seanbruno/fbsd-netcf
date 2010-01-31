@@ -656,7 +656,10 @@ static void usage(void) {
     fprintf(stderr, "Interactive shell for netcf\n\n");
     fprintf(stderr, "Type 'help' at the prompt to get a list of commands\n");
     fprintf(stderr, "\nOptions:\n\n");
-    fprintf(stderr, "  -r, --root ROOT    use ROOT as the root of the filesystem\n");
+    fprintf(stderr,
+            "  -r, --root ROOT    use ROOT as the root of the filesystem\n\n");
+    fprintf(stderr,
+            "  -d, --debug        Show debugging output\n\n");
 
     exit(EXIT_FAILURE);
 }
@@ -666,12 +669,16 @@ static void parse_opts(int argc, char **argv) {
     struct option options[] = {
         { "help",      0, 0, 'h' },
         { "root",      1, 0, 'r' },
+        { "debug",     0, 0, 'd' },
         { 0, 0, 0, 0}
     };
     int idx;
 
-    while ((opt = getopt_long(argc, argv, "+hr:", options, &idx)) != -1) {
+    while ((opt = getopt_long(argc, argv, "+dhr:", options, &idx)) != -1) {
         switch(opt) {
+        case 'd':
+            setenv("NETCF_DEBUG", "1", 1);
+            break;
         case 'h':
             usage();
             break;
