@@ -56,7 +56,8 @@ enum command_result {
     CMD_RES_OK,
     CMD_RES_ERR,
     CMD_RES_ENOMEM,
-    CMD_RES_QUIT
+    CMD_RES_QUIT,
+    CMD_RES_UNKNOWN
 };
 
 struct command {
@@ -669,7 +670,7 @@ static void parse_opts(int argc, char **argv) {
     };
     int idx;
 
-    while ((opt = getopt_long(argc, argv, "hr:", options, &idx)) != -1) {
+    while ((opt = getopt_long(argc, argv, "+hr:", options, &idx)) != -1) {
         switch(opt) {
         case 'h':
             usage();
@@ -695,53 +696,73 @@ static void print_netcf_error(void) {
     }
 }
 
-static int main_loop(void) {
+static int run_command_line(const char *line, int *cmdstatus)
+{
     struct command cmd;
-    char *line;
+    char *dup_line;
     int ret = 0;
 
     MEMZERO(&cmd, 1);
+
+    dup_line = strdup(line);
+    if (dup_line == NULL) {
+        fprintf(stderr, "Out of memory\n");
+        return -1;
+    }
+
+    if (parseline(&cmd, dup_line) == 0) {
+        *cmdstatus = cmd.def->handler(&cmd);
+        switch (*cmdstatus) {
+        case CMD_RES_OK:
+            ret = 0;
+            break;
+        case CMD_RES_ERR:
+            print_netcf_error();
+            ret = -1;
+            break;
+        case CMD_RES_ENOMEM:
+            fprintf(stderr, "error: allocation failed\n");
+            ret = -1;
+            break;
+        case CMD_RES_QUIT:
+            ret = 0;
+            break;
+        }
+    } else {
+        ret = -1;
+        *cmdstatus = CMD_RES_UNKNOWN;
+    }
+
+    free(dup_line);
+    cmd.def = NULL;
+    while (cmd.opt != NULL) {
+        struct command_opt *del = cmd.opt;
+        cmd.opt = del->next;
+        free(del);
+    }
+
+    return ret;
+}
+
+static int main_loop(void) {
+    char *line;
+    int ret;
+
     while(1) {
-        char *dup_line;
+        int cmdret;
+        int cmdstatus = 0;
 
         line = readline("ncftool> ");
         if (line == NULL) {
-            printf("\n");
             return ret;
         }
 
-        dup_line = strdup(line);
-        if (dup_line == NULL) {
-            fprintf(stderr, "Out of memory\n");
-            return -1;
-        }
+        cmdret = run_command_line(line, &cmdstatus);
+        if (ret == 0 && cmdstatus == CMD_RES_QUIT)
+            return ret;
 
-        if (parseline(&cmd, dup_line) == 0) {
-            int r;
-            r = cmd.def->handler(&cmd);
-            switch (r) {
-            case CMD_RES_OK:
-                break;
-            case CMD_RES_ERR:
-                print_netcf_error();
-                ret = -1;
-                break;
-            case CMD_RES_ENOMEM:
-                fprintf(stderr, "error: allocation failed\n");
-                ret = -1;
-                break;
-            case CMD_RES_QUIT:
-                return ret;
-            }
-            add_history(line);
-        }
-        free(dup_line);
-        cmd.def = NULL;
-        while (cmd.opt != NULL) {
-            struct command_opt *del = cmd.opt;
-            cmd.opt = del->next;
-            free(del);
-        }
+        add_history(line);
+        ret = cmdret;
     }
 }
 
@@ -760,7 +781,29 @@ int main(int argc, char **argv) {
     }
     readline_init();
     if (optind < argc) {
-        fprintf(stderr, "warning: ignoring additional arguments\n");
+        /* Run a single command */
+        int i, ignore_status;
+        int cmdsize = 0;
+        char *cmd;
+
+        for (i = optind; i < argc; ++i) {
+            cmdsize += strlen(argv[i]) + 1;
+        }
+
+        r = ALLOC_N(cmd, cmdsize + 1);
+        if (r < 0) {
+            fprintf(stderr, "Out of memory\n");
+            exit(EXIT_FAILURE);
+        }
+
+        for (i = optind; i < argc; i++) {
+            strncat(cmd, argv[i], cmdsize);
+            cmdsize -= strlen(argv[i]);
+            strncat(cmd, " ", cmdsize--);
+        }
+
+        r = run_command_line(cmd, &ignore_status);
+        free(cmd);
     } else {
         r = main_loop();
     }
