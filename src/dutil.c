@@ -519,6 +519,9 @@ int netlink_init(struct netcf *ncf) {
     }
     nl_cache_mngt_provide(ncf->driver->addr_cache);
 
+    int netlink_fd = nl_socket_get_fd(ncf->driver->nl_sock);
+    if (netlink_fd >= 0)
+        fcntl(netlink_fd, F_SETFD, FD_CLOEXEC);
     return 0;
 
 error:
