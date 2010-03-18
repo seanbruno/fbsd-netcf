@@ -27,6 +27,10 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <errno.h>
 #include "safe-alloc.h"
 
 #include "internal.h"
@@ -262,25 +266,130 @@ int ncf_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
  * Internal helpers
  */
 
+static int
+exec_program(struct netcf *ncf,
+             const char *const*argv,
+             const char *commandline,
+             pid_t *pid)
+{
+    sigset_t oldmask, newmask;
+    struct sigaction sig_action;
+    char errbuf[128];
+
+    /* commandline is only used for error reporting */
+    if (commandline == NULL)
+        commandline = argv[0];
+    /*
+     * Need to block signals now, so that child process can safely
+     * kill off caller's signal handlers without a race.
+     */
+    sigfillset(&newmask);
+    if (pthread_sigmask(SIG_SETMASK, &newmask, &oldmask) != 0) {
+        report_error(ncf, NETCF_EEXEC,
+                     "failed to set signal mask while forking for '%s': %s",
+                     commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
+        goto error;
+    }
+
+    *pid = fork();
+
+    ERR_THROW(*pid < 0, ncf, EEXEC, "failed to fork for '%s': %s",
+              commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
+
+    if (*pid) { /* parent */
+        /* Restore our original signal mask now that the child is
+           safely running */
+        ERR_THROW(pthread_sigmask(SIG_SETMASK, &oldmask, NULL) != 0,
+                  ncf, EEXEC,
+                  "failed to restore signal mask while forking for '%s': %s",
+                  commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return 0;
+    }
+
+    /* child */
+
+    /* Clear out all signal handlers from parent so nothing unexpected
+       can happen in our child once we unblock signals */
+
+    sig_action.sa_handler = SIG_DFL;
+    sig_action.sa_flags = 0;
+    sigemptyset(&sig_action.sa_mask);
+
+    int i;
+    for (i = 1; i < NSIG; i++) {
+        /* Only possible errors are EFAULT or EINVAL
+           The former wont happen, the latter we
+           expect, so no need to check return value */
+
+        sigaction(i, &sig_action, NULL);
+    }
+
+    /* Unmask all signals in child, since we've no idea what the
+       caller's done with their signal mask and don't want to
+       propagate that to children */
+    sigemptyset(&newmask);
+    if (pthread_sigmask(SIG_SETMASK, &newmask, NULL) != 0) {
+        /* don't report_error, as it will never be seen anyway */
+        _exit(1);
+    }
+
+    /* close all open file descriptors */
+    int openmax = sysconf (_SC_OPEN_MAX);
+    for (i = 3; i < openmax; i++)
+        close(i);
+
+    execvp(argv[0], (char **) argv);
+
+    /* if execvp() returns, it has failed */
+    /* don't report_error, as it will never be seen anyway */
+    _exit(1);
+
+error:
+    /* This is cleanup of parent process only - child
+       should never jump here on error */
+    return -1;
+}
+
+/**
+ * Run a command without using the shell.
+ *
+ * return 0 if the command run and exited with 0 status; Otherwise
+ * return -1
+ *
+ */
 int run_program(struct netcf *ncf, const char *const *argv) {
 
-    int status, success;
-    char *argv_str = argv_to_string(argv);
+    pid_t childpid;
+    int exitstatus, waitret;
+    char *argv_str;
     int ret = -1;
+    char errbuf[128];
 
-    /* BIG FIXME!!!  Before any general release, this *must* be
-     * replaced with a call to a function similar to libVirt's
-     * virRun(), and if there is an error returned, anything the
-     * program produced on stderr or stdout should be placed in
-     * ncf->errdetails.
-     */
-    status = system(argv_str);
-    success = WIFEXITED(status) && WEXITSTATUS(status) == 0;
-    ERR_THROW(!success, ncf, EEXEC,
-              "Running '%s' failed with error code %d",
-              argv_str == NULL ? argv[0] : argv_str, WEXITSTATUS(status));
+    argv_str = argv_to_string(argv);
+    ERR_NOMEM(argv_str == NULL, ncf);
 
+    exec_program(ncf, argv, argv_str, &childpid);
+    ERR_BAIL(ncf);
+
+    while ((waitret = waitpid(childpid, &exitstatus, 0) == -1) &&
+           errno == EINTR) {
+        /* empty loop */
+    }
+
+    ERR_THROW(waitret == -1, ncf, EEXEC,
+              "Failed waiting for completion of '%s': %s",
+              argv_str, strerror_r(errno, errbuf, sizeof(errbuf)));
+    ERR_THROW(!WIFEXITED(exitstatus) && WIFSIGNALED(exitstatus), ncf, EEXEC,
+              "'%s' terminated by signal: %d",
+              argv_str, WTERMSIG(exitstatus));
+    ERR_THROW(!WIFEXITED(exitstatus), ncf, EEXEC,
+              "'%s' terminated improperly: %d",
+              argv_str, WEXITSTATUS(exitstatus));
+    ERR_THROW(WEXITSTATUS(exitstatus) != 0, ncf, EEXEC,
+              "Running '%s' failed with exit code %d",
+              argv_str, WEXITSTATUS(exitstatus));
     ret = 0;
+
 error:
     FREE(argv_str);
     return ret;
