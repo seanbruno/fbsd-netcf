@@ -121,6 +121,18 @@ static int is_slave(struct netcf *ncf, const char *intf) {
     return 0;
 }
 
+static bool has_ifcfg_file(struct netcf *ncf, const char *name) {
+    int nmatches;
+
+    nmatches = aug_fmt_match(ncf, NULL,
+                             "%s[ DEVICE = '%s'"
+                             "    or BRIDGE = '%s'"
+                             "    or MASTER = '%s'"
+                             "    or MASTER = ../*[BRIDGE = '%s']/DEVICE ]/DEVICE",
+                             ifcfg_path, name, name, name, name);
+    return nmatches > 0;
+}
+
 static int cmpstrp(const void *p1, const void *p2) {
     const char *s1 = * (const char **)p1;
     const char *s2 = * (const char **)p2;
@@ -1087,6 +1099,8 @@ int drv_lookup_by_mac_string(struct netcf *ncf, const char *mac,
 
     int cnt = 0;
     for (int i = 0; i < nmatches; i++) {
+        if (!has_ifcfg_file(ncf, matches[i]))
+            continue;
         r = xasprintf(&ifcfg, "%s[DEVICE = '%s']", ifcfg_path, matches[i]);
         ERR_NOMEM(r < 0, ncf);
 
