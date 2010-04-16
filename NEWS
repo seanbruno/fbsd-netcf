@@ -1,3 +1,10 @@
+0.1.6 - 2010-04-15
+  - only list devices that have an ifcfg file (BZ 580348)
+  - improve run_program to close all open file descriptors before exec.
+  - add missing includes for stat in src/dutil.c
+  - add --debug option to ncftool - sets NETCF_DEBUG env variable
+  - allow a one shot, non-interactive command in ncftool
+
 0.1.5 - 2009-11-30
   - fix a couple of memory leaks (BZ 540521 and 540472)
   - do not require bridge module for succesful initialization
