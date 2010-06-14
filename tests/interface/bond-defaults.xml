@@ -1,0 +1,11 @@
+<interface type="bond" name="bond0">
+  <start mode="none"/>
+  <protocol family="ipv4">
+    <ip address="192.168.50.7" prefix="24"/>
+    <route gateway="192.168.50.1"/>
+  </protocol>
+  <bond>
+    <interface type="ethernet" name="eth1"/>
+    <interface type="ethernet" name="eth0"/>
+  </bond>
+</interface>
