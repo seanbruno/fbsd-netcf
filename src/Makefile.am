@@ -54,10 +54,7 @@ netcf.syms: netcf_public.syms netcf_private.syms
 # Generate datadir.h. That's where we look for stylesheets
 internal.h: datadir.h
 
-FORCE-datadir.h: Makefile
-	echo '#define DATADIR "$(datadir)"' > datadir.h1
-	$(top_srcdir)/build/aux/move-if-change datadir.h1 datadir.h
-
-datadir.h: FORCE-datadir.h
+datadir.h: $(top_builddir)/config.status
+	echo '#define DATADIR "$(datadir)"' > datadir.h
 
 DISTCLEANFILES += $(BUILT_SOURCES)
