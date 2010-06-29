@@ -432,12 +432,11 @@ static void bridge_physdevs(struct netcf *ncf) {
     }
 
     if (! use_lokkit) {
-        defnode(ncf, "ipt_filter", NULL, "$iptables/table[. = 'filter']");
+        int created = defnode(ncf, "ipt_filter", NULL,
+                              "$iptables/table[. = 'filter']");
         ERR_BAIL(ncf);
 
-        nmatches = aug_match(aug, "$ipt_filter", NULL);
-        ERR_COND_BAIL(nmatches < 0, ncf, EOTHER);
-        if (nmatches == 0) {
+        if (created) {
             r = aug_set(aug, "$ipt_filter", "filter");
             ERR_COND_BAIL(r < 0, ncf, EOTHER);
             r = aug_set(aug, "$ipt_filter/chain[1]", "INPUT");
