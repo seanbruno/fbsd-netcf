@@ -56,7 +56,7 @@ static const char *const ifcfg_path =
 /* Augeas should only load the files we are interested in */
 static const struct augeas_pv augeas_xfm_common_pv[] = {
     /* Ifcfg files */
-    { "/augeas/load/Ifcfg/lens", "Shellvars.lns" },
+    { "/augeas/load/Ifcfg/lens", "Sysconfig.lns" },
     { "/augeas/load/Ifcfg/incl",
       "/etc/sysconfig/network-scripts/ifcfg-*" },
     { "/augeas/load/Ifcfg/excl[1]", "*~" },

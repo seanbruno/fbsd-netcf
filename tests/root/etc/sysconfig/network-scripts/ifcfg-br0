@@ -1,5 +1,6 @@
-DEVICE=br0
-ONBOOT=yes
-BOOTPROTO=dhcp
-TYPE=Bridge
-DELAY=0
+# Enclosing the values in useless quotes is intentional
+DEVICE="br0"
+ONBOOT='yes'
+BOOTPROTO="dhcp"
+TYPE="Bridge"
+DELAY='0'
