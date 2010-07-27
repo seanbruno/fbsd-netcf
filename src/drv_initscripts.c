@@ -949,7 +949,9 @@ static void rm_all_interfaces(struct netcf *ncf, xmlDocPtr ncf_xml) {
 	context = xmlXPathNewContext(ncf_xml);
     ERR_NOMEM(context == NULL, ncf);
 
-	obj = xmlXPathEvalExpression(BAD_CAST "//interface", context);
+    obj = xmlXPathEvalExpression(BAD_CAST
+                                 "//interface[count(parent::vlan) = 0]",
+                                 context);
     ERR_NOMEM(obj == NULL, ncf);
 
 
