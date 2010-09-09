@@ -77,4 +77,5 @@ $gnulib_tool			\
   --tests-base=gnulib/tests	\
   --aux-dir=build/aux           \
   --quiet                       \
+  --libtool                     \
   --import $modules

@@ -1,6 +1,7 @@
 AC_INIT(netcf, 0.1.6)
 AC_CONFIG_SRCDIR([src/netcf.c])
 AC_CONFIG_AUX_DIR([build/aux])
+AC_CONFIG_MACRO_DIR([gnulib/m4])
 AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([-Wno-portability 1.11 color-tests parallel-tests])
 AM_SILENT_RULES([yes]) # make --enable-silent-rules the default.

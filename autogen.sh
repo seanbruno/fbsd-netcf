@@ -85,7 +85,7 @@ fi
 mkdir -p $BUILD_AUX
 
 $LIBTOOLIZE --copy --force
-./bootstrap $GNULIB_SRCDIR
+./bootstrap ${GNULIB_SRCDIR:+--gnulib-srcdir="$GNULIB_SRCDIR"}
 aclocal -I gnulib/m4
 autoheader
 automake --add-missing
