@@ -84,6 +84,7 @@ fi
 
 mkdir -p $BUILD_AUX
 
+touch ChangeLog
 $LIBTOOLIZE --copy --force
 ./bootstrap ${GNULIB_SRCDIR:+--gnulib-srcdir="$GNULIB_SRCDIR"}
 aclocal -I gnulib/m4
