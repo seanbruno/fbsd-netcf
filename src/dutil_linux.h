@@ -45,10 +45,6 @@ void modprobed_alias_bond(struct netcf *ncf, const char *name);
 /* Remove an 'alias NAME bonding' as created by modprobed_alias_bond */
 void modprobed_unalias_bond(struct netcf *ncf, const char *name);
 
-/* Look at /proc/sys/net/bridge/bridge-nf-call-iptables and return TRUE
- * if bridge packets pass through iptables, FALSE otherwise
- */
-bool bridge_nf_call_iptables(struct netcf *ncf);
 #endif
 
 /*

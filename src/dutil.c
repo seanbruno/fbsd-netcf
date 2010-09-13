@@ -166,11 +166,6 @@ struct augeas *get_augeas(struct netcf *ncf) {
 
     if (ncf->driver->load_augeas) {
         struct augeas *aug = ncf->driver->augeas;
-        /* Undefine all our variables to work around bug 79 in Augeas */
-        aug_defvar(aug, "iptables", NULL);
-        aug_defvar(aug, "fw", NULL);
-        aug_defvar(aug, "fw_custom", NULL);
-        aug_defvar(aug, "ipt_filter", NULL);
 
         r = aug_load(aug);
         ERR_THROW(r < 0, ncf, EOTHER, "failed to load config files");

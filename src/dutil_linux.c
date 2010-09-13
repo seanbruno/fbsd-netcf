@@ -151,37 +151,6 @@ void modprobed_unalias_bond(struct netcf *ncf, const char *name) {
     FREE(path);
 }
 
-bool bridge_nf_call_iptables(struct netcf *ncf) {
-    static const char *const proc_bridge_nf_call_iptables =
-        "proc/sys/net/bridge/bridge-nf-call-iptables";
-    char *path = NULL;
-    FILE *proc = NULL;
-    int r, c;
-    bool result = false;
-
-    r = xasprintf(&path, "%s%s", ncf->root, proc_bridge_nf_call_iptables);
-    ERR_NOMEM(r < 0, ncf);
-
-    proc = fopen(path, "r");
-    /* If the file does not exist, assume the bridge module is not loaded
-     * and just report that no bridge packets will hit iptables */
-    if (proc == NULL && errno == ENOENT)
-        goto error;
-
-    ERR_THROW(proc == NULL, ncf, EFILE, "can not open %s: %s",
-              path, strerror(errno));
-    c = fgetc(proc);
-    ERR_THROW(c == EOF, ncf, EFILE, "nothing to read from %s: %s",
-              path, strerror(errno));
-    result = (c == '1');
-
- error:
-    FREE(path);
-    if (proc != NULL)
-        fclose(proc);
-    return result;
-}
-
 /*
  * Local variables:
  *  indent-tabs-mode: nil

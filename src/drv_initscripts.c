@@ -86,25 +86,6 @@ static const struct augeas_xfm_table augeas_xfm_common =
     { .size = ARRAY_CARDINALITY(augeas_xfm_common_pv),
       .pv = augeas_xfm_common_pv };
 
-static const struct augeas_pv augeas_xfm_iptables_pv[] = {
-    /* iptables config */
-    { "/augeas/load/Iptables/lens", "Iptables.lns" },
-    { "/augeas/load/Iptables/incl", "/etc/sysconfig/iptables" },
-    /* lokkit */
-    { "/augeas/load/Lokkit/lens", "Lokkit.lns" },
-    { "/augeas/load/Lokkit/incl", "/etc/sysconfig/system-config-firewall" },
-};
-
-static const struct augeas_xfm_table augeas_xfm_iptables =
-    { .size = ARRAY_CARDINALITY(augeas_xfm_iptables_pv),
-      .pv = augeas_xfm_iptables_pv };
-
-static const char *const prog_lokkit = "/usr/sbin/lokkit";
-static const char *const lokkit_custom_rules =
-    "--custom-rules=ipv4:filter:" DATADIR "/netcf/iptables-forward-bridged";
-
-static const char *const prog_rc_d_iptables = "/etc/init.d/iptables";
-
 /* Entries in a ifcfg file that tell us that the interface
  * is not a toplevel interface
  */
@@ -358,127 +339,6 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
     return -1;
 }
 
-/* Ensure we have an iptables rule to bridge physdevs. We take care of both
- * systems using iptables directly, and systems using lokkit (even if it's
- * only installed, but not used)
- */
-static void bridge_physdevs(struct netcf *ncf) {
-    struct augeas *aug = NULL;
-    char *path = NULL, *p = NULL;
-    const char *argv[5];
-    int have_lokkit, use_lokkit;
-    int r, nmatches;
-
-    /* If bridge packets never hit iptables, nothing to worry about */
-    if (! bridge_nf_call_iptables(ncf))
-        return;
-    ERR_BAIL(ncf);
-
-    MEMZERO(argv, ARRAY_CARDINALITY(argv));
-
-    add_augeas_xfm_table(ncf, &augeas_xfm_iptables);
-
-    aug = get_augeas(ncf);
-    ERR_BAIL(ncf);
-
-    defnode(ncf, "iptables", NULL, "/files/etc/sysconfig/iptables");
-    ERR_BAIL(ncf);
-
-    nmatches = aug_match(aug,
-      "$iptables/table[ . = 'filter']/*[. = 'FORWARD'][match = 'physdev']", NULL);
-    ERR_THROW(nmatches < 0, ncf, EOTHER, "failed to look for bridge");
-    if (nmatches > 0)
-        goto error;
-
-    have_lokkit = access(prog_lokkit, X_OK) == 0;
-    use_lokkit = aug_match(aug,
-      "$iptables/#comment[. = 'Firewall configuration written by system-config-firewall']", NULL);
-    ERR_THROW(use_lokkit < 0, ncf, EOTHER, "failed to look for lokkit");
-
-    if (have_lokkit) {
-        const char *rules_file = strrchr(lokkit_custom_rules, ':') + 1;
-        int created;
-
-        defnode(ncf, "fw", NULL, "/files/etc/sysconfig/system-config-firewall");
-        ERR_BAIL(ncf);
-
-        created = defnode(ncf, "fw_custom", rules_file,
-                          "$fw/custom-rules[. = '%s']", rules_file);
-        ERR_BAIL(ncf);
-
-        if (created) {
-            r = aug_set(aug, "$fw_custom", rules_file);
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-
-            r = aug_set(aug, "$fw_custom/type", "ipv4");
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            FREE(p);
-
-            r = aug_set(aug, "$fw_custom/table", "filter");
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-
-            FREE(p);
-
-            r = aug_save(aug);
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-        }
-        FREE(path);
-
-        if (use_lokkit) {
-            argv[0] = prog_lokkit;
-            argv[1] = "--update";
-            r = run_program(ncf, argv);
-            ERR_BAIL(ncf);
-        }
-    }
-
-    if (! use_lokkit) {
-        int created = defnode(ncf, "ipt_filter", NULL,
-                              "$iptables/table[. = 'filter']");
-        ERR_BAIL(ncf);
-
-        if (created) {
-            r = aug_set(aug, "$ipt_filter", "filter");
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, "$ipt_filter/chain[1]", "INPUT");
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, "$ipt_filter/chain[1]/policy", "ACCEPT");
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, "$ipt_filter/chain[2]", "FORWARD");
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, "$ipt_filter/chain[2]/policy", "ACCEPT");
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, "$ipt_filter/chain[3]", "OUTPUT");
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-            r = aug_set(aug, "$ipt_filter/chain[3]/policy", "ACCEPT");
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-        } else {
-            r = aug_insert(aug, "$ipt_filter/chain[last()]", "append", 0);
-            ERR_COND_BAIL(r < 0, ncf, EOTHER);
-        }
-        r = aug_set(aug, "$ipt_filter/append[1]", "FORWARD");
-        r = aug_set(aug, "$ipt_filter/append[1]/match", "physdev");
-        ERR_COND_BAIL(r < 0, ncf, EOTHER);
-        r = aug_set(aug, "$ipt_filter/append[1]/physdev-is-bridged", NULL);
-        ERR_COND_BAIL(r < 0, ncf, EOTHER);
-        r = aug_set(aug, "$ipt_filter/append[1]/jump", "ACCEPT");
-        ERR_COND_BAIL(r < 0, ncf, EOTHER);
-
-        r = aug_save(aug);
-        ERR_COND_BAIL(r < 0, ncf, EOTHER);
-
-        argv[0] = prog_rc_d_iptables;
-        argv[1] = "condrestart";
-        r = run_program(ncf, argv);
-        ERR_BAIL(ncf);
-    }
- error:
-    remove_augeas_xfm_table(ncf, &augeas_xfm_iptables);
-    free(path);
-    free(p);
-    return;
-}
-
 int drv_init(struct netcf *ncf) {
     int r;
     struct stat stats;
@@ -504,9 +364,6 @@ int drv_init(struct netcf *ncf) {
     ncf->driver->get = parse_stylesheet(ncf, "initscripts-get.xsl");
     ncf->driver->put = parse_stylesheet(ncf, "initscripts-put.xsl");
     ncf->driver->rng = rng_parse(ncf, "interface.rng");
-    ERR_BAIL(ncf);
-
-    bridge_physdevs(ncf);
     ERR_BAIL(ncf);
 
     /* open a socket for interface ioctls */
