@@ -30,6 +30,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "safe-alloc.h"
 #include "ref.h"
@@ -480,6 +481,7 @@ static void bridge_physdevs(struct netcf *ncf) {
 
 int drv_init(struct netcf *ncf) {
     int r;
+    struct stat stats;
 
     if (ALLOC(ncf->driver) < 0)
         return -1;
@@ -489,6 +491,12 @@ int drv_init(struct netcf *ncf) {
     r = add_augeas_xfm_table(ncf, &augeas_xfm_common);
     if (r < 0)
         goto error;
+
+    if (stat(ncf->root, &stats) != 0 || !S_ISDIR(stats.st_mode)) {
+        report_error(ncf, NETCF_EFILE,
+                     "invalid root '%s' is not a directory", ncf->root);
+        return -1;
+    }
 
     // FIXME: Check for errors
     xsltInit();
