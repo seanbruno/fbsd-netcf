@@ -1,3 +1,10 @@
+0.1.7 - 2010-09-24
+  - remove code that modifies iptables config for bridges
+  - register gnulib as a proper submodule
+  - don't delete physical interface config when defining a vlan
+  - properly handle quoted entries in sysconfig files.
+  - make miimon/arpmon optional
+
 0.1.6 - 2010-04-15
   - only list devices that have an ifcfg file (BZ 580348)
   - improve run_program to close all open file descriptors before exec.
