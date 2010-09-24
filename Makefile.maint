@@ -33,7 +33,7 @@ upload:
 	@gpg -q --batch --verify $(tarball).sig > /dev/null 2>&1 || \
 	  gpg --output $(tarball).sig --detach-sig $(tarball);     \
 	scp $(tarball) $(tarball).sig $(rel_dir);                  \
-	git push --tags
+	git push origin tag release-$(VERSION)
 
 tag-release:
 	@git tag -s release-$(VERSION)
