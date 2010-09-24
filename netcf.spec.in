@@ -74,6 +74,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/netcf.pc
 
 %changelog
+* Thu Sep 24 2010 Laine Stump <laine@redhat.com> - 0.1.7-1
+- remove code that modifies iptables config for bridges
+- register gnulib as a proper submodule
+- don't delete physical interface config when defining a vlan
+- properly handle quoted entries in sysconfig files.
+- make miimon/arpmon optional
+
 * Thu Apr 16 2010 Laine Stump <laine@redhat.com> - 0.1.6-1
 - New version
 
