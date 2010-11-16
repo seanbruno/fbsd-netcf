@@ -31,6 +31,7 @@
 #include <stdarg.h>
 
 #include <libxslt/transform.h>
+#include <libxml/relaxng.h>
 
 /*
  * Macros for gcc's attributes
@@ -129,14 +130,26 @@
         }                                            \
     } while(0)
 
+/* Clear error code and details */
+#define API_ENTRY(ncf)                          \
+    do {                                        \
+        (ncf)->errcode = NETCF_NOERROR;         \
+        FREE((ncf)->errdetails);                \
+        if (ncf->driver != NULL)                \
+            drv_entry(ncf);                     \
+    } while(0);
+
 /*
  * netcf structures and internal API's
  */
+struct driver;
+
 struct netcf {
     ref_t            ref;
     char            *root;                /* The filesystem root, always ends
                                            * with '/' */
     const char      *data_dir;            /* Where to find stylesheets etc. */
+    xmlRelaxNGPtr    rng;                 /* RNG of <interface> elements */
     netcf_errcode_t  errcode;
     char            *errdetails;          /* Error details */
     struct driver   *driver;              /* Driver specific data */
@@ -151,23 +164,11 @@ struct netcf_if {
                                              drv_mac_string */
 };
 
-void free_netcf_if(struct netcf_if *nif);
-
 #define NCF_DEBUG(ncf) ((ncf)->debug)
 
-/*
- * Error reporting
- */
-void report_error(struct netcf *ncf, netcf_errcode_t errcode,
-                  const char *format, ...)
-    ATTRIBUTE_FORMAT(printf, 3, 4);
-
-void vreport_error(struct netcf *ncf, netcf_errcode_t errcode,
-                   const char *format, va_list ap)
-    ATTRIBUTE_FORMAT(printf, 3, 0);
-
 /* The interface to the driver (backend). The appropriate driver is
- * selected at build time from the available drivers in drv_*
+ * selected at build time from the available drivers in drv_*; each of
+ * these files should include definitions for all the drv_* functions.
  */
 int drv_init(struct netcf *netcf);
 void drv_close(struct netcf *netcf);
@@ -186,22 +187,10 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml);
 int drv_undefine(struct netcf_if *nif);
 int drv_if_up(struct netcf_if *nif);
 int drv_if_down(struct netcf_if *nif);
-int drv_get_aug(struct netcf *, const char *ncf_xml, char **aug_xml);
-int drv_put_aug(struct netcf *, const char *aug_xml, char **ncf_xml);
 
 /*
- * Internally used utilities
- */
-int run_program(struct netcf *ncf, const char *const *argv);
-char *argv_to_string(const char *const *argv);
-
-/*
- * XSLT extension functions in xslt_ext.c
- */
-int xslt_register_exts(xsltTransformContextPtr ctxt);
-
-/*
- * Useful for debugging, used by ncftransform
+ * Useful for debugging, used by ncftransform (only needed for
+ * the initscripts version of netcf)
  */
 
 /* Transform the NCF_XML into simple Augeas XML AUG_XML */

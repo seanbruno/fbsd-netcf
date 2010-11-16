@@ -22,6 +22,7 @@
 
 #include <config.h>
 #include "internal.h"
+#include "dutil.h"
 
 #include <errno.h>
 #include <arpa/inet.h>

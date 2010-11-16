@@ -23,25 +23,6 @@
 #ifndef DUTIL_H_
 #define DUTIL_H_
 
-#include <libxml/relaxng.h>
-#include <libxslt/xsltInternals.h>
-#include <netlink/netlink.h>
-
-struct driver {
-    struct augeas     *augeas;
-    xsltStylesheetPtr  put;
-    xsltStylesheetPtr  get;
-    xmlRelaxNGPtr      rng;
-    int                ioctl_fd;
-    struct nl_handle  *nl_sock;
-    struct nl_cache   *link_cache;
-    struct nl_cache   *addr_cache;
-    unsigned int       load_augeas : 1;
-    unsigned int       copy_augeas_xfm : 1;
-    unsigned int       augeas_xfm_num_tables;
-    const struct augeas_xfm_table **augeas_xfm_tables;
-};
-
 struct augeas_pv {
     const char *const path;
     const char *const value;
@@ -52,33 +33,36 @@ struct augeas_xfm_table {
     const struct augeas_pv *pv;
 };
 
+/* Create a new netcf if instance for interface NAME */
+struct netcf_if *make_netcf_if(struct netcf *ncf, char *name);
+
+/* never call these directly. Only call via, eg, "unref(ncf, netcf)" */
+void free_netcf(struct netcf *ncf);
+void free_netcf_if(struct netcf_if *nif);
+
 /* Like asprintf, but set *STRP to NULL on error */
 ATTRIBUTE_FORMAT(printf, 2, 3)
 int xasprintf(char **strp, const char *format, ...);
 
-/* Add a table of transformations that the next GET_AUGEAS should run */
-int add_augeas_xfm_table(struct netcf *ncf,
-                         const struct augeas_xfm_table *table);
+/*
+ * Convert an array of char* into a single, newly allocated string
+ * with a space between each arg.
+ */
+char *argv_to_string(const char *const *argv);
 
-/* Remove a table of transformations that the next GET_AUGEAS should run */
-int remove_augeas_xfm_table(struct netcf *ncf,
-                            const struct augeas_xfm_table *table);
+/*
+ * Error reporting
+ */
+void report_error(struct netcf *ncf, netcf_errcode_t errcode,
+                  const char *format, ...)
+    ATTRIBUTE_FORMAT(printf, 3, 4);
 
-/* Get or create the augeas instance from NCF */
-struct augeas *get_augeas(struct netcf *ncf);
+void vreport_error(struct netcf *ncf, netcf_errcode_t errcode,
+                   const char *format, va_list ap)
+    ATTRIBUTE_FORMAT(printf, 3, 0);
 
-/* Define a node inside the augeas tree */
-ATTRIBUTE_FORMAT(printf, 4, 5)
-int defnode(struct netcf *ncf, const char *name, const char *value,
-                   const char *format, ...);
-
-/* Format a path by doing a printf of FMT and the var args, then call
-   AUG_MATCH on that path. Sets NCF->ERRCODE on error */
-ATTRIBUTE_FORMAT(printf, 3, 4)
-int aug_fmt_match(struct netcf *ncf, char ***matches, const char *fmt, ...);
-
-/* Free matches from aug_match (or aug_submatch) */
-void free_matches(int nint, char ***intf);
+/* XSLT extension functions in xslt_ext.c */
+int xslt_register_exts(xsltTransformContextPtr ctxt);
 
 /* Parse an XSLT stylesheet residing in the file NCF->data_dir/xml/FNAME */
 xsltStylesheetPtr parse_stylesheet(struct netcf *ncf, const char *fname);
@@ -110,52 +94,17 @@ xmlDocPtr parse_xml(struct netcf *ncf, const char *xml_str);
 /* Return the content the property NAME in NODE */
 char *xml_prop(xmlNodePtr node, const char *name);
 
-/* Get a file descriptor to a ioctl socket */
-int init_ioctl_fd(struct netcf *ncf);
+/* Create a new node (even if one of the same name already exists) and
+ * link it to the document. Return NULL on error.
+*/
+xmlNodePtr xml_new_node(xmlDocPtr doc,
+                        xmlNodePtr parent, const char *name);
 
-/* setup the netlink socket */
-int netlink_init(struct netcf *ncf);
-
-/*shutdown the netlink socket and release its resources */
-int netlink_close(struct netcf *ncf);
-
-/* Check if the interface INTF is up using an ioctl call */
-int if_is_active(struct netcf *ncf, const char *intf);
-
-/* Interface types recognized by netcf. */
-typedef enum {
-    NETCF_IFACE_TYPE_NONE = 0,  /* not yet determined */
-    NETCF_IFACE_TYPE_ETHERNET,  /* any physical device is "ethernet" */
-    NETCF_IFACE_TYPE_BOND,
-    NETCF_IFACE_TYPE_BRIDGE,
-    NETCF_IFACE_TYPE_VLAN,
-} netcf_if_type_t;
-
-/* Return the type of the interface.
- */
-netcf_if_type_t if_type(struct netcf *ncf, const char *intf);
-
-/* Given a netcf_if_type_t enum value, return a const char *representation
- * This pointer has an indefinite life, and shouldn't be / can't be free'd.
- */
-const char *if_type_str(netcf_if_type_t type);
-
-/* Create a new netcf if instance for interface NAME */
-struct netcf_if *make_netcf_if(struct netcf *ncf, char *name);
-
-/* Transform the interface XML NCF_XML into Augeas XML AUG_XML */
-int dutil_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml);
-
-/* Transform the Augeas XML AUG_XML into interface XML NCF_XML */
-int dutil_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml);
-
-/* Add the state of the interface (currently all addresses + netmasks)
- * to its xml document.
- */
-void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc);
-
-/* Run the program PROG with the single argument ARG */
-void run1(struct netcf *ncf, const char *prog, const char *arg);
+/* Find an existing node, or create one if not found, and link it to
+ * the document. Return NULL on error.
+*/
+xmlNodePtr xml_node(xmlDocPtr doc,
+                    xmlNodePtr parent, const char *name);
 
 #endif
 

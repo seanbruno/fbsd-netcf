@@ -27,24 +27,12 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <signal.h>
 #include <errno.h>
 #include "safe-alloc.h"
 
 #include "internal.h"
 #include "netcf.h"
 #include "dutil.h"
-
-/* Clear error code and details */
-#define API_ENTRY(ncf)                          \
-    do {                                        \
-        (ncf)->errcode = NETCF_NOERROR;         \
-        FREE((ncf)->errdetails);                \
-        if (ncf->driver != NULL)                \
-            drv_entry(ncf);                     \
-    } while(0);
 
 /* Human-readable error messages. This array is indexed by NETCF_ERRCODE_T */
 static const char *const errmsgs[] = {
@@ -63,46 +51,28 @@ static const char *const errmsgs[] = {
     "NETLINK socket operation failed"     /* ENETLINK */
 };
 
-static void free_netcf(struct netcf *ncf) {
-    if (ncf == NULL)
-        return;
-
-    assert(ncf->ref == 0);
-    free(ncf->root);
-    free(ncf);
-}
-
-void free_netcf_if(struct netcf_if *nif) {
-    if (nif == NULL)
-        return;
-
-    assert(nif->ref == 0);
-    unref(nif->ncf, netcf);
-    free(nif->name);
-    free(nif->mac);
-    free(nif);
-}
-
 int ncf_init(struct netcf **ncf, const char *root) {
     *ncf = NULL;
     if (make_ref(*ncf) < 0)
-        goto oom;
+        goto error;
     if (root == NULL)
         root = "/";
     if (root[strlen(root)-1] == '/') {
         (*ncf)->root = strdup(root);
     } else {
         if (xasprintf(&(*ncf)->root, "%s/", root) < 0)
-            goto oom;
+            goto error;
     }
     if ((*ncf)->root == NULL)
-        goto oom;
+        goto error;
     (*ncf)->data_dir = getenv("NETCF_DATADIR");
     if ((*ncf)->data_dir == NULL)
         (*ncf)->data_dir = DATADIR "/netcf";
     (*ncf)->debug = getenv("NETCF_DEBUG") != NULL;
+    (*ncf)->rng = rng_parse(*ncf, "interface.rng");
+    ERR_BAIL(*ncf);
     return drv_init(*ncf);
- oom:
+error:
     ncf_close(*ncf);
     *ncf = NULL;
     return -2;
@@ -117,6 +87,7 @@ int ncf_close(struct netcf *ncf) {
     ERR_COND_BAIL(ncf->ref > 1, ncf, EINUSE);
 
     drv_close(ncf);
+    xmlRelaxNGFree(ncf->rng);
     unref(ncf, netcf);
     return 0;
  error:
@@ -245,207 +216,6 @@ int ncf_error(struct netcf *ncf, const char **errmsg, const char **details) {
     if (details)
         *details = ncf->errdetails;
     return errcode;
-}
-
-/*
- * Test interface
- */
-int ncf_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
-    API_ENTRY(ncf);
-
-    return drv_get_aug(ncf, ncf_xml, aug_xml);
-}
-
-int ncf_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
-    API_ENTRY(ncf);
-
-    return drv_put_aug(ncf, aug_xml, ncf_xml);
-}
-
-/*
- * Internal helpers
- */
-
-static int
-exec_program(struct netcf *ncf,
-             const char *const*argv,
-             const char *commandline,
-             pid_t *pid)
-{
-    sigset_t oldmask, newmask;
-    struct sigaction sig_action;
-    char errbuf[128];
-
-    /* commandline is only used for error reporting */
-    if (commandline == NULL)
-        commandline = argv[0];
-    /*
-     * Need to block signals now, so that child process can safely
-     * kill off caller's signal handlers without a race.
-     */
-    sigfillset(&newmask);
-    if (pthread_sigmask(SIG_SETMASK, &newmask, &oldmask) != 0) {
-        report_error(ncf, NETCF_EEXEC,
-                     "failed to set signal mask while forking for '%s': %s",
-                     commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
-        goto error;
-    }
-
-    *pid = fork();
-
-    ERR_THROW(*pid < 0, ncf, EEXEC, "failed to fork for '%s': %s",
-              commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
-
-    if (*pid) { /* parent */
-        /* Restore our original signal mask now that the child is
-           safely running */
-        ERR_THROW(pthread_sigmask(SIG_SETMASK, &oldmask, NULL) != 0,
-                  ncf, EEXEC,
-                  "failed to restore signal mask while forking for '%s': %s",
-                  commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
-        return 0;
-    }
-
-    /* child */
-
-    /* Clear out all signal handlers from parent so nothing unexpected
-       can happen in our child once we unblock signals */
-
-    sig_action.sa_handler = SIG_DFL;
-    sig_action.sa_flags = 0;
-    sigemptyset(&sig_action.sa_mask);
-
-    int i;
-    for (i = 1; i < NSIG; i++) {
-        /* Only possible errors are EFAULT or EINVAL
-           The former wont happen, the latter we
-           expect, so no need to check return value */
-
-        sigaction(i, &sig_action, NULL);
-    }
-
-    /* Unmask all signals in child, since we've no idea what the
-       caller's done with their signal mask and don't want to
-       propagate that to children */
-    sigemptyset(&newmask);
-    if (pthread_sigmask(SIG_SETMASK, &newmask, NULL) != 0) {
-        /* don't report_error, as it will never be seen anyway */
-        _exit(1);
-    }
-
-    /* close all open file descriptors */
-    int openmax = sysconf (_SC_OPEN_MAX);
-    for (i = 3; i < openmax; i++)
-        close(i);
-
-    execvp(argv[0], (char **) argv);
-
-    /* if execvp() returns, it has failed */
-    /* don't report_error, as it will never be seen anyway */
-    _exit(1);
-
-error:
-    /* This is cleanup of parent process only - child
-       should never jump here on error */
-    return -1;
-}
-
-/**
- * Run a command without using the shell.
- *
- * return 0 if the command run and exited with 0 status; Otherwise
- * return -1
- *
- */
-int run_program(struct netcf *ncf, const char *const *argv) {
-
-    pid_t childpid;
-    int exitstatus, waitret;
-    char *argv_str;
-    int ret = -1;
-    char errbuf[128];
-
-    argv_str = argv_to_string(argv);
-    ERR_NOMEM(argv_str == NULL, ncf);
-
-    exec_program(ncf, argv, argv_str, &childpid);
-    ERR_BAIL(ncf);
-
-    while ((waitret = waitpid(childpid, &exitstatus, 0) == -1) &&
-           errno == EINTR) {
-        /* empty loop */
-    }
-
-    ERR_THROW(waitret == -1, ncf, EEXEC,
-              "Failed waiting for completion of '%s': %s",
-              argv_str, strerror_r(errno, errbuf, sizeof(errbuf)));
-    ERR_THROW(!WIFEXITED(exitstatus) && WIFSIGNALED(exitstatus), ncf, EEXEC,
-              "'%s' terminated by signal: %d",
-              argv_str, WTERMSIG(exitstatus));
-    ERR_THROW(!WIFEXITED(exitstatus), ncf, EEXEC,
-              "'%s' terminated improperly: %d",
-              argv_str, WEXITSTATUS(exitstatus));
-    ERR_THROW(WEXITSTATUS(exitstatus) != 0, ncf, EEXEC,
-              "Running '%s' failed with exit code %d",
-              argv_str, WEXITSTATUS(exitstatus));
-    ret = 0;
-
-error:
-    FREE(argv_str);
-    return ret;
-}
-
-/*
- * argv_to_string() is borrowed from libvirt's
- * src/util.c:virArgvToString()
- */
-char *
-argv_to_string(const char *const *argv) {
-    int i;
-    size_t len;
-    char *ret, *p;
-
-    for (len = 1, i = 0; argv[i]; i++)
-        len += strlen(argv[i]) + 1;
-
-    if (ALLOC_N(ret, len) < 0)
-        return NULL;
-    p = ret;
-
-    for (i = 0; argv[i]; i++) {
-        if (i != 0)
-            *(p++) = ' ';
-
-        strcpy(p, argv[i]);
-        p += strlen(argv[i]);
-    }
-
-    *p = '\0';
-
-    return ret;
-}
-
-void report_error(struct netcf *ncf, netcf_errcode_t errcode,
-                  const char *format, ...) {
-    va_list ap;
-
-    va_start(ap, format);
-    vreport_error(ncf, errcode, format, ap);
-    va_end(ap);
-}
-
-void vreport_error(struct netcf *ncf, netcf_errcode_t errcode,
-                   const char *format, va_list ap) {
-    /* We only remember the first error */
-    if (ncf->errcode != NETCF_NOERROR)
-        return;
-    assert(ncf->errdetails == NULL);
-
-    ncf->errcode = errcode;
-    if (format != NULL) {
-        if (vasprintf(&(ncf->errdetails), format, ap) < 0)
-            ncf->errdetails = NULL;
-    }
 }
 
 /*
