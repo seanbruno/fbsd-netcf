@@ -57,6 +57,29 @@ if test "$prefix" = "/usr" && test "$sysconfdir" = '${prefix}/etc' ; then
     sysconfdir='/etc'
 fi
 
+dnl
+dnl init script flavor
+dnl
+AC_MSG_CHECKING([for init script flavor])
+AC_ARG_WITH([init-script],
+            [AC_HELP_STRING([--with-init-script=@<:@redhat|auto|none@:>@],
+		     [Style of init script to install @<:@default=auto@:>@])])
+if test "x$with_init_script" = "x" || test "x$with_init_script" = "xauto"; then
+    if test "$prefix" = "$HOME" || test "$cross_compiling" = yes || test ! -f /etc/redhat-release; then
+        with_init_script=none
+    else
+        with_init_script=redhat
+    fi
+fi
+if test "x$with_init_script" = "xredhat"; then
+    AC_DEFINE_UNQUOTED([NETCF_TRANSACTION],
+                       ["$sysconfdir/rc.d/init.d/netcf-transaction"],
+                       [Location of the netcf-transaction shell script])
+fi
+AM_CONDITIONAL([NETCF_INIT_SCRIPT_RED_HAT],
+               [test x$with_init_script = xredhat])
+AC_MSG_RESULT([$with_init_script])
+
 AC_OUTPUT(Makefile                                          \
           gnulib/lib/Makefile                               \
           gnulib/tests/Makefile                             \

@@ -64,6 +64,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %{_datadir}/netcf
 %{_libdir}/*.so.*
+%{_sysconfdir}/rc.d/init.d/netcf-transaction
 %doc AUTHORS COPYING NEWS
 
 %files devel
