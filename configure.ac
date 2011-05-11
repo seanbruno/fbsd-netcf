@@ -46,6 +46,17 @@ AC_CHECK_HEADER([pthread.h],
 		LIBS="-lpthread $LIBS"
 	])])
 
+dnl if --prefix is /usr, don't use /usr/var for localstatedir
+dnl or /usr/etc for sysconfdir
+dnl as this makes a lot of things break in testing situations
+
+if test "$prefix" = "/usr" && test "$localstatedir" = '${prefix}/var' ; then
+    localstatedir='/var'
+fi
+if test "$prefix" = "/usr" && test "$sysconfdir" = '${prefix}/etc' ; then
+    sysconfdir='/etc'
+fi
+
 AC_OUTPUT(Makefile                                          \
           gnulib/lib/Makefile                               \
           gnulib/tests/Makefile                             \
