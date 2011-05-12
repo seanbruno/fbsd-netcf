@@ -15,10 +15,10 @@ BuildRequires:  libnl-devel
 Requires:       %{name}-libs = %{version}-%{release}
 
 %description
-A library for modifying the network configuration of a system. Network
-configurations are expresed in a platform-independent XML format, which
-netcf translates into changes to the system's 'native' network
-configuration files.
+Netcf is a library used to modify the network configuration of a
+system. Network configurations are expressed in a platform-independent
+XML format, which netcf translates into changes to the system's
+'native' network configuration files.
 
 %package        devel
 Summary:        Development files for %{name}
