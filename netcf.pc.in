@@ -6,6 +6,6 @@ includedir=@includedir@
 Name: netcf
 Version: @VERSION@
 Description: Network configuration library
-Requires: augeas >= 0.5.0 libxml-2.0 libxslt
+Requires:
 Libs: -L${libdir} -lnetcf
 Cflags: -I${includedir}
