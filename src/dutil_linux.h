@@ -44,7 +44,14 @@ enum
     EXIT_DUP2=124,          /* dup2() of stdout/stderr in child failed */
     EXIT_SIGMASK=125,       /* failed to reset signal mask of child */
     EXIT_CANNOT_INVOKE=126, /* program located, but not usable. */
-    EXIT_ENOENT=127         /* could not find program to execute */
+    EXIT_ENOENT=127,        /* could not find program to execute */
+
+    /* any application-specific exit codes returned by the exec'ed
+     * binary should be in the range 193-199 to avoid various
+     *ambiguities (confusion with signals, truncation...
+     */
+    /* NB: the following code matches that in the netcf-transact script */
+    EXIT_INVALID_IN_THIS_STATE=199, /* wrong state to perform this operation */
 };
 
 /* run an external program */

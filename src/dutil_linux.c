@@ -254,6 +254,9 @@ int run_program(struct netcf *ncf, const char *const *argv, char **output)
     ERR_THROW(WEXITSTATUS(exitstatus) == EXIT_DUP2, ncf, EEXEC,
               "Running '%s' failed to dup2 child process stdout/stderr",
               argv_str);
+    ERR_THROW(WEXITSTATUS(exitstatus) == EXIT_INVALID_IN_THIS_STATE, ncf, EINVALIDOP,
+              "Running '%s' operation is invalid in this state",
+              argv_str);
     ERR_THROW(WEXITSTATUS(exitstatus) != 0, ncf, EEXEC,
               "Running '%s' failed with exit code %d: %s",
               argv_str, WEXITSTATUS(exitstatus), *output);

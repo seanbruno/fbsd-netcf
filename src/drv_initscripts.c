@@ -1070,6 +1070,49 @@ int drv_if_down(struct netcf_if *nif) {
     return result;
 }
 
+/* Functions to take a snapshot of network config (change_begin), and
+ * later either revert to that config (change_rollback), or make the
+ * new config permanent (change_commit).
+ */
+int
+drv_change_begin(struct netcf *ncf ATTRIBUTE_UNUSED,
+                 unsigned int flags ATTRIBUTE_UNUSED)
+{
+    int result = -1;
+
+    run1(ncf, NETCF_TRANSACTION, "change-begin");
+    ERR_BAIL(ncf);
+    result = 0;
+error:
+    return result;
+}
+
+int
+drv_change_rollback(struct netcf *ncf ATTRIBUTE_UNUSED,
+                    unsigned int flags ATTRIBUTE_UNUSED)
+{
+    int result = -1;
+
+    run1(ncf, NETCF_TRANSACTION, "change-rollback");
+    ERR_BAIL(ncf);
+    result = 0;
+error:
+    return result;
+}
+
+int
+drv_change_commit(struct netcf *ncf ATTRIBUTE_UNUSED,
+                  unsigned int flags ATTRIBUTE_UNUSED)
+{
+    int result = -1;
+
+    run1(ncf, NETCF_TRANSACTION, "change-commit");
+    ERR_BAIL(ncf);
+    result = 0;
+error:
+    return result;
+}
+
 /*
  * Test interface
  */

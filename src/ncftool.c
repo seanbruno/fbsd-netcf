@@ -412,6 +412,66 @@ static const struct command_def cmd_undefine_def = {
     .help = "remove the configuration of an interface"
 };
 
+static int cmd_change_begin(ATTRIBUTE_UNUSED const struct command *cmd)
+{
+    if (ncf_change_begin(ncf, 0) < 0)
+        return CMD_RES_ERR;
+    printf("config change transaction started\n");
+    return CMD_RES_OK;
+}
+
+static const struct command_opt_def cmd_change_begin_opts[] = {
+    CMD_OPT_DEF_LAST
+};
+
+static const struct command_def cmd_change_begin_def = {
+    .name = "change-begin",
+    .opts = cmd_change_begin_opts,
+    .handler = cmd_change_begin,
+    .synopsis = "mark the beginning of a set of revertable network config changes",
+    .help = "marks the beginning of a set of revertable network config changes",
+};
+
+static int cmd_change_commit(ATTRIBUTE_UNUSED const struct command *cmd)
+{
+    if (ncf_change_commit(ncf, 0) < 0)
+        return CMD_RES_ERR;
+    printf("config change transaction committed\n");
+    return CMD_RES_OK;
+}
+
+static const struct command_opt_def cmd_change_commit_opts[] = {
+    CMD_OPT_DEF_LAST
+};
+
+static const struct command_def cmd_change_commit_def = {
+    .name = "change-commit",
+    .opts = cmd_change_commit_opts,
+    .handler = cmd_change_commit,
+    .synopsis = "commit the pending network config changes",
+    .help = "commits (makes permanent) of a set of network config changes",
+};
+
+static int cmd_change_rollback(ATTRIBUTE_UNUSED const struct command *cmd)
+{
+    if (ncf_change_rollback(ncf, 0) < 0)
+        return CMD_RES_ERR;
+    printf("config change transaction rolled back\n");
+    return CMD_RES_OK;
+}
+
+static const struct command_opt_def cmd_change_rollback_opts[] = {
+    CMD_OPT_DEF_LAST
+};
+
+static const struct command_def cmd_change_rollback_def = {
+    .name = "change-rollback",
+    .opts = cmd_change_rollback_opts,
+    .handler = cmd_change_rollback,
+    .synopsis = "rollback (revert) a set of network config changes",
+    .help = "rollback (revert) a set of network config changes",
+};
+
 static int cmd_help(const struct command *cmd) {
     const char *name = param_value(cmd, "command");
     if (name == NULL) {
@@ -616,6 +676,9 @@ static const struct command_def const *commands[] = {
     &cmd_undefine_def,
     &cmd_if_up_def,
     &cmd_if_down_def,
+    &cmd_change_begin_def,
+    &cmd_change_commit_def,
+    &cmd_change_rollback_def,
     &cmd_help_def,
     &cmd_quit_def,
     &cmd_def_last

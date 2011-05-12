@@ -28,3 +28,10 @@ NETCF_1.3.0 {
     global:
       ncf_if_status;
 } NETCF_1.2.0;
+
+NETCF_1.4.0 {
+    global:
+      ncf_change_begin;
+      ncf_change_commit;
+      ncf_change_rollback;
+} NETCF_1.3.0;

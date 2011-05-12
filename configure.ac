@@ -6,7 +6,7 @@ AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([-Wno-portability 1.11 color-tests parallel-tests])
 AM_SILENT_RULES([yes]) # make --enable-silent-rules the default.
 
-AC_SUBST([LIBNETCF_VERSION_INFO], [4:3:3])
+AC_SUBST([LIBNETCF_VERSION_INFO], [5:0:4])
 
 AC_GNU_SOURCE
 

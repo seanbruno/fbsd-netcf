@@ -48,7 +48,8 @@ static const char *const errmsgs[] = {
     "XSLT transformation failed",         /* EXSLTFAILED */
     "File operation failed",              /* EFILE */
     "ioctl operation failed",             /* EIOCTL */
-    "NETLINK socket operation failed"     /* ENETLINK */
+    "NETLINK socket operation failed",    /* ENETLINK */
+    "Operation invalid in this state"     /* EINVALIDOP */
 };
 
 int ncf_init(struct netcf **ncf, const char *root) {
@@ -194,6 +195,27 @@ char *ncf_if_xml_state(struct netcf_if *nif) {
 int ncf_if_status(struct netcf_if *nif, unsigned int *flags) {
     API_ENTRY(nif->ncf);
     return drv_if_status(nif, flags);
+}
+
+int
+ncf_change_begin(struct netcf *ncf, unsigned int flags)
+{
+    API_ENTRY(ncf);
+    return drv_change_begin(ncf, flags);
+}
+
+int
+ncf_change_rollback(struct netcf *ncf, unsigned int flags)
+{
+    API_ENTRY(ncf);
+    return drv_change_rollback(ncf, flags);
+}
+
+int
+ncf_change_commit(struct netcf *ncf, unsigned int flags)
+{
+    API_ENTRY(ncf);
+    return drv_change_commit(ncf, flags);
 }
 
 /* Release any resources used by this NETCF_IF; the pointer is invalid
