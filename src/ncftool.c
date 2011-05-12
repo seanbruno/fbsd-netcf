@@ -753,7 +753,7 @@ static int run_command_line(const char *line, int *cmdstatus)
 
 static int main_loop(void) {
     char *line;
-    int ret;
+    int ret = 0;
 
     while(1) {
         int cmdret;
@@ -765,7 +765,7 @@ static int main_loop(void) {
         }
 
         cmdret = run_command_line(line, &cmdstatus);
-        if (ret == 0 && cmdstatus == CMD_RES_QUIT)
+        if (cmdret == 0 && cmdstatus == CMD_RES_QUIT)
             return ret;
 
         add_history(line);
