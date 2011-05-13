@@ -30,7 +30,31 @@ srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
 
 THEDIR=`pwd`
-cd $srcdir
+cd "$srcdir"
+
+test -f src/netcf.c || {
+    echo "You must run this script in the top-level libvirt directory"
+    exit 1
+}
+
+EXTRA_ARGS=
+if test "x$1" = "x--system"; then
+    shift
+    prefix=/usr
+    libdir=$prefix/lib
+    sysconfdir=/etc
+    localstatedir=/var
+    if [ -d /usr/lib64 ]; then
+      libdir=$prefix/lib64
+    fi
+    EXTRA_ARGS="--prefix=$prefix --sysconfdir=$sysconfdir --localstatedir=$localstatedir --libdir=$libdir"
+    echo "Running ./configure with $EXTRA_ARGS $@"
+else
+    if test -z "$*" && test ! -f "$THEDIR/config.status"; then
+        echo "I am going to run ./configure with no arguments - if you wish "
+        echo "to pass any to it, please specify them on the $0 command line."
+    fi
+fi
 
 # Split out options for bootstrap and for configure
 declare -a CF_ARGS
@@ -99,7 +123,7 @@ if test x$OBJ_DIR != x; then
     cd "$OBJ_DIR"
 fi
 
-$srcdir/configure "${CF_ARGS[@]}" && {
+"$srcdir/configure" $EXTRA_ARGS "${CF_ARGS[@]}" && {
     echo
     echo "Now type 'make' to compile $package."
 }
