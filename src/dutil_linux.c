@@ -129,8 +129,8 @@ exec_program(struct netcf *ncf,
        propagate that to children */
     sigemptyset(&newmask);
     if (pthread_sigmask(SIG_SETMASK, &newmask, NULL) != 0) {
-        /* don't report_error, as it will never be seen anyway */
-        _exit(1);
+        /* return a unique code and let the parent log the error */
+        _exit(EXIT_SIGMASK);
     }
 
     /* close all open file descriptors */
@@ -141,8 +141,8 @@ exec_program(struct netcf *ncf,
     execvp(argv[0], (char **) argv);
 
     /* if execvp() returns, it has failed */
-    /* don't report_error, as it will never be seen anyway */
-    _exit(1);
+    /* return a unique code and let the parent log the error */
+    _exit(errno == ENOENT ? EXIT_ENOENT : EXIT_CANNOT_INVOKE);
 
 error:
     /* This is cleanup of parent process only - child
@@ -185,6 +185,13 @@ int run_program(struct netcf *ncf, const char *const *argv) {
     ERR_THROW(!WIFEXITED(exitstatus), ncf, EEXEC,
               "'%s' terminated improperly: %d",
               argv_str, WEXITSTATUS(exitstatus));
+    ERR_THROW(WEXITSTATUS(exitstatus) == EXIT_ENOENT, ncf, EEXEC,
+              "Running '%s' program not found", argv_str);
+    ERR_THROW(WEXITSTATUS(exitstatus) == EXIT_CANNOT_INVOKE, ncf, EEXEC,
+              "Running '%s' program located but not usable", argv_str);
+    ERR_THROW(WEXITSTATUS(exitstatus) == EXIT_SIGMASK, ncf, EEXEC,
+              "Running '%s' failed to reset child process signal mask",
+              argv_str);
     ERR_THROW(WEXITSTATUS(exitstatus) != 0, ncf, EEXEC,
               "Running '%s' failed with exit code %d",
               argv_str, WEXITSTATUS(exitstatus));
