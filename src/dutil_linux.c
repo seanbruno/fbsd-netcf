@@ -243,8 +243,7 @@ int run_program(struct netcf *ncf, const char *const *argv, char **output)
               "'%s' terminated by signal: %d",
               argv_str, WTERMSIG(exitstatus));
     ERR_THROW(!WIFEXITED(exitstatus), ncf, EEXEC,
-              "'%s' terminated improperly: %d",
-              argv_str, WEXITSTATUS(exitstatus));
+              "'%s' terminated improperly", argv_str);
     ERR_THROW(WEXITSTATUS(exitstatus) == EXIT_ENOENT, ncf, EEXEC,
               "Running '%s' program not found", argv_str);
     ERR_THROW(WEXITSTATUS(exitstatus) == EXIT_CANNOT_INVOKE, ncf, EEXEC,
