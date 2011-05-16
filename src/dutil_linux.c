@@ -47,6 +47,7 @@
 #include <arpa/inet.h>
 
 #include "safe-alloc.h"
+#include "read-file.h"
 #include "ref.h"
 #include "list.h"
 #include "netcf.h"
@@ -70,15 +71,29 @@ static int
 exec_program(struct netcf *ncf,
              const char *const*argv,
              const char *commandline,
-             pid_t *pid)
+             pid_t *pid,
+             int *outfd)
 {
     sigset_t oldmask, newmask;
     struct sigaction sig_action;
     char errbuf[128];
+    int pipeout[2] = {-1, -1};
 
     /* commandline is only used for error reporting */
     if (commandline == NULL)
         commandline = argv[0];
+
+    /* create a pipe to receive stdout+stderr from child */
+    if (outfd) {
+        if (pipe(pipeout) < 0) {
+            report_error(ncf, NETCF_EEXEC,
+                         "failed to create pipe while forking for '%s': %s",
+                         commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
+            goto error;
+        }
+        *outfd = pipeout[0];
+    }
+
     /*
      * Need to block signals now, so that child process can safely
      * kill off caller's signal handlers without a race.
@@ -103,6 +118,11 @@ exec_program(struct netcf *ncf,
                   ncf, EEXEC,
                   "failed to restore signal mask while forking for '%s': %s",
                   commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
+
+        /* parent doesn't use write side of the pipe */
+        if (pipeout[1] >= 0)
+            close(pipeout[1]);
+
         return 0;
     }
 
@@ -133,6 +153,18 @@ exec_program(struct netcf *ncf,
         _exit(EXIT_SIGMASK);
     }
 
+    if (pipeout[1] >= 0) {
+        /* direct stdout and stderr to the pipe */
+        if (dup2(pipeout[1], fileno(stdout)) < 0
+            || dup2(pipeout[1], fileno(stderr)) < 0) {
+            /* return a unique code and let the parent log the error */
+            _exit(EXIT_DUP2);
+        }
+    }
+    /* child doesn't use the read side of the pipe */
+    if (pipeout[0] >= 0)
+        close(pipeout[0]);
+
     /* close all open file descriptors */
     int openmax = sysconf (_SC_OPEN_MAX);
     for (i = 3; i < openmax; i++)
@@ -147,6 +179,12 @@ exec_program(struct netcf *ncf,
 error:
     /* This is cleanup of parent process only - child
        should never jump here on error */
+    if (pipeout[0] >= 0)
+        close(pipeout[0]);
+    if (pipeout[1] >= 0)
+        close(pipeout[1]);
+    if (outfd)
+        *outfd = -1;
     return -1;
 }
 
@@ -157,19 +195,41 @@ error:
  * return -1
  *
  */
-int run_program(struct netcf *ncf, const char *const *argv) {
+int run_program(struct netcf *ncf, const char *const *argv, char **output)
+{
 
     pid_t childpid;
     int exitstatus, waitret;
     char *argv_str;
     int ret = -1;
     char errbuf[128];
+    char *outtext = NULL;
+    int outfd = -1;
+    FILE *outfile = NULL;
+    size_t outlen;
+
+    if (!output)
+        output = &outtext;
 
     argv_str = argv_to_string(argv);
     ERR_NOMEM(argv_str == NULL, ncf);
 
-    exec_program(ncf, argv, argv_str, &childpid);
+    exec_program(ncf, argv, argv_str, &childpid, &outfd);
     ERR_BAIL(ncf);
+
+    outfile = fdopen(outfd, "r");
+    ERR_THROW(outfile == NULL, ncf, EEXEC,
+              "Failed to create file stream for output while executing '%s': %s",
+              argv_str, strerror_r(errno, errbuf, sizeof(errbuf)));
+
+    *output = fread_file(outfile, &outlen);
+    ERR_THROW(*output == NULL, ncf, EEXEC,
+              "Error while reading output from execution of '%s': %s",
+              argv_str, strerror_r(errno, errbuf, sizeof(errbuf)));
+
+    /* finished with the stream. Close it so the child can exit. */
+    fclose(outfile);
+    outfile = NULL;
 
     while ((waitret = waitpid(childpid, &exitstatus, 0) == -1) &&
            errno == EINTR) {
@@ -192,12 +252,20 @@ int run_program(struct netcf *ncf, const char *const *argv) {
     ERR_THROW(WEXITSTATUS(exitstatus) == EXIT_SIGMASK, ncf, EEXEC,
               "Running '%s' failed to reset child process signal mask",
               argv_str);
+    ERR_THROW(WEXITSTATUS(exitstatus) == EXIT_DUP2, ncf, EEXEC,
+              "Running '%s' failed to dup2 child process stdout/stderr",
+              argv_str);
     ERR_THROW(WEXITSTATUS(exitstatus) != 0, ncf, EEXEC,
-              "Running '%s' failed with exit code %d",
-              argv_str, WEXITSTATUS(exitstatus));
+              "Running '%s' failed with exit code %d: %s",
+              argv_str, WEXITSTATUS(exitstatus), *output);
     ret = 0;
 
 error:
+    if (outfile)
+        fclose(outfile);
+    else if (outfd >= 0)
+        close(outfd);
+    FREE(outtext);
     FREE(argv_str);
     return ret;
 }
@@ -208,7 +276,7 @@ void run1(struct netcf *ncf, const char *prog, const char *arg) {
         prog, arg, NULL
     };
 
-    run_program(ncf, argv);
+    run_program(ncf, argv, NULL);
 }
 
 /*

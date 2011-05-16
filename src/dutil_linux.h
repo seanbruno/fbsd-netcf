@@ -41,13 +41,14 @@ struct driver {
 
 enum
 {
+    EXIT_DUP2=124,          /* dup2() of stdout/stderr in child failed */
     EXIT_SIGMASK=125,       /* failed to reset signal mask of child */
     EXIT_CANNOT_INVOKE=126, /* program located, but not usable. */
     EXIT_ENOENT=127         /* could not find program to execute */
 };
 
 /* run an external program */
-int run_program(struct netcf *ncf, const char *const *argv);
+int run_program(struct netcf *ncf, const char *const *argv, char **output);
 void run1(struct netcf *ncf, const char *prog, const char *arg);
 
 /* Add a table of transformations that the next GET_AUGEAS should run */
