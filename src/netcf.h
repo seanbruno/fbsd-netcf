@@ -40,20 +40,34 @@ struct netcf_if;
 /* The error codes returned by ncf_error */
 typedef enum {
     NETCF_NOERROR = 0,   /* no error, everything ok */
+#define NETCF_NOERROR NETCF_NOERROR
     NETCF_EINTERNAL,     /* internal error, aka bug */
+#define NETCF_EINTERNAL NETCF_EINTERNAL
     NETCF_EOTHER,        /* other error, copout for being more specific */
+#define NETCF_EOTHER NETCF_EOTHER
     NETCF_ENOMEM,        /* allocation failed */
+#define NETCF_ENOMEM NETCF_ENOMEM
     NETCF_EXMLPARSER,    /* XML parser choked */
+#define NETCF_EXMLPARSER NETCF_EXMLPARSER
     NETCF_EXMLINVALID,   /* XML invalid in some form */
+#define NETCF_EXMLINVALID NETCF_EXMLINVALID
     NETCF_ENOENT,        /* Required entry in a tree is missing */
-    NETCF_EEXEC,         /* external program execution failed or returned
-                          * non-0 */
+#define NETCF_ENOENT NETCF_ENOENT
+    NETCF_EEXEC,         /* external program execution failed or returned non-0 */
+#define NETCF_EEXEC NETCF_EEXEC
     NETCF_EINUSE,        /* attempt to close a netcf instance that is still
                           * used by other data structures */
+#define NETCF_EINUSE NETCF_EINUSE
     NETCF_EXSLTFAILED,   /* XSLT transformation failed */
+#define NETCF_EXSLTFAILED NETCF_EXSLTFAILED
     NETCF_EFILE,         /* Some file access failed */
+#define NETCF_EFILE NETCF_EFILE
     NETCF_EIOCTL,        /* An ioctl call failed */
-    NETCF_ENETLINK       /* something related to the netlink socket failed */
+#define NETCF_EIOCTL NETCF_EIOCTL
+    NETCF_ENETLINK,      /* something related to the netlink socket failed */
+#define NETCF_ENETLINK NETCF_ENETLINK
+    NETCF_EINVALIDOP     /* the requested operation is invalid in this state */
+#define NETCF_EINVALIDOP NETCF_EINVALIDOP
 } netcf_errcode_t;
 
 
