@@ -1075,11 +1075,11 @@ int drv_if_down(struct netcf_if *nif) {
  * new config permanent (change_commit).
  */
 int
-drv_change_begin(struct netcf *ncf ATTRIBUTE_UNUSED,
-                 unsigned int flags ATTRIBUTE_UNUSED)
+drv_change_begin(struct netcf *ncf, unsigned int flags)
 {
     int result = -1;
 
+    ERR_THROW(flags != 0, ncf, EOTHER, "unsupported flags value %d", flags);
     run1(ncf, NETCF_TRANSACTION, "change-begin");
     ERR_BAIL(ncf);
     result = 0;
@@ -1088,11 +1088,11 @@ error:
 }
 
 int
-drv_change_rollback(struct netcf *ncf ATTRIBUTE_UNUSED,
-                    unsigned int flags ATTRIBUTE_UNUSED)
+drv_change_rollback(struct netcf *ncf, unsigned int flags)
 {
     int result = -1;
 
+    ERR_THROW(flags != 0, ncf, EOTHER, "unsupported flags value %d", flags);
     run1(ncf, NETCF_TRANSACTION, "change-rollback");
     ERR_BAIL(ncf);
     result = 0;
@@ -1101,11 +1101,11 @@ error:
 }
 
 int
-drv_change_commit(struct netcf *ncf ATTRIBUTE_UNUSED,
-                  unsigned int flags ATTRIBUTE_UNUSED)
+drv_change_commit(struct netcf *ncf, unsigned int flags)
 {
     int result = -1;
 
+    ERR_THROW(flags != 0, ncf, EOTHER, "unsupported flags value %d", flags);
     run1(ncf, NETCF_TRANSACTION, "change-commit");
     ERR_BAIL(ncf);
     result = 0;

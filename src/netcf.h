@@ -183,24 +183,25 @@ char *ncf_if_xml_state(struct netcf_if *);
  */
 int ncf_if_status(struct netcf_if *nif, unsigned int *flags);
 
-/* Mark the beginning of a sequence of revertable changes to the
- * network interface config by saving a snapshot of all relevant
- * config information.
+/* Mark the beginning of a sequence of revertible changes to the
+ * network interface configuration by saving a snapshot of all relevant
+ * configuration information.
  * Returns 0 on success, -1 on failure
  */
 int ncf_change_begin(struct netcf *ncf, unsigned int flags);
 
 /* Revert to the previously snapshotted (with ncf_change_begin)
- * network config, effectively undoing the changes.
+ * network configuration, effectively undoing the changes.
  * Returns 0 on success, -1 on failure
  */
 int ncf_change_rollback(struct netcf *ncf, unsigned int flags);
 
-/* Commit the changes made to network config since ncf_change_begin
- * was called (usually by simply deleting the snapshot that was saved,
- * as well as bringing down any interfaces that will not be present in
- * the restored config, and bouncing interfaces that still exist, but
- * have changed their config.)
+/* Commit the changes made to network configuration since
+ * ncf_change_begin was called (usually by simply deleting the
+ * snapshot that was saved, as well as bringing down any interfaces
+ * that will not be present in the restored configuration, and
+ * bouncing interfaces that still exist, but have changed their
+ * configuration.)
  * Returns 0 on success, -1 on failure
  */
 int ncf_change_commit(struct netcf *ncf, unsigned int flags);

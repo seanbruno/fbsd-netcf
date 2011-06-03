@@ -428,8 +428,8 @@ static const struct command_def cmd_change_begin_def = {
     .name = "change-begin",
     .opts = cmd_change_begin_opts,
     .handler = cmd_change_begin,
-    .synopsis = "mark the beginning of a set of revertable network config changes",
-    .help = "marks the beginning of a set of revertable network config changes",
+    .synopsis = "mark the beginning of a set of revertible network config changes",
+    .help = "marks the beginning of a set of revertible network config changes",
 };
 
 static int cmd_change_commit(ATTRIBUTE_UNUSED const struct command *cmd)
