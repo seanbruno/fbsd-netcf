@@ -75,6 +75,17 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/netcf.pc
 
 %changelog
+* Fri Jun  3 2011 Laine Stump <laine@redhat.com> - 0.1.8-1
+- new transactional change APIs: ncf_change_(begin|commit|rollback)
+- add stdout/stderr to error text when an external program fails
+- make error reporting of failed execs more exact/correct
+- add "--system" to autogen.sh - sets all directories for standard system
+  install.
+- change sysconfdir and localstatedir during config if basedir is /usr.
+- Remove unnecessary "Requires" of libxml2 and augeas from pkgconfig file
+  to pulling in extra packages when building an application that uses netcf.
+- Reorganize code to simplify porting to other platforms.
+
 * Thu Sep 24 2010 Laine Stump <laine@redhat.com> - 0.1.7-1
 - remove code that modifies iptables config for bridges
 - register gnulib as a proper submodule

@@ -1,3 +1,14 @@
+0.1.8 - 2011-06-03
+  - new transactional change APIs: ncf_change_(begin|commit|rollback)
+  - add stdout/stderr to error text when an external program fails
+  - make error reporting of failed execs more exact/correct
+  - add "--system" to autogen.sh - sets all directories for standard system
+    install.
+  - change sysconfdir and localstatedir during config if basedir is /usr.
+  - Remove unnecessary "Requires" of libxml2 and augeas from pkgconfig file
+    to pulling in extra packages when building an application that uses netcf.
+  - Reorganize code to simplify porting to other platforms.
+
 0.1.7 - 2010-09-24
   - remove code that modifies iptables config for bridges
   - register gnulib as a proper submodule
