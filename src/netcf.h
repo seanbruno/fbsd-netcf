@@ -82,6 +82,10 @@ typedef enum {
 } netcf_if_flag_t;
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Initialize netcf. This function must be called before any other netcf
  * function can be called.
@@ -223,6 +227,11 @@ void ncf_if_free(struct netcf_if *);
  * next call to another function in this API.
  */
 int ncf_error(struct netcf *, const char **errmsg, const char **details);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif
 
 
