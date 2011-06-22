@@ -355,7 +355,7 @@ int drv_init(struct netcf *ncf) {
     if (stat(ncf->root, &stats) != 0 || !S_ISDIR(stats.st_mode)) {
         report_error(ncf, NETCF_EFILE,
                      "invalid root '%s' is not a directory", ncf->root);
-        return -1;
+        goto error;
     }
 
     // FIXME: Check for errors
