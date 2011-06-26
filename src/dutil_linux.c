@@ -1022,12 +1022,15 @@ static void add_bridge_info(struct netcf *ncf,
     int  nphys, ii;
     xmlNodePtr bridge_node = NULL, interface_node = NULL;
 
+    /* The <bridge> element is required by the grammar, so always add
+     * it, even if there are no physical devices attached.
+    */
+    bridge_node = xml_node(doc, root, "bridge");
+    ERR_NOMEM(bridge_node == NULL, ncf);
+
     nphys = if_bridge_phys_name(ncf, ifname, &phys_names);
     if (nphys <= 0)
         return;
-
-    bridge_node = xml_node(doc, root, "bridge");
-    ERR_NOMEM(bridge_node == NULL, ncf);
 
     for (ii = 0; ii < nphys; ii++) {
         int   phys_ifindex;
