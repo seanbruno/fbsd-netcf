@@ -908,6 +908,10 @@ static void add_ethernet_info(struct netcf *ncf,
         = { doc, root, NULL, ncf };
     struct rtnl_link *filter_link = NULL;
 
+    /* if interface isn't currently available, nothing to add */
+    if (ifindex != RTNL_LINK_NOT_FOUND)
+        return;
+
     filter_link = rtnl_link_alloc();
     ERR_NOMEM(filter_link == NULL, ncf);
 
@@ -993,6 +997,10 @@ static void add_vlan_info(struct netcf *ncf,
         = { doc, root, NULL, ncf };
     struct rtnl_link *filter_link = NULL;
 
+    /* if interface isn't currently available, nothing to add */
+    if (ifindex != RTNL_LINK_NOT_FOUND)
+        return;
+
     filter_link = rtnl_link_alloc();
     ERR_NOMEM(filter_link == NULL, ncf);
 
@@ -1030,10 +1038,12 @@ static void add_bridge_info(struct netcf *ncf,
         /* Add in type-specific info of physical interface */
         phys_ifindex =
             rtnl_link_name2i(ncf->driver->link_cache, phys_names[ii]);
-        ERR_THROW((phys_ifindex == RTNL_LINK_NOT_FOUND), ncf, ENETLINK,
-          "couldn't find ifindex for physical interface `%s` of bridge %s",
-                  phys_names[ii], ifname);
-
+        /* We ignore an error return here, because that usually just
+         * means the interface isn't currently running. The
+         * type-specific functions will recognize this from the
+         * invalid ifindex we pass to them, and "do the right thing"
+         * (which is usually, but not always, to silently return).
+         */
         add_type_specific_info(ncf, phys_names[ii], phys_ifindex, doc,
                                interface_node);
     }
@@ -1099,6 +1109,10 @@ static void add_bond_info(struct netcf *ncf,
     struct nl_bond_callback_data cb_data
         = { doc, root, NULL, ifindex, ncf };
 
+    /* if interface isn't currently available, nothing to add */
+    if (ifindex != RTNL_LINK_NOT_FOUND)
+        return;
+
     nl_cache_foreach(ncf->driver->link_cache, add_bond_info_cb, &cb_data);
 }
 
@@ -1163,9 +1177,12 @@ void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
               "failed to refill interface address cache");
 
     ifindex = rtnl_link_name2i(nif->ncf->driver->link_cache, nif->name);
-    ERR_THROW((ifindex == RTNL_LINK_NOT_FOUND), nif->ncf, ENETLINK,
-              "couldn't find ifindex for interface `%s`", nif->name);
-
+    /* We ignore an error return here, because that usually just
+     * means the interface isn't currently running. The
+     * type-specific functions will recognize this from the
+     * invalid ifindex we pass to them, and "do the right thing"
+     * (which is usually, but not always, to silently return).
+     */
     add_type_specific_info(nif->ncf, nif->name, ifindex, doc, root);
     ERR_BAIL(nif->ncf);
 
