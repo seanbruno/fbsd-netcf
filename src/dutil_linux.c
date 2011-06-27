@@ -1,7 +1,7 @@
 /*
  * dutil_linux.c: Linux utility functions for driver backends.
  *
- * Copyright (C) 2009 Red Hat Inc.
+ * Copyright (C) 2009, 2011 Red Hat Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -198,7 +198,7 @@ error:
 int run_program(struct netcf *ncf, const char *const *argv, char **output)
 {
 
-    pid_t childpid;
+    pid_t childpid = -1;
     int exitstatus, waitret;
     char *argv_str;
     int ret = -1;
