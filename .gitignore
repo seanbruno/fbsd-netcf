@@ -33,6 +33,7 @@ src/datadir.h
 src/ncftool
 src/ncftransform
 src/netcf.syms
+src/netcf-transaction.init
 tests/test-initscripts
 *.aux
 *.dvi
