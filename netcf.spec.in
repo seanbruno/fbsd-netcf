@@ -75,6 +75,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/netcf.pc
 
 %changelog
+* Tue Jul 26 2011 Laine Stump <laine@redhat.com> - 0.1.9-1
+- always add <bridge> element to bridge, even if there is no physdev present
+- don't log error if interface isn't found in kernel during status report
+- allow building with C++
+- update gnulib
+
 * Fri Jun  3 2011 Laine Stump <laine@redhat.com> - 0.1.8-1
 - new transactional change APIs: ncf_change_(begin|commit|rollback)
 - add stdout/stderr to error text when an external program fails
