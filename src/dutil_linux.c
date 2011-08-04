@@ -1018,8 +1018,8 @@ error:
 static void add_bridge_info(struct netcf *ncf,
                             const char *ifname, int ifindex ATTRIBUTE_UNUSED,
                             xmlDocPtr doc, xmlNodePtr root) {
-    char **phys_names;
-    int  nphys, ii;
+    char **phys_names = NULL;
+    int  nphys = 0, ii;
     xmlNodePtr bridge_node = NULL, interface_node = NULL;
 
     /* The <bridge> element is required by the grammar, so always add
