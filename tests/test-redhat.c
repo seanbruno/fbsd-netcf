@@ -150,7 +150,7 @@ static void assert_transforms(CuTest *tc, const char *base) {
     char *aug_xml_act = NULL, *ncf_xml_act = NULL;
     int r;
 
-    r = asprintf(&aug_fname, "redhat/%s.xml", base);
+    r = asprintf(&aug_fname, "redhat/schema/%s.xml", base);
     r = asprintf(&ncf_fname, "interface/%s.xml", base);
 
     aug_xml_exp = read_test_file(tc, aug_fname);
@@ -218,7 +218,7 @@ int main(void) {
     if (abs_top_builddir == NULL)
         die("env var abs_top_builddir must be set");
 
-    if (asprintf(&src_root, "%s/tests/root", abs_top_srcdir) < 0) {
+    if (asprintf(&src_root, "%s/tests/redhat/fsroot", abs_top_srcdir) < 0) {
         die("failed to set src_root");
     }
 

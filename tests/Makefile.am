@@ -6,7 +6,7 @@ GNULIB_CFLAGS= -I $(top_srcdir)/gnulib/lib
 AM_CFLAGS = $(NETCF_CFLAGS) $(WARN_CFLAGS) $(GNULIB_CFLAGS) \
 	$(LIBXML_CFLAGS) -I $(top_builddir)/src
 
-EXTRA_DIST = interface redhat root
+EXTRA_DIST = interface redhat
 
 TESTS_ENVIRONMENT = \
   PATH='$(abs_top_builddir)/src$(PATH_SEPARATOR)'"$$PATH" \
