@@ -1,0 +1,23 @@
+<!-- A sketch of how the ethernet-static.xml example would be
+     turned into actual files.
+
+     The XML notation is close to what would turn up in a Augeas tree -->
+<forest>
+  <tree path="/files/etc/network/interfaces">
+    <array label="auto">
+      <element>
+	<node value="br0"/>
+      </element>
+    </array>
+    <array label="iface">
+      <element key="br0">
+	<node label="family" value="inet"/>
+	<node label="method" value="dhcp"/>
+	<node label="mtu" value="1500"/>
+	<node label="bridge_ports" value="eth0 eth1"/>
+	<node label="bridge_stp" value="off"/>
+	<node label="bridge_fd" value="0.01"/>
+      </element>
+    </array>
+  </tree>
+</forest>

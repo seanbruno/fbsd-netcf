@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<forest>
+  <tree path="/files/etc/network/interfaces">
+    <array label="auto">
+      <element>
+	<node value="br0"/>
+      </element>
+    </array>
+    <array label="iface">
+      <element key="br0">
+	<node label="family" value="inet"/>
+	<node label="method" value="manual"/>
+	<node label="mtu" value="1500"/>
+	<node label="bridge_ports" value="eth2 bond0"/>
+	<node label="bridge_stp" value="off"/>
+	<node label="pre-up" value="ifup bond0"/>
+	<node label="post-down" value="ifdown bond0"/>
+      </element>
+      <element key="bond0">
+	<node label="family" value="inet"/>
+	<node label="method" value="manual"/>
+        <node label="bond_slaves" value="eth1 eth0"/>
+	<node label="bond_primary" value="eth1"/>
+	<node label="bond_mode" value="active-backup"/>
+	<node label="bond_miimon" value="100"/>
+	<node label="bond_updelay" value="10"/>
+	<node label="bond_use_carrier" value="0"/>
+      </element>
+    </array>
+  </tree>
+</forest>

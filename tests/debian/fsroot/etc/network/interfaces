@@ -1,0 +1,27 @@
+auto lo
+iface lo inet loopback
+iface lo inet6 loopback
+
+auto br0
+iface br0 inet dhcp
+        bridge_ports eth0
+        bridge_maxwait 0
+        hwaddress ether 00:1c:c0:89:dd:01
+
+auto bond0
+iface bond0 inet static
+        netmask 255.255.255.0
+        network 10.0.1.0
+        address 10.0.1.27
+        bond_slaves eth1 eth2
+        bond_mode active-backup
+        bond_primary eth2
+iface bond0 inet6 dhcp
+auto eth3
+iface eth3 inet dhcp
+
+auto eth4
+iface eth4 inet dhcp
+
+auto eth4
+iface eth4 inet dhcp

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<forest>
+  <tree path="/files/etc/network/interfaces">
+    <array label="auto">
+      <element>
+	<node value="eth0"/>
+      </element>
+    </array>
+    <array label="iface">
+      <element key="eth0">
+	<node label="family" value="inet6"/>
+	<node label="method" value="manual"/>
+	<node label="pre-up" value="echo 0 > /proc/sys/net/ipv6/conf/eth0/autoconf"/>
+	<node label="post-down" value="echo 1 > /proc/sys/net/ipv6/conf/eth0/autoconf"/>
+      </element>
+    </array>
+  </tree>
+</forest>

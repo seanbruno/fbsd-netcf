@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<forest>
+  <tree path="/files/etc/network/interfaces">
+    <array label="auto">
+      <element>
+	<node value="eth0.42"/>
+      </element>
+    </array>
+    <array label="iface">
+      <element key="eth0.42">
+	<node label="family" value="inet"/>
+	<node label="method" value="dhcp"/>
+	<node label="vlan_raw_device" value="eth0"/>
+<!--XXX	<node label="PEERDNS" value="no"/>-->
+      </element>
+    </array>
+  </tree>
+</forest>
