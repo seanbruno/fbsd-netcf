@@ -16,17 +16,22 @@ noinst_PROGRAMS = ncftransform
 DRIVER_SOURCES_LINUX = dutil.h dutil.c \
      dutil_linux.h dutil_linux.c
 DRIVER_SOURCES_REDHAT = drv_redhat.c
+DRIVER_SOURCES_DEBIAN = drv_debian.c
 
 EXTRA_DIST = netcf_public.syms \
 	netcf_private.syms \
 	netcf-transaction.init.sh \
 	$(DRIVER_SOURCES_LINUX) \
-	$(DRIVER_SOURCES_REDHAT)
+	$(DRIVER_SOURCES_REDHAT) \
+        $(DRIVER_SOURCES_DEBIAN)
 
 if NETCF_DRIVER_REDHAT
 DRIVER_SOURCES = \
 	$(DRIVER_SOURCES_LINUX) \
 	$(DRIVER_SOURCES_REDHAT)
+endif
+if NETCF_DRIVER_DEBIAN
+DRIVER_SOURCES = $(DRIVER_SOURCES_LINUX) $(DRIVER_SOURCES_DEBIAN)
 endif
 
 BUILT_SOURCES = datadir.h netcf.syms

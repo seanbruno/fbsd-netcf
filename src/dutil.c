@@ -223,7 +223,6 @@ char *apply_stylesheet_to_string(struct netcf *ncf, xsltStylesheetPtr style,
 
     doc_xfm = apply_stylesheet(ncf, style, doc);
     ERR_BAIL(ncf);
-
     r = xsltSaveResultToString((xmlChar **) &result, &result_len,
                                doc_xfm, style);
     ERR_NOMEM(r < 0, ncf);

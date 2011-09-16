@@ -68,6 +68,12 @@ fi
 if test "x$with_driver" = "xcheck" && test -f /etc/fedora-release ; then
   with_driver=redhat
 fi
+if test "x$with_driver" = "xcheck" && test -f /etc/debian_version ; then
+  with_driver=debian
+fi
+if test "x$with_driver" = "xcheck" && test -f /etc/ubuntu_version ; then
+  with_driver=debian
+fi
 if test "x$with_driver" = "xcheck" ; then
   AC_MSG_ERROR([Cannot detect network driver, use --with-driver=NAME to select implementation])
 fi
@@ -76,6 +82,7 @@ NETCF_DRIVER=$with_driver
 AC_SUBST([NETCF_DRIVER])
 AC_DEFINE_UNQUOTED([NETCF_DRIVER], $NETCF_DRIVER, [The network driver])
 AM_CONDITIONAL([NETCF_DRIVER_REDHAT], test "x$with_driver" = "xredhat")
+AM_CONDITIONAL([NETCF_DRIVER_DEBIAN], test "x$with_driver" = "xdebian")
 
 if test "x$with_driver" = "xredhat"; then
     AC_DEFINE_UNQUOTED([NETCF_TRANSACTION],

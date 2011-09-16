@@ -421,6 +421,63 @@ int defnode(struct netcf *ncf, const char *name, const char *value,
     return (r < 0) ? -1 : created;
 }
 
+int aug_fmt_set(struct netcf *ncf, const char *value, const char *fmt, ...)
+{
+    struct augeas *aug = NULL;
+    char *path = NULL;
+    va_list args;
+    int r;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    va_start(args, fmt);
+    r = vasprintf(&path, fmt, args);
+    va_end(args);
+    if (r < 0) {
+        path = NULL;
+        ERR_NOMEM(1, ncf);
+    }
+
+    r = aug_set(aug, path, value);
+    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+
+    free(path);
+    return r;
+ error:
+    free(path);
+    return -1;
+}
+
+int aug_fmt_rm(struct netcf *ncf, const char *fmt, ...)
+{
+    struct augeas *aug = NULL;
+    char *path = NULL;
+    va_list args;
+    int r;
+
+    aug = get_augeas(ncf);
+    ERR_BAIL(ncf);
+
+    va_start(args, fmt);
+    r = vasprintf(&path, fmt, args);
+    va_end(args);
+    if (r < 0) {
+        path = NULL;
+        ERR_NOMEM(1, ncf);
+    }
+
+    r = aug_rm(aug, path);
+
+    ERR_COND_BAIL(r < 0, ncf, EOTHER);
+
+    free(path);
+    return r;
+ error:
+    free(path);
+    return -1;
+}
+
 int aug_fmt_match(struct netcf *ncf, char ***matches, const char *fmt, ...) {
     struct augeas *aug = NULL;
     char *path = NULL;

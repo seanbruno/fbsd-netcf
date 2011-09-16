@@ -79,6 +79,12 @@ int defnode(struct netcf *ncf, const char *name, const char *value,
 ATTRIBUTE_FORMAT(printf, 3, 4)
 int aug_fmt_match(struct netcf *ncf, char ***matches, const char *fmt, ...);
 
+ATTRIBUTE_FORMAT(printf, 3, 4)
+int aug_fmt_set(struct netcf *ncf, const char *value, const char *fmt, ...);
+
+ATTRIBUTE_FORMAT(printf, 2, 3)
+int aug_fmt_rm(struct netcf *ncf, const char *fmt, ...);
+
 /* Free matches from aug_match (or aug_submatch) */
 void free_matches(int nint, char ***intf);
 

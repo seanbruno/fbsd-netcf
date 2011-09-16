@@ -1,0 +1,195 @@
+    NetCF Debian Driver
+    ===================
+
+The Debian driver in NetCF is designed around the reading/writing  of the
+primary configuration file /etc/network/interfaces.
+
+There are, unfortuntely, often many different ways to achieve the same
+type of network setup using /etc/network/interfaces. The NetCF driver
+does not attempt to understand all possible styles of configuration.
+The current driver impl has picked what is believed to be the "best
+practice" configuration style. It should be able to read back any
+configuration that it has written out, and any configuration the user
+may have created manually, provided they follow the best practice.
+
+Some of the configurations reqiure extra packages to be installed:
+
+  - ifenslave    (required for any bonding config)
+  - bridge-utils (required for any bridging config)
+  - vlan         (required for any vlan config)
+
+This document illustrates the types of configuration that the Debian
+NetCF driver supports:
+
+Ethernet Devices
+================
+
+Loopback:
+
+  auto lo
+  iface lo inet loopback
+
+DHCP:
+
+  auto eth0
+  iface eth0 inet dhcp
+
+Static config:
+
+  auto eth0
+  iface eth0 inet static
+     address 196.168.1.1
+     netmask 255.255.255.0
+     gateway 196.168.1.255
+
+No IP config
+
+
+  auto eth0
+  iface eth0 inet manual
+
+Config with MTU / MAC addres
+
+  auto eth0
+  iface eth0 inet dhcp
+     hwaddr ether 00:11:22:33:44:55
+     mtu 150
+
+Bonding
+=======
+
+With miimon
+
+  iface bond0 inet dhcp
+     bond_slaves eth1 eth2
+     bond_primary eth1
+     bond_mode active-backup
+     bond_miimon 100
+     bond_updelay 10
+     bond_use_carrier 0
+
+With arpmon
+
+  iface bond2 inet dhcp
+     bond_slaves eth6
+     bond_primary eth6
+     bond_mode active-backup
+     bond_arp_interval 100
+     bond_arp_ip_target 198.168.1.1
+
+
+VLANs
+=====
+
+  auto eth0.42
+  iface eth0.42 inet static
+     address 196.168.1.1
+     netmask 255.255.255.0
+     vlan_raw_device eth0
+
+
+Bridging
+========
+
+With single interface and IP addr
+
+  auto br0
+  iface br0 inet static
+     address 192.68.2.3
+     netmask 255.255.255.0
+     mtu 1500
+     bridge_ports eth3
+     bridge_stp off
+     bridge_fd 0.01
+
+With no IP addr
+
+  auto br0
+  iface br0 inet manual
+     bridge_ports eth3
+     bridge_stp off
+     bridge_fd 0.01
+
+With multiple interfaces
+
+  auto br0
+  iface br0 inet static
+     address 192.68.2.3
+     netmask 255.255.255.0
+     mtu 1500
+     bridge_ports eth3 eth4
+     bridge_stp off
+     bridge_fd 0.01
+
+With no interface or addr
+
+  auto br0
+  iface br0 inet manual
+     mtu 1500
+     bridge_ports none
+     bridge_stp off
+     bridge_fd 0.01
+
+
+Complex Bridging
+================
+
+Bridging a bond:
+
+  auto br1
+  iface br1 inet manual
+     mtu 1500
+     bridge_ports bond1
+     bridge_stp off
+     pre-up ifup bond1
+     post-down ifdown bond1
+  iface bond1 inet manual
+     bond_slaves eth4
+     bond_primary eth4
+     bond_mode active-backup
+     bond_miimon 100
+     bond_updelay 10
+     bond_use_carrier 0
+
+Bridging a VLAN:
+
+  auto br2
+  iface br2 inet manual
+     mtu 1500
+     bridge_ports eth0.42
+     bridge_stp off
+  iface eth0.42 inet manual
+     vlan_raw_device eth0
+
+
+IPv6
+====
+
+Static addressing, with multiple addresses:
+
+  auto eth5
+  iface eth5 inet6 static
+     address 3ffe:ffff:0:5::1
+     netmask 128
+     pre-up echo 0 > /proc/sys/net/ipv6/conf/eth5/autoconf
+     post-down echo 1 > /proc/sys/net/ipv6/conf/eth5/autoconf
+     up /sbin/ifconfig eth5 inet6 add 3ffe:ffff:0:5::5/128
+     down /sbin/ifconfig eth5 inet6 del 3ffe:ffff:0:5::5/128
+
+Stateless autoconf
+
+  auto eth5
+  iface eth5 inet6 manual
+
+DHCPv6 with autoconf
+
+  auto eth5
+  iface eth5 inet6 dhcp
+
+
+DHCPv6 without autoconf
+
+  auto eth5
+  iface eth5 inet6 dhcp
+     pre-up echo 0 > /proc/sys/net/ipv6/conf/eth5/autoconf
+     post-down echo 1 > /proc/sys/net/ipv6/conf/eth5/autoconf
