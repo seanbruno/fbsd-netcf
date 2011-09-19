@@ -2,7 +2,7 @@ SUBDIRS=gnulib/lib src gnulib/tests tests doc
 
 ACLOCAL_AMFLAGS = -I gnulib/m4
 
-EXTRA_DIST=netcf.spec build/aux/move-if-change
+EXTRA_DIST=netcf.spec autogen.sh bootstrap bootstrap.conf
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = netcf.pc

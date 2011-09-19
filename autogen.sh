@@ -1,43 +1,24 @@
-#!/bin/bash
+#!/bin/sh
 # Run this to generate all the initial makefiles, etc.
 
-package=netcf
-
-usage() {
-  echo >&2 "\
-Usage: $0 [OPTION]...
-Generate makefiles and other infrastructure needed for building
-
-
-Options:
- --gnulib-srcdir=DIRNAME  Specify the local directory where gnulib
-                          sources reside.  Use this if you already
-                          have gnulib sources on your machine, and
-                          do not want to waste your bandwidth downloading
-                          them again.
- --help                   Print this message
- any other option         Pass to the 'configure' script verbatim
-
-Running without arguments will suffice in most cases.
-"
-}
-
-BUILD_AUX=build/aux
-GNULIB_DIR=gnulib
-
-set -e
-srcdir=`dirname $0`
+srcdir=`dirname "$0"`
 test -z "$srcdir" && srcdir=.
 
 THEDIR=`pwd`
 cd "$srcdir"
 
 test -f src/netcf.c || {
-    echo "You must run this script in the top-level libvirt directory"
+    echo "You must run this script in the top-level netcf directory"
     exit 1
 }
 
+
 EXTRA_ARGS=
+no_git=
+if test "x$1" = "x--no-git"; then
+  no_git=" $1"
+  shift
+fi
 if test "x$1" = "x--system"; then
     shift
     prefix=/usr
@@ -56,74 +37,47 @@ else
     fi
 fi
 
-# Split out options for bootstrap and for configure
-declare -a CF_ARGS
-for option
-do
-  case $option in
-  --help)
-    usage
-    exit;;
-  --gnulib-srcdir=*)
-    GNULIB_SRCDIR=$option;;
-  *)
-    CF_ARGS[${#CF_ARGS[@]}]=$option;;
-  esac
-done
-
-#Check for OSX
-case `uname -s` in
-Darwin) LIBTOOLIZE=glibtoolize;;
-*) LIBTOOLIZE=libtoolize;;
-esac
-
-
-DIE=0
-
-(autoconf --version) < /dev/null > /dev/null 2>&1 || {
-	echo
-	echo "You must have autoconf installed to compile $package."
-	echo "Download the appropriate package for your distribution,"
-	echo "or see http://www.gnu.org/software/autoconf"
-	DIE=1
+# Compute the hash we'll use to determine whether rerunning bootstrap
+# is required.  The first is just the SHA1 that selects a gnulib snapshot.
+# The second ensures that whenever we change the set of gnulib modules used
+# by this package, we rerun bootstrap to pull in the matching set of files.
+bootstrap_hash()
+{
+    git submodule status | sed 's/^[ +-]//;s/ .*//'
+    git hash-object bootstrap.conf
 }
 
-(automake --version) < /dev/null > /dev/null 2>&1 || {
-	echo
-	DIE=1
-	echo "You must have automake installed to compile $package."
-	echo "Download the appropriate package for your distribution,"
-	echo "or see http://www.gnu.org/software/automake"
-}
-
-if test "$DIE" -eq 1; then
-	exit 1
+# Ensure that whenever we pull in a gnulib update or otherwise change to a
+# different version (i.e., when switching branches), we also rerun ./bootstrap.
+# Also, running 'make rpm' tends to litter the po/ directory, and some people
+# like to run 'git clean -x -f po' to fix it; but only ./bootstrap regenerates
+# the required file po/Makevars.
+# Only run bootstrap from a git checkout, never from a tarball.
+if test -d .git; then
+    curr_status=.git-module-status
+    t=$(bootstrap_hash; git diff .gnulib)
+    if test "$t" = "$(cat $curr_status 2>/dev/null)" ; then
+        # good, it's up to date, all we need is autoreconf
+        autoreconf -if
+    else
+        echo running bootstrap$no_git...
+        ./bootstrap$no_git --bootstrap-sync && bootstrap_hash > $curr_status \
+            || { echo "Failed to bootstrap, please investigate."; exit 1; }
+    fi
 fi
 
-if test -z "${CF_ARGS[*]}"; then
-	echo "I am going to run ./configure with --enable-warnings - if you "
-        echo "wish to pass any extra arguments to it, please specify them on "
-        echo "the $0 command line."
-fi
+cd "$THEDIR"
 
-mkdir -p $BUILD_AUX
-
-touch ChangeLog
-$LIBTOOLIZE --copy --force
-./bootstrap ${GNULIB_SRCDIR:+--gnulib-srcdir="$GNULIB_SRCDIR"}
-aclocal -I gnulib/m4
-autoheader
-automake --add-missing
-autoconf
-
-cd $THEDIR
-
-if test x$OBJ_DIR != x; then
+if test "x$OBJ_DIR" != x; then
     mkdir -p "$OBJ_DIR"
     cd "$OBJ_DIR"
 fi
 
-"$srcdir/configure" $EXTRA_ARGS "${CF_ARGS[@]}" && {
+if test -z "$*" && test -f config.status; then
+    ./config.status --recheck
+else
+    $srcdir/configure $EXTRA_ARGS "$@"
+fi && {
     echo
-    echo "Now type 'make' to compile $package."
+    echo "Now type 'make' to compile netcf."
 }
