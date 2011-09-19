@@ -15,9 +15,9 @@ gl_EARLY
 
 AC_PROG_LIBTOOL
 
-dnl The backend driver. Right now hardcoded to initscripts, but
+dnl The backend driver. Right now hardcoded to redhat, but
 dnl eventually needs to be configurable at buildtime
-AM_CONDITIONAL([NETCF_DRIVER_INITSCRIPTS], [true])
+AM_CONDITIONAL([NETCF_DRIVER_REDHAT], [true])
 
 dnl Compiler flags to be used everywhere
 AC_SUBST([NETCF_CFLAGS], ['--std=gnu99 -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fasynchronous-unwind-tables'])

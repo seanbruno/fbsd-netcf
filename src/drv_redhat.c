@@ -1,5 +1,5 @@
 /*
- * drv_initscripts.c: the initscripts backend for netcf
+ * drv_redhat.c: the Red Hat distro family backend for netcf
  *
  * Copyright (C) 2009 Red Hat Inc.
  *
@@ -361,8 +361,8 @@ int drv_init(struct netcf *ncf) {
     // FIXME: Check for errors
     xsltInit();
     exsltStrRegister();
-    ncf->driver->get = parse_stylesheet(ncf, "initscripts-get.xsl");
-    ncf->driver->put = parse_stylesheet(ncf, "initscripts-put.xsl");
+    ncf->driver->get = parse_stylesheet(ncf, "redhat-get.xsl");
+    ncf->driver->put = parse_stylesheet(ncf, "redhat-put.xsl");
     ERR_BAIL(ncf);
 
     /* open a socket for interface ioctls */

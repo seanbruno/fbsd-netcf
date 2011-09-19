@@ -17,8 +17,8 @@ EXTRA_DIST = netcf_public.syms \
 	netcf_private.syms \
 	netcf-transaction.init.sh
 
-if NETCF_DRIVER_INITSCRIPTS
-DRIVER_SOURCES = drv_initscripts.c dutil.h dutil.c \
+if NETCF_DRIVER_REDHAT
+DRIVER_SOURCES = drv_redhat.c dutil.h dutil.c \
      dutil_linux.h dutil_linux.c
 endif
 

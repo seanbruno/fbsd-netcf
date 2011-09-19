@@ -40,5 +40,5 @@ src/ncftransform
 src/netcf-transaction.init
 src/netcf.syms
 stamp-h1
-tests/test-initscripts
+tests/test-redhat
 ylwrap

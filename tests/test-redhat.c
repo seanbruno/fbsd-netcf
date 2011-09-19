@@ -1,5 +1,5 @@
 /*
- * test-initscripts.c:
+ * test-redhat.c:
  *
  * Copyright (C) 2009 Red Hat Inc.
  *
@@ -150,7 +150,7 @@ static void assert_transforms(CuTest *tc, const char *base) {
     char *aug_xml_act = NULL, *ncf_xml_act = NULL;
     int r;
 
-    r = asprintf(&aug_fname, "initscripts/%s.xml", base);
+    r = asprintf(&aug_fname, "redhat/%s.xml", base);
     r = asprintf(&ncf_fname, "interface/%s.xml", base);
 
     aug_xml_exp = read_test_file(tc, aug_fname);
@@ -222,7 +222,7 @@ int main(void) {
         die("failed to set src_root");
     }
 
-    driver_name = strdup("initscripts");
+    driver_name = strdup("redhat");
     if (driver_name == NULL) {
         die("failed to set driver name");
     }
