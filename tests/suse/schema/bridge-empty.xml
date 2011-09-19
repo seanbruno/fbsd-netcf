@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<forest>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-br0">
+    <node label="DEVICE" value="br0"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="MTU" value="1500"/>
+    <node label="TYPE" value="Bridge"/>
+    <node label="STP" value="off"/>
+  </tree>
+</forest>

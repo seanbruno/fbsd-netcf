@@ -1,0 +1,26 @@
+<!-- A sketch of how the ethernet-static.xml example would be
+     turned into actual files.
+
+     The XML notation is close to what would turn up in a Augeas tree -->
+<forest>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-br0">
+    <node label="DEVICE" value="br0"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="MTU" value="1500"/>
+    <node label="TYPE" value="Bridge"/>
+    <node label="STP" value="off"/>
+  </tree>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth0">
+    <node label="DEVICE" value="eth0"/>
+    <node label="HWADDR" value="ab:bb:cc:dd:ee:ff"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="MTU" value="1500"/>
+    <node label="BRIDGE" value="br0"/>
+  </tree>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth1">
+    <node label="DEVICE" value="eth1"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="MTU" value="1500"/>
+    <node label="BRIDGE" value="br0"/>
+  </tree>
+</forest>

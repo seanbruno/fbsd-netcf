@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<forest>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-br0">
+    <node label="DEVICE" value="br0"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="TYPE" value="Bridge"/>
+    <node label="BOOTPROTO" value="dhcp"/>
+    <node label="STP" value="off"/>
+  </tree>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth0.42">
+    <node label="DEVICE" value="eth0.42"/>
+    <node label="VLAN" value="yes"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="BRIDGE" value="br0"/>
+  </tree>
+</forest>

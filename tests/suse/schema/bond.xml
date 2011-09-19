@@ -1,0 +1,28 @@
+<!-- A sketch of how the ethernet-static.xml example would be
+     turned into actual files.
+
+     The XML notation is close to what would turn up in a Augeas tree -->
+
+<forest>
+  <tree  path="/files/etc/sysconfig/network-scripts/ifcfg-bond0">
+    <node label="DEVICE" value="bond0"/>
+    <node label="ONBOOT" value="no"/>
+    <node label="BOOTPROTO" value="none"/>
+    <node label="IPADDR" value="192.168.50.7"/>
+    <node label="NETMASK" value="255.255.255.0"/>
+    <node label="GATEWAY" value="192.168.50.1"/>
+    <node label="BONDING_OPTS" value="'mode=active-backup primary=eth1 miimon=100 updelay=10 use_carrier=0'"/>
+  </tree>
+  <tree  path="/files/etc/sysconfig/network-scripts/ifcfg-eth1">
+    <node label="DEVICE" value="eth1"/>
+    <node label="ONBOOT" value="no"/>
+    <node label="MASTER" value="bond0"/>
+    <node label="SLAVE" value="yes"/>
+  </tree>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth0">
+    <node label="DEVICE" value="eth0"/>
+    <node label="ONBOOT" value="no"/>
+    <node label="MASTER" value="bond0"/>
+    <node label="SLAVE" value="yes"/>
+  </tree>
+</forest>

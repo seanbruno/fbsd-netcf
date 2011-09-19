@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<forest>
+  <tree path="/files/etc/sysconfig/network-scripts/ifcfg-eth0">
+    <node label="DEVICE" value="eth0"/>
+    <node label="ONBOOT" value="yes"/>
+    <node label="IPV6INIT" value="yes"/>
+    <node label="IPV6_AUTOCONF" value="yes"/>
+    <node label="DHCPV6" value="yes"/>
+  </tree>
+</forest>
