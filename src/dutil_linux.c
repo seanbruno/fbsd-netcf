@@ -709,6 +709,40 @@ const char *if_type_str(netcf_if_type_t type) {
     }
 }
 
+
+static size_t format_mac_addr(unsigned char *buf, int buflen,
+                                const unsigned char *addr, int len)
+{
+        int i;
+        char *cp = (char *)buf;
+
+        for (i = 0; i < len; i++) {
+                cp += snprintf(cp, buflen - (cp - (char *)buf), "%02x", addr[i]);
+                if (i == len - 1) {
+                       *cp = '\0';
+                        break;
+                }
+                strncpy(cp, ":", 1);
+               cp++;
+        }
+        return cp - (char *)buf;
+}
+
+int if_hwaddr(struct netcf *ncf, const char *intf,
+              unsigned char *mac, int buflen) {
+    struct ifreq ifr;
+    int ret;
+
+    MEMZERO(&ifr, 1);
+    strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
+    ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
+    ret = ioctl(ncf->driver->ioctl_fd, SIOCGIFHWADDR, &ifr);
+    memcpy(mac,ifr.ifr_hwaddr.sa_data,6);
+    format_mac_addr(mac,buflen, (unsigned char *)ifr.ifr_hwaddr.sa_data,6);
+    return ret;
+}
+
+
 static int if_bridge_phys_name(struct netcf *ncf,
                                const char *intf, char ***phys_names) {
     /* We can learn the name of the physical interface associated with

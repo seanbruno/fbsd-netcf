@@ -74,6 +74,9 @@ fi
 if test "x$with_driver" = "xcheck" && test -f /etc/ubuntu_version ; then
   with_driver=debian
 fi
+if test "x$with_driver" = "xcheck" && test -f /etc/suse-release ; then
+  with_driver=suse
+fi
 if test "x$with_driver" = "xcheck" ; then
   AC_MSG_ERROR([Cannot detect network driver, use --with-driver=NAME to select implementation])
 fi
@@ -83,6 +86,7 @@ AC_SUBST([NETCF_DRIVER])
 AC_DEFINE_UNQUOTED([NETCF_DRIVER], $NETCF_DRIVER, [The network driver])
 AM_CONDITIONAL([NETCF_DRIVER_REDHAT], test "x$with_driver" = "xredhat")
 AM_CONDITIONAL([NETCF_DRIVER_DEBIAN], test "x$with_driver" = "xdebian")
+AM_CONDITIONAL([NETCF_DRIVER_SUSE], test "x$with_driver" = "xsuse")
 
 if test "x$with_driver" = "xredhat"; then
     AC_DEFINE_UNQUOTED([NETCF_TRANSACTION],

@@ -139,6 +139,9 @@ netcf_if_type_t if_type(struct netcf *ncf, const char *intf);
  */
 const char *if_type_str(netcf_if_type_t type);
 
+/* Retrieve the hw mac address of the interface INTF */
+int if_hwaddr(struct netcf *ncf, const char *intf, unsigned char *mac, int len);
+
 /* Add the state of the interface (currently all addresses + netmasks)
  * to its xml document.
  */
