@@ -9,6 +9,5 @@
     <node label="ONBOOT" value="no"/>
     <node label="MTU" value="1492"/>
     <node label="BOOTPROTO" value="dhcp"/>
-    <node label="PEERDNS" value="no"/>
   </tree>
 </forest>

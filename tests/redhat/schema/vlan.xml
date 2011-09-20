@@ -5,6 +5,5 @@
     <node label="VLAN" value="yes"/>
     <node label="ONBOOT" value="yes"/>
     <node label="BOOTPROTO" value="dhcp"/>
-    <node label="PEERDNS" value="no"/>
   </tree>
 </forest>

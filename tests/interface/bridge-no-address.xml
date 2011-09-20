@@ -3,7 +3,7 @@
   <mtu size="1500"/>
   <bridge stp="off">
     <interface type="ethernet" name="eth0">
-      <mac address="ab:bb:cc:dd:ee:ff"/>
+<!--      <mac address="ab:bb:cc:dd:ee:ff"/>-->
     </interface>
     <interface type="ethernet" name="eth1"/>
   </bridge>

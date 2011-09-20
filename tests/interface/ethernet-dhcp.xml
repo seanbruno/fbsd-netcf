@@ -3,6 +3,6 @@
   <mac address="aa:bb:cc:dd:ee:ff"/>
   <mtu size="1492"/>
   <protocol family="ipv4">
-    <dhcp peerdns="no"/>
+    <dhcp/><!-- peerdns="no"/>-->
   </protocol>
 </interface>
