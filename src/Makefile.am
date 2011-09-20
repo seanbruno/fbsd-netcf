@@ -1,6 +1,6 @@
 
 GNULIB= ../gnulib/lib/libgnu.la
-GNULIB_CFLAGS= -I $(top_srcdir)/gnulib/lib
+GNULIB_CFLAGS= -I$(top_srcdir)/gnulib/lib -I$(top_builddir)/gnulib/lib
 
 AM_CFLAGS = $(NETCF_CFLAGS) $(GNULIB_CFLAGS) $(WARN_CFLAGS) \
   $(LIBXML_CFLAGS) $(LIBXSLT_CFLAGS) $(LIBAUGEAS_CFLAGS)
@@ -11,10 +11,13 @@ lib_LTLIBRARIES = libnetcf.la
 
 bin_PROGRAMS = ncftool
 
+if ! NETCF_DRIVER_MSWINDOWS
 noinst_PROGRAMS = ncftransform
+endif
 
-DRIVER_SOURCES_LINUX = dutil.h dutil.c \
-     dutil_linux.h dutil_linux.c
+DRIVER_SOURCES_COMMON = dutil.h dutil.c
+DRIVER_SOURCES_LINUX = dutil_linux.h dutil_linux.c
+DRIVER_SOURCES_MSWINDOWS = dutil_mswindows.h dutil_mswindows.c drv_mswindows.c
 DRIVER_SOURCES_REDHAT = drv_redhat.c
 DRIVER_SOURCES_DEBIAN = drv_debian.c
 DRIVER_SOURCES_SUSE = drv_suse.c
@@ -22,23 +25,35 @@ DRIVER_SOURCES_SUSE = drv_suse.c
 EXTRA_DIST = netcf_public.syms \
 	netcf_private.syms \
 	netcf-transaction.init.sh \
+	$(DRIVER_SOURCES_COMMON) \
 	$(DRIVER_SOURCES_LINUX) \
+	$(DRIVER_SOURCES_MSWINDOWS) \
 	$(DRIVER_SOURCES_REDHAT) \
         $(DRIVER_SOURCES_DEBIAN) \
         $(DRIVER_SOURCES_SUSE)
 
 if NETCF_DRIVER_REDHAT
 DRIVER_SOURCES = \
+	$(DRIVER_SOURCES_COMMON) \
 	$(DRIVER_SOURCES_LINUX) \
 	$(DRIVER_SOURCES_REDHAT)
 endif
 if NETCF_DRIVER_DEBIAN
-DRIVER_SOURCES = $(DRIVER_SOURCES_LINUX) $(DRIVER_SOURCES_DEBIAN)
+DRIVER_SOURCES = \
+	$(DRIVER_SOURCES_COMMON) \
+	$(DRIVER_SOURCES_LINUX) \
+	$(DRIVER_SOURCES_DEBIAN)
 endif
 if NETCF_DRIVER_SUSE
 DRIVER_SOURCES = \
+	$(DRIVER_SOURCES_COMMON) \
 	$(DRIVER_SOURCES_LINUX) \
 	$(DRIVER_SOURCES_SUSE)
+endif
+if NETCF_DRIVER_MSWINDOWS
+DRIVER_SOURCES = \
+	$(DRIVER_SOURCES_COMMON) \
+	$(DRIVER_SOURCES_MSWINDOWS)
 endif
 
 BUILT_SOURCES = datadir.h netcf.syms
@@ -49,15 +64,20 @@ libnetcf_la_SOURCES = netcf.h netcf.c internal.h \
      ref.h list.h \
      xslt_ext.c $(DRIVER_SOURCES)
 libnetcf_la_LDFLAGS = -Wl,--version-script=netcf.syms \
-     -version-info $(LIBNETCF_VERSION_INFO)
+     -version-info $(LIBNETCF_VERSION_INFO) -no-undefined
 libnetcf_la_LIBADD = $(NETCF_LIBDEPS) $(GNULIB)
-libnetcf_la_DEPENDENCIES = $(libnetcf_la_LIBADD) netcf.syms
+if NETCF_DRIVER_MSWINDOWS
+libnetcf_la_LIBADD += -liphlpapi
+endif
+libnetcf_la_DEPENDENCIES = $(GNULIB) netcf.syms
 
 ncftool_SOURCES = ncftool.c
 ncftool_LDADD = libnetcf.la $(READLINE_LIBS) $(GNULIB)
 
+if ! NETCF_DRIVER_MSWINDOWS
 ncftransform_SOURCES = ncftransform.c
 ncftransform_LDADD = libnetcf.la $(GNULIB)
+endif
 
 netcf.syms: netcf_public.syms netcf_private.syms
 	rm -f $@-tmp $@
@@ -75,7 +95,7 @@ netcf.syms: netcf_public.syms netcf_private.syms
 internal.h: datadir.h
 
 datadir.h: $(top_builddir)/config.status
-	echo '#define DATADIR "$(datadir)"' > datadir.h
+	echo '#define NETCF_DATADIR "$(datadir)"' > datadir.h
 
 install-data-local: install-init
 

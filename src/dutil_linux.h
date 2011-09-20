@@ -39,6 +39,17 @@ struct driver {
     const struct augeas_xfm_table **augeas_xfm_tables;
 };
 
+struct augeas_pv {
+    const char *const path;
+    const char *const value;
+};
+
+struct augeas_xfm_table {
+    unsigned int            size;
+    const struct augeas_pv *pv;
+};
+
+
 enum
 {
     EXIT_DUP2=124,          /* dup2() of stdout/stderr in child failed */

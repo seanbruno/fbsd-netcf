@@ -5,6 +5,7 @@ AC_CONFIG_MACRO_DIR([gnulib/m4])
 AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([-Wno-portability 1.11 color-tests parallel-tests])
 AM_SILENT_RULES([yes]) # make --enable-silent-rules the default.
+AC_CANONICAL_HOST
 
 AC_SUBST([LIBNETCF_VERSION_INFO], [5:0:4])
 
@@ -24,16 +25,11 @@ NETCF_COMPILE_WARNINGS
 
 dnl Need to test if pkg-config exists
 PKG_PROG_PKG_CONFIG
-PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.5.0])
 PKG_CHECK_MODULES([LIBXML], [libxml-2.0])
 PKG_CHECK_MODULES([LIBXSLT], [libxslt])
 PKG_CHECK_MODULES([LIBEXSLT], [libexslt])
-PKG_CHECK_MODULES([LIBNL], [libnl-1])
 
 NETCF_CHECK_READLINE
-
-NETCF_LIBDEPS=$(echo $LIBAUGEAS_LIBS $LIBEXSLT_LIBS $LIBXSLT_LIBS $LIBXML_LIBS $LIBNL_LIBS)
-AC_SUBST([NETCF_LIBDEPS])
 
 AC_CHECK_HEADER([pthread.h],
 	[AC_CHECK_LIB([pthread],[pthread_join],[
@@ -62,6 +58,13 @@ AC_ARG_WITH([driver],
             [],[with_driver=check])
 
 AC_MSG_CHECKING([Network driver name])
+if test "x$with_driver" = "xcheck" ; then
+  case "$host" in
+	*-*-mingw*)
+          with_driver=mswindows
+	;;
+  esac
+fi
 if test "x$with_driver" = "xcheck" && test -f /etc/redhat-release ; then
   with_driver=redhat
 fi
@@ -87,6 +90,7 @@ AC_DEFINE_UNQUOTED([NETCF_DRIVER], $NETCF_DRIVER, [The network driver])
 AM_CONDITIONAL([NETCF_DRIVER_REDHAT], test "x$with_driver" = "xredhat")
 AM_CONDITIONAL([NETCF_DRIVER_DEBIAN], test "x$with_driver" = "xdebian")
 AM_CONDITIONAL([NETCF_DRIVER_SUSE], test "x$with_driver" = "xsuse")
+AM_CONDITIONAL([NETCF_DRIVER_MSWINDOWS], test "x$with_driver" = "xmswindows")
 
 if test "x$with_driver" = "xredhat"; then
     AC_DEFINE_UNQUOTED([NETCF_TRANSACTION],
@@ -96,10 +100,19 @@ fi
 AM_CONDITIONAL([NETCF_INIT_SCRIPT_RED_HAT],
                [test x$with_driver = xredhat])
 
+if test "x$with_driver" != "xmswindows"
+then
+    PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.5.0])
+    PKG_CHECK_MODULES([LIBNL], [libnl-1])
+fi
+
+NETCF_LIBDEPS=$(echo $LIBAUGEAS_LIBS $LIBEXSLT_LIBS $LIBXSLT_LIBS $LIBXML_LIBS $LIBNL_LIBS)
+AC_SUBST([NETCF_LIBDEPS])
+
 AC_OUTPUT(Makefile                                          \
           gnulib/lib/Makefile                               \
           gnulib/tests/Makefile                             \
           src/Makefile                                      \
           tests/Makefile                                    \
           doc/Makefile                                      \
-          netcf.pc netcf.spec)
+          netcf.pc netcf.spec mingw32-netcf.spec)

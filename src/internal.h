@@ -84,6 +84,9 @@
 #define ATTRIBUTE_NOINLINE
 #endif                                   /* __GNUC__ */
 
+#ifndef WIN32
+#define DATADIR NETCF_DATADIR
+#endif
 /* This needs ATTRIBUTE_RETURN_CHECK */
 #include "ref.h"
 

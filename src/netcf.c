@@ -27,9 +27,13 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <spawn.h>
 #include <errno.h>
-#include "safe-alloc.h"
 
+#include "safe-alloc.h"
 #include "internal.h"
 #include "netcf.h"
 #include "dutil.h"
@@ -56,8 +60,15 @@ int ncf_init(struct netcf **ncf, const char *root) {
     *ncf = NULL;
     if (make_ref(*ncf) < 0)
         goto error;
-    if (root == NULL)
+    if (root == NULL) {
+#ifdef WIN32
+        root = getenv("SYSTEMDRIVE");
+        if (!root)
+            root = "c:";
+#else
         root = "/";
+#endif
+    }
     if (root[strlen(root)-1] == '/') {
         (*ncf)->root = strdup(root);
     } else {
@@ -68,7 +79,7 @@ int ncf_init(struct netcf **ncf, const char *root) {
         goto error;
     (*ncf)->data_dir = getenv("NETCF_DATADIR");
     if ((*ncf)->data_dir == NULL)
-        (*ncf)->data_dir = DATADIR "/netcf";
+        (*ncf)->data_dir = NETCF_DATADIR "/netcf";
     (*ncf)->debug = getenv("NETCF_DEBUG") != NULL;
     (*ncf)->rng = rng_parse(*ncf, "interface.rng");
     ERR_BAIL(*ncf);

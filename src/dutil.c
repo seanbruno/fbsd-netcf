@@ -23,7 +23,6 @@
 #include <config.h>
 #include <internal.h>
 
-#include <augeas.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>

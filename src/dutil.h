@@ -23,15 +23,6 @@
 #ifndef DUTIL_H_
 #define DUTIL_H_
 
-struct augeas_pv {
-    const char *const path;
-    const char *const value;
-};
-
-struct augeas_xfm_table {
-    unsigned int            size;
-    const struct augeas_pv *pv;
-};
 
 /* Create a new netcf if instance for interface NAME */
 struct netcf_if *make_netcf_if(struct netcf *ncf, char *name);

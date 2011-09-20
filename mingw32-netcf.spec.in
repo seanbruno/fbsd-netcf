@@ -1,0 +1,70 @@
+%global __strip %{_mingw32_strip}
+%global __objdump %{_mingw32_objdump}
+%global _use_internal_dependency_generator 0
+%global __find_requires %{_mingw32_findrequires}
+%global __find_provides %{_mingw32_findprovides}
+%define __debug_install_post %{_mingw32_debug_install_post}
+
+Name:           mingw32-netcf
+Version:        @VERSION@
+Release:        1%{?dist}%{?extra_release}
+Summary:        MinGW network configuration library
+
+Group:          System Environment/Libraries
+License:        LGPLv2+
+URL:            https://fedorahosted.org/netcf/
+Source0:        http://astokes.fedorapeople.org/%{name}/netcf-%{version}.tar.gz
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+
+BuildRequires:  mingw32-filesystem >= 56
+BuildRequires:  mingw32-readline
+BuildRequires:  mingw32-binutils
+BuildRequires:  mingw32-libxml2
+BuildRequires:  mingw32-libxslt
+BuildRequires:  mingw32-gcc
+BuildRequires:  mingw32-gettext
+BuildRequires:  mingw32-w32api
+BuildRequires:  gettext
+Requires:       pkgconfig
+
+BuildArch:	noarch
+
+%{?_mingw32_debug_package}
+
+%description
+A library for modifying the network configuration of a system. Network
+configurations are expresed in a platform-independent XML format, which
+netcf translates into changes to the system's 'native' network
+configuration files.
+
+MinGW cross-compiled Windows library.
+
+%prep
+%setup -q -n netcf-%{version}
+
+%build
+%{_mingw32_configure} --disable-static
+make %{?_smp_mflags}
+
+%install
+rm -rf $RPM_BUILD_ROOT
+make install DESTDIR=$RPM_BUILD_ROOT
+rm -rf $RPM_BUILD_ROOT%{_mingw32_datadir}/netcf
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-,root,root,-)
+%{_mingw32_bindir}/ncftool.exe
+%{_mingw32_bindir}/libnetcf-1.dll
+%{_mingw32_includedir}/*.h
+%{_mingw32_libdir}/pkgconfig/netcf.pc
+%{_mingw32_libdir}/libnetcf.dll.a
+%{_mingw32_libdir}/libnetcf.la
+
+%doc AUTHORS COPYING NEWS
+
+%changelog
+* Thu Nov 04 2010 Adam Stokes <astokes@fedoraproject.org> - 0.1.7-1
+- MinGW Port

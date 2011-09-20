@@ -107,7 +107,7 @@ static void ipcalc_prefix(xmlXPathParserContextPtr ctxt, int nargs) {
         goto error;
     }
 
-    r = inet_aton((char *) netmask_str, &netmask);
+    r = inet_pton(AF_INET, (char *) netmask_str, &netmask);
     if (r < 0) {
         xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
                            "ipcalc:prefix: illegal netmask '%s'",
