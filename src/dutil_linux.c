@@ -909,7 +909,7 @@ static void add_ethernet_info(struct netcf *ncf,
     struct rtnl_link *filter_link = NULL;
 
     /* if interface isn't currently available, nothing to add */
-    if (ifindex != RTNL_LINK_NOT_FOUND)
+    if (ifindex == RTNL_LINK_NOT_FOUND)
         return;
 
     filter_link = rtnl_link_alloc();
@@ -998,7 +998,7 @@ static void add_vlan_info(struct netcf *ncf,
     struct rtnl_link *filter_link = NULL;
 
     /* if interface isn't currently available, nothing to add */
-    if (ifindex != RTNL_LINK_NOT_FOUND)
+    if (ifindex == RTNL_LINK_NOT_FOUND)
         return;
 
     filter_link = rtnl_link_alloc();
@@ -1113,7 +1113,7 @@ static void add_bond_info(struct netcf *ncf,
         = { doc, root, NULL, ifindex, ncf };
 
     /* if interface isn't currently available, nothing to add */
-    if (ifindex != RTNL_LINK_NOT_FOUND)
+    if (ifindex == RTNL_LINK_NOT_FOUND)
         return;
 
     nl_cache_foreach(ncf->driver->link_cache, add_bond_info_cb, &cb_data);
