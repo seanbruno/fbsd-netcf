@@ -390,8 +390,10 @@ static int cmd_undefine(const struct command *cmd) {
         return CMD_RES_ERR;
 
     r = ncf_if_undefine(nif);
-    if (r < 0)
+    if (r < 0) {
+        ncf_if_free(nif);
         return CMD_RES_ERR;
+    }
 
     printf("%s undefined\n", name);
     ncf_if_free(nif);
