@@ -166,11 +166,10 @@ static char *find_ifcfg_path_by_hwaddr(struct netcf *ncf, const char *mac) {
  * interface by checking for an entry 'DEVICE=NAME'
  */
 static char *find_ifcfg_path_by_device(struct netcf *ncf, const char *name) {
-    struct augeas *aug = NULL;
     int ndevs = 0;
     char **devs = NULL;
 
-    aug = get_augeas(ncf);
+    get_augeas(ncf);
     ERR_BAIL(ncf);
 
     ndevs = aug_fmt_match(ncf, &devs, "%s[DEVICE = '%s']",
@@ -312,9 +311,8 @@ static int list_ifcfg_paths(struct netcf *ncf, char ***intf) {
 
 static int list_interfaces(struct netcf *ncf, char ***intf) {
     int nint = 0, result = 0;
-    struct augeas *aug = NULL;
 
-    aug = get_augeas(ncf);
+    get_augeas(ncf);
     ERR_BAIL(ncf);
 
     /* Look in augeas for all interfaces */
@@ -462,9 +460,8 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
     struct netcf_if *nif = NULL;
     char *pathx = NULL;
     char *name_dup = NULL;
-    struct augeas *aug;
 
-    aug = get_augeas(ncf);
+    get_augeas(ncf);
     ERR_BAIL(ncf);
 
     pathx = find_ifcfg_path(ncf, name);
@@ -552,17 +549,12 @@ static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml) {
                   EINTERNAL, "expected node labeled 'tree', not '%s'",
                   tree->name);
         path = xml_prop(tree, "path");
-        int toplevel = 1;
         /* This is a little drastic, since it clears out the file entirely */
         r = aug_rm(aug, path);
         ERR_THROW(r < 0, ncf, EINTERNAL, "aug_rm of '%s' failed", path);
         list_for_each(node, tree->children) {
             label = xml_prop(node, "label");
             value = xml_prop(node, "value");
-            /* We should mark the toplevel interface from the XSLT */
-            if (STREQ(label, "BRIDGE") || STREQ(label, "MASTER")) {
-                toplevel = 0;
-            }
             r = xasprintf(&lpath, "%s/%s", path, label);
             ERR_NOMEM(r < 0, ncf);
 
@@ -939,7 +931,6 @@ int drv_undefine(struct netcf_if *nif) {
 int drv_lookup_by_mac_string(struct netcf *ncf, const char *mac,
                              int maxifaces, struct netcf_if **ifaces)
 {
-    struct augeas *aug = NULL;
     char *path = NULL, *ifcfg = NULL;
     const char **names = NULL;
     int nmatches = 0;
@@ -949,7 +940,7 @@ int drv_lookup_by_mac_string(struct netcf *ncf, const char *mac,
 
     MEMZERO(ifaces, maxifaces);
 
-    aug = get_augeas(ncf);
+    get_augeas(ncf);
     ERR_BAIL(ncf);
 
     nmatches = aug_match_mac(ncf, mac, &matches);
