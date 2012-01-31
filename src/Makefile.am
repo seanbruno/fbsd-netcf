@@ -16,6 +16,7 @@ noinst_PROGRAMS = ncftransform
 endif
 
 DRIVER_SOURCES_COMMON = dutil.h dutil.c
+DRIVER_SOURCES_FBSD = dutil_fbsd.h dutil_fbsd.c drv_fbsd.c
 DRIVER_SOURCES_LINUX = dutil_linux.h dutil_linux.c
 DRIVER_SOURCES_MSWINDOWS = dutil_mswindows.h dutil_mswindows.c drv_mswindows.c
 DRIVER_SOURCES_REDHAT = drv_redhat.c
@@ -26,6 +27,7 @@ EXTRA_DIST = netcf_public.syms \
 	netcf_private.syms \
 	netcf-transaction.init.sh \
 	$(DRIVER_SOURCES_COMMON) \
+	$(DRIVER_SOURCES_FBSD) \
 	$(DRIVER_SOURCES_LINUX) \
 	$(DRIVER_SOURCES_MSWINDOWS) \
 	$(DRIVER_SOURCES_REDHAT) \
@@ -54,6 +56,11 @@ if NETCF_DRIVER_MSWINDOWS
 DRIVER_SOURCES = \
 	$(DRIVER_SOURCES_COMMON) \
 	$(DRIVER_SOURCES_MSWINDOWS)
+endif
+if NETCF_DRIVER_FBSD
+DRIVER_SOURCES = \
+	$(DRIVER_SOURCES_COMMON) \
+	$(DRIVER_SOURCES_FBSD)
 endif
 
 BUILT_SOURCES = datadir.h netcf.syms

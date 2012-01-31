@@ -80,6 +80,9 @@ fi
 if test "x$with_driver" = "xcheck" && test -f /etc/suse-release ; then
   with_driver=suse
 fi
+if test "x$with_driver" = "xcheck" && test -f /usr/include/sys/param.h ; then
+  with_driver=fbsd
+fi
 if test "x$with_driver" = "xcheck" ; then
   AC_MSG_ERROR([Cannot detect network driver, use --with-driver=NAME to select implementation])
 fi
@@ -91,6 +94,7 @@ AM_CONDITIONAL([NETCF_DRIVER_REDHAT], test "x$with_driver" = "xredhat")
 AM_CONDITIONAL([NETCF_DRIVER_DEBIAN], test "x$with_driver" = "xdebian")
 AM_CONDITIONAL([NETCF_DRIVER_SUSE], test "x$with_driver" = "xsuse")
 AM_CONDITIONAL([NETCF_DRIVER_MSWINDOWS], test "x$with_driver" = "xmswindows")
+AM_CONDITIONAL([NETCF_DRIVER_FBSD], test "x$with_driver" = "xfbsd")
 
 if test "x$with_driver" = "xredhat"; then
     AC_DEFINE_UNQUOTED([NETCF_TRANSACTION],
@@ -103,7 +107,10 @@ AM_CONDITIONAL([NETCF_INIT_SCRIPT_RED_HAT],
 if test "x$with_driver" != "xmswindows"
 then
     PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.5.0])
-    PKG_CHECK_MODULES([LIBNL], [libnl-1])
+    if test "x$with_driver" != "xfbsd"
+    then
+        PKG_CHECK_MODULES([LIBNL], [libnl-1])
+    fi
 fi
 
 NETCF_LIBDEPS=$(echo $LIBAUGEAS_LIBS $LIBEXSLT_LIBS $LIBXSLT_LIBS $LIBXML_LIBS $LIBNL_LIBS)

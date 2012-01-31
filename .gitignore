@@ -8,16 +8,16 @@
 *.pdf
 *.spec
 *~
-/.git-module-status
 .deps/
 .libs/
-/build-aux
+/.git-module-status
 /ChangeLog
-Makefile
-Makefile.in
 /TAGS
 /aclocal.m4
 /autom4te.cache/
+/build-aux
+Makefile
+Makefile.in
 build/
 config.guess
 config.h
@@ -43,3 +43,5 @@ stamp-h1
 tests/test-debian
 tests/test-redhat
 ylwrap
+/GNUmakefile
+/maint.mk
