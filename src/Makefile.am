@@ -16,7 +16,7 @@ noinst_PROGRAMS = ncftransform
 endif
 
 DRIVER_SOURCES_COMMON = dutil.h dutil.c
-DRIVER_SOURCES_FBSD = dutil_fbsd.h dutil_fbsd.c drv_fbsd.c
+DRIVER_SOURCES_FBSD = dutil_fbsd.h drv_fbsd.c
 DRIVER_SOURCES_LINUX = dutil_linux.h dutil_linux.c
 DRIVER_SOURCES_MSWINDOWS = dutil_mswindows.h dutil_mswindows.c drv_mswindows.c
 DRIVER_SOURCES_REDHAT = drv_redhat.c

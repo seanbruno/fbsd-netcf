@@ -1,30 +1,22 @@
 /*
- * dutil_mswindows.h: Window utility functions for driver backends.
- *
- * Copyright (C) 2010 Red Hat Inc.
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
- *
- * Author: Adam Stokes <astokes@fedoraproject.org>
+ * dutil_fbsd.c: FreeBSD utility functions for driver backends.
  */
 
-#ifndef DUTIL_MSWINDOWS_H_
-#define DUTIL_MSWINDOWS_H_
+#include <config.h>
+#include <internal.h>
+
+#include "dutil.h"
 
 struct driver {
-    int padding;
+    struct augeas     *augeas;
+    xsltStylesheetPtr  put;
+    xsltStylesheetPtr  get;
+    int                ioctl_fd;
+    struct nl_handle  *nl_sock;
+    struct nl_cache   *link_cache;
+    struct nl_cache   *addr_cache;
+    unsigned int       load_augeas : 1;
+    unsigned int       copy_augeas_xfm : 1;
+    unsigned int       augeas_xfm_num_tables;
+    const struct augeas_xfm_table **augeas_xfm_tables;
 };
-
-#endif /* DUTIL_MSWINDOWS_H_ */

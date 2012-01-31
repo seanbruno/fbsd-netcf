@@ -877,6 +877,10 @@ struct nl_ip_callback_data {
 
 /* add all ip addresses for the given interface to the xml document
 */
+#ifdef __FreeBSD__
+static void add_ip_info_cb(struct nl_object *obj, void *arg) {
+}
+#else
 static void add_ip_info_cb(struct nl_object *obj, void *arg) {
     struct nl_ip_callback_data *cb_data = arg;
     struct rtnl_addr *addr = (struct rtnl_addr *)obj;
@@ -955,7 +959,15 @@ static void add_ip_info_cb(struct nl_object *obj, void *arg) {
 error:
     return;
 }
+#endif
 
+#ifdef __FreeBSD__
+static void add_ip_info(struct netcf *ncf,
+                        const char *ifname ATTRIBUTE_UNUSED, int ifindex,
+                        xmlDocPtr doc, xmlNodePtr root) {
+    return;
+}
+#else
 static void add_ip_info(struct netcf *ncf,
                         const char *ifname ATTRIBUTE_UNUSED, int ifindex,
                         xmlDocPtr doc, xmlNodePtr root) {
@@ -975,7 +987,7 @@ error:
         rtnl_addr_put(filter_addr);
     return;
 }
-
+#endif
 
 struct nl_ethernet_callback_data {
     xmlDocPtr doc;
@@ -1008,6 +1020,13 @@ error:
     return;
 }
 
+#ifdef __FreeBSD__
+static void add_ethernet_info(struct netcf *ncf,
+                              const char *ifname ATTRIBUTE_UNUSED, int ifindex,
+                              xmlDocPtr doc, xmlNodePtr root) {
+    return;
+}
+#else
 static void add_ethernet_info(struct netcf *ncf,
                               const char *ifname ATTRIBUTE_UNUSED, int ifindex,
                               xmlDocPtr doc, xmlNodePtr root) {
@@ -1015,11 +1034,9 @@ static void add_ethernet_info(struct netcf *ncf,
         = { doc, root, NULL, ncf };
     struct rtnl_link *filter_link = NULL;
 
-#ifndef __FreeBSD__
     /* if interface isn't currently available, nothing to add */
     if (ifindex == RTNL_LINK_NOT_FOUND)
         return;
-#endif
 
     filter_link = rtnl_link_alloc();
     ERR_NOMEM(filter_link == NULL, ncf);
@@ -1033,6 +1050,7 @@ error:
         rtnl_link_put(filter_link);
     return;
 }
+#endif
 
 struct nl_vlan_callback_data {
     xmlDocPtr doc;
@@ -1041,6 +1059,11 @@ struct nl_vlan_callback_data {
     struct netcf *ncf;
 };
 
+#ifdef __FreeBSD__
+static void add_vlan_info_cb(struct nl_object *obj, void *arg) {
+    return;
+}
+#else
 static void add_vlan_info_cb(struct nl_object *obj, void *arg) {
     struct nl_vlan_callback_data *cb_data = arg;
     struct rtnl_link *iflink = (struct rtnl_link *)obj;
@@ -1064,10 +1087,8 @@ static void add_vlan_info_cb(struct nl_object *obj, void *arg) {
         return;
 
     l_link = rtnl_link_get_link(iflink);
-#ifndef __FreeBSD__
     if (l_link == RTNL_LINK_NOT_FOUND)
         return;
-#endif
 
     master_link = rtnl_link_get(nl_object_get_cache(obj), l_link);
     if (master_link == NULL)
@@ -1091,18 +1112,24 @@ static void add_vlan_info_cb(struct nl_object *obj, void *arg) {
 
     /* Add in type-specific info of master interface */
     master_ifindex = rtnl_link_name2i(ncf->driver->link_cache, master_name);
-#ifndef __FreeBSD__
     ERR_THROW((master_ifindex == RTNL_LINK_NOT_FOUND), ncf, ENETLINK,
               "couldn't find ifindex for vlan master interface `%s`",
               master_name);
-#endif
     add_type_specific_info(ncf, master_name, master_ifindex,
                            cb_data->doc, interface_node);
 
 error:
     return;
 }
+#endif
 
+#ifdef __FreeBSD__
+static void add_vlan_info(struct netcf *ncf,
+                          const char *ifname ATTRIBUTE_UNUSED, int ifindex,
+                          xmlDocPtr doc, xmlNodePtr root) {
+    return;
+}
+#else
 static void add_vlan_info(struct netcf *ncf,
                           const char *ifname ATTRIBUTE_UNUSED, int ifindex,
                           xmlDocPtr doc, xmlNodePtr root) {
@@ -1110,11 +1137,9 @@ static void add_vlan_info(struct netcf *ncf,
         = { doc, root, NULL, ncf };
     struct rtnl_link *filter_link = NULL;
 
-#ifndef __FreeBSD__
     /* if interface isn't currently available, nothing to add */
     if (ifindex == RTNL_LINK_NOT_FOUND)
         return;
-#endif
 
     filter_link = rtnl_link_alloc();
     ERR_NOMEM(filter_link == NULL, ncf);
@@ -1129,7 +1154,15 @@ error:
         rtnl_link_put(filter_link);
     return;
 }
+#endif
 
+#ifdef __FreeBSD__
+static void add_bridge_info(struct netcf *ncf,
+                            const char *ifname, int ifindex ATTRIBUTE_UNUSED,
+                            xmlDocPtr doc, xmlNodePtr root) {
+    return;
+}
+#else
 static void add_bridge_info(struct netcf *ncf,
                             const char *ifname, int ifindex ATTRIBUTE_UNUSED,
                             xmlDocPtr doc, xmlNodePtr root) {
@@ -1171,6 +1204,7 @@ error:
         FREE(phys_names[ii]);
     FREE(phys_names);
 }
+#endif
 
 
 struct nl_bond_callback_data {
@@ -1181,6 +1215,12 @@ struct nl_bond_callback_data {
     struct netcf *ncf;
 };
 
+#ifdef __FreeBSD__
+static void add_bond_info_cb(struct nl_object *obj,
+                             void *arg ATTRIBUTE_UNUSED) {
+    return;
+}
+#else
 static void add_bond_info_cb(struct nl_object *obj,
                              void *arg ATTRIBUTE_UNUSED) {
     struct nl_bond_callback_data *cb_data = arg;
@@ -1189,7 +1229,6 @@ static void add_bond_info_cb(struct nl_object *obj,
 
     xmlNodePtr interface_node;
 
-#ifndef __FreeBSD__
     /* If this is a slave link, and the master is master_ifindex, add the
      * interface info to the bond.
      */
@@ -1197,7 +1236,6 @@ static void add_bond_info_cb(struct nl_object *obj,
     if (!(rtnl_link_get_flags(iflink) & IFF_SLAVE)
         || rtnl_link_get_master(iflink) != cb_data->master_ifindex)
         return;
-#endif
 
     cb_data->bond = xml_node(cb_data->doc, cb_data->root, "bond");
     ERR_NOMEM(cb_data->bond == NULL, ncf);
@@ -1222,21 +1260,28 @@ static void add_bond_info_cb(struct nl_object *obj,
 error:
     return;
 }
+#endif
 
+#ifdef __FreeBSD__
+static void add_bond_info(struct netcf *ncf,
+                          const char *ifname ATTRIBUTE_UNUSED, int ifindex,
+                          xmlDocPtr doc, xmlNodePtr root) {
+    return;
+}
+#else
 static void add_bond_info(struct netcf *ncf,
                           const char *ifname ATTRIBUTE_UNUSED, int ifindex,
                           xmlDocPtr doc, xmlNodePtr root) {
     struct nl_bond_callback_data cb_data
         = { doc, root, NULL, ifindex, ncf };
 
-#ifndef __FreeBSD__
     /* if interface isn't currently available, nothing to add */
     if (ifindex == RTNL_LINK_NOT_FOUND)
         return;
-#endif
 
     nl_cache_foreach(ncf->driver->link_cache, add_bond_info_cb, &cb_data);
 }
+#endif
 
 
 static void add_type_specific_info(struct netcf *ncf,
@@ -1288,6 +1333,7 @@ void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
     ERR_THROW(!xmlStrEqual(root->name, BAD_CAST "interface"),
               nif->ncf, EINTERNAL, "root document is not an interface");
 
+#ifndef __FreeBSD__
     /* Update the caches with any recent changes */
     code = nl_cache_refill(nif->ncf->driver->nl_sock,
                            nif->ncf->driver->link_cache);
@@ -1299,6 +1345,7 @@ void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
               "failed to refill interface address cache");
 
     ifindex = rtnl_link_name2i(nif->ncf->driver->link_cache, nif->name);
+#endif
     /* We ignore an error return here, because that usually just
      * means the interface isn't currently running. The
      * type-specific functions will recognize this from the
