@@ -23,7 +23,9 @@
 #ifndef DUTIL_LINUX_H_
 #define DUTIL_LINUX_H_
 
+#ifndef __FreeBSD__
 #include <netlink/netlink.h>
+#endif
 
 struct driver {
     struct augeas     *augeas;

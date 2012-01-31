@@ -45,6 +45,10 @@
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#ifdef __FreeBSD__
+#include <net/if.h> // For struct ifreq
+#include <sys/sockio.h> // For SIOCGIADDR
+#endif
 
 #include "safe-alloc.h"
 #include "read-file.h"
@@ -54,14 +58,18 @@
 #include "dutil.h"
 #include "dutil_linux.h"
 
+#ifndef __FreeBSD__
 #include <net/if.h>
 #include <netlink/socket.h>
 #include <netlink/cache.h>
 #include <netlink/route/addr.h>
 #include <netlink/route/link.h>
+#endif
 
+#ifndef __FreeBSD__
 /* For some reason, the headers for libnl vlan functions aren't installed */
 extern int rtnl_link_vlan_get_id(struct rtnl_link *link);
+#endif
 
 /*
  * Executing external programs
@@ -736,9 +744,15 @@ int if_hwaddr(struct netcf *ncf, const char *intf,
     MEMZERO(&ifr, 1);
     strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
     ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
+#ifdef __FreeBSD__
+    ret = ioctl(ncf->driver->ioctl_fd, SIOCGIFADDR, &ifr);
+    memcpy(mac,ifr.ifr_addr.sa_data,6);
+    format_mac_addr(mac,buflen, (unsigned char *)ifr.ifr_addr.sa_data,6);
+#else
     ret = ioctl(ncf->driver->ioctl_fd, SIOCGIFHWADDR, &ifr);
     memcpy(mac,ifr.ifr_hwaddr.sa_data,6);
     format_mac_addr(mac,buflen, (unsigned char *)ifr.ifr_hwaddr.sa_data,6);
+#endif
     return ret;
 }
 
@@ -794,6 +808,7 @@ done:
 }
 
 
+#ifndef __FreeBSD__
 int netlink_init(struct netcf *ncf) {
 
     ncf->driver->nl_sock = nl_handle_alloc();
@@ -842,6 +857,7 @@ int netlink_close(struct netcf *ncf) {
     }
     return 0;
 }
+#endif
 
 
 static void add_type_specific_info(struct netcf *ncf,
@@ -999,9 +1015,11 @@ static void add_ethernet_info(struct netcf *ncf,
         = { doc, root, NULL, ncf };
     struct rtnl_link *filter_link = NULL;
 
+#ifndef __FreeBSD__
     /* if interface isn't currently available, nothing to add */
     if (ifindex == RTNL_LINK_NOT_FOUND)
         return;
+#endif
 
     filter_link = rtnl_link_alloc();
     ERR_NOMEM(filter_link == NULL, ncf);
@@ -1046,8 +1064,10 @@ static void add_vlan_info_cb(struct nl_object *obj, void *arg) {
         return;
 
     l_link = rtnl_link_get_link(iflink);
+#ifndef __FreeBSD__
     if (l_link == RTNL_LINK_NOT_FOUND)
         return;
+#endif
 
     master_link = rtnl_link_get(nl_object_get_cache(obj), l_link);
     if (master_link == NULL)
@@ -1071,9 +1091,11 @@ static void add_vlan_info_cb(struct nl_object *obj, void *arg) {
 
     /* Add in type-specific info of master interface */
     master_ifindex = rtnl_link_name2i(ncf->driver->link_cache, master_name);
+#ifndef __FreeBSD__
     ERR_THROW((master_ifindex == RTNL_LINK_NOT_FOUND), ncf, ENETLINK,
               "couldn't find ifindex for vlan master interface `%s`",
               master_name);
+#endif
     add_type_specific_info(ncf, master_name, master_ifindex,
                            cb_data->doc, interface_node);
 
@@ -1088,9 +1110,11 @@ static void add_vlan_info(struct netcf *ncf,
         = { doc, root, NULL, ncf };
     struct rtnl_link *filter_link = NULL;
 
+#ifndef __FreeBSD__
     /* if interface isn't currently available, nothing to add */
     if (ifindex == RTNL_LINK_NOT_FOUND)
         return;
+#endif
 
     filter_link = rtnl_link_alloc();
     ERR_NOMEM(filter_link == NULL, ncf);
@@ -1165,6 +1189,7 @@ static void add_bond_info_cb(struct nl_object *obj,
 
     xmlNodePtr interface_node;
 
+#ifndef __FreeBSD__
     /* If this is a slave link, and the master is master_ifindex, add the
      * interface info to the bond.
      */
@@ -1172,6 +1197,7 @@ static void add_bond_info_cb(struct nl_object *obj,
     if (!(rtnl_link_get_flags(iflink) & IFF_SLAVE)
         || rtnl_link_get_master(iflink) != cb_data->master_ifindex)
         return;
+#endif
 
     cb_data->bond = xml_node(cb_data->doc, cb_data->root, "bond");
     ERR_NOMEM(cb_data->bond == NULL, ncf);
@@ -1203,9 +1229,11 @@ static void add_bond_info(struct netcf *ncf,
     struct nl_bond_callback_data cb_data
         = { doc, root, NULL, ifindex, ncf };
 
+#ifndef __FreeBSD__
     /* if interface isn't currently available, nothing to add */
     if (ifindex == RTNL_LINK_NOT_FOUND)
         return;
+#endif
 
     nl_cache_foreach(ncf->driver->link_cache, add_bond_info_cb, &cb_data);
 }
