@@ -46,6 +46,18 @@ int drv_init(struct netcf *ncf) {
 
     if (ALLOC(ncf->driver) < 0)
 		return -1;
+   if (ALLOC(ncf->driver) < 0)
+        return -1;
+
+    ncf->driver->ioctl_fd = -1;
+
+    /* open a socket for interface ioctls */
+    ncf->driver->ioctl_fd = init_ioctl_fd(ncf);
+    if (ncf->driver->ioctl_fd < 0) {
+        printf("%s:Unable to opend device\n", __func__);
+        return -1;
+    }
+
     return 0;
 
 }
@@ -67,7 +79,8 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
     int nint = 0, count;
     struct augeas *aug = NULL;
     char buffer[1024];
-    char *write_here = buffer, *buffer_copy, *readhere, *last;
+    char *write_here = buffer, *buffer_copy, *readhere;
+    char **temp;
 	FILE *hackery;
 
     aug = get_augeas(ncf);
@@ -84,28 +97,18 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
     }
     pclose(hackery);
 
-    buffer_copy = strdup(buffer);
-
-    for (readhere = strtok_r(buffer_copy, " ", &last);
-         readhere;
-         readhere = strtok_r(NULL, " ", &last)) {
-        printf("found dev(%s)\n", readhere);
-        nint++;
-    }
-    ALLOC_N(*intf, 1);
 
 	/* TODO filter out slave interfaces */
-    strncpy(buffer_copy, buffer, strlen(buffer));
-    count=0;
-    for (readhere = strtok_r(buffer_copy, " ", &last);
-         readhere;
-         readhere = strtok_r(NULL, " ", &last))
-    {
-
-        ALLOC_N((*intf)[count], strlen(readhere));
-        strncpy((*intf)[count], readhere, strlen(readhere));
-        count++;
+    buffer_copy = buffer;
+    while ((readhere = strsep(&buffer_copy, " ")) != NULL) {
+        temp[nint]=strdup(readhere);
+        nint++;
     }
+    intf = &temp;
+
+    for (count =0; count < nint; count++)
+        printf("found dev(%s) intf(%p)\n", (*intf)[count], intf);
+
     return nint;
  error:
     free_matches(nint, intf);
@@ -126,11 +129,15 @@ static int list_interface_ids(struct netcf *ncf,
     if (!names) {
         maxnames = nint;    /* if not returning list, ignore maxnames too */
     }
+    for (result = 0; result < nint; result++)
+        printf("%s: intf[%d] %s\n", __func__, result, intf[result]);
+
     for (result = 0; (result < nint) && (nqualified < maxnames); result++) {
             const char *name;
             int is_qualified = ((flags & (NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE))
                              == (NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE));
 
+            printf("looking up intf[%d](%s)\n", result, intf[result]);
             name = intf[result];
             printf("looking up name(%s)\n", name);
 
@@ -138,17 +145,24 @@ static int list_interface_ids(struct netcf *ncf,
                 int is_active = if_is_active(ncf, name);
                 if ((is_active && (flags & NETCF_IFACE_ACTIVE))
                     || ((!is_active) && (flags & NETCF_IFACE_INACTIVE))) {
-
+                    printf("%s: down here\n", __func__);
                     is_qualified = 1;
                 }
             }
 
             if (is_qualified) {
+                if (!names) {
+                    names = malloc(sizeof(char *));
+                }
                 if (names) {
                     names[nqualified] = strdup(name);
                     ERR_NOMEM(names[nqualified] == NULL, ncf);
+                    printf("%s: names assigned names[nqualified](%s)\n",
+                            __func__, names[nqualified]);
                 }
+                printf("%s: is_qualified(%d) names(%s)\n", __func__, is_qualified, names[nqualified]);
                 nqualified++;
+                printf("%s: here\n", __func__);
             }
     }
     free_matches(nint, &intf);

@@ -29,3 +29,6 @@ void free_matches(int nint, char ***intf);
 
 /* Check if the interface INTF is up using an ioctl call */
 int if_is_active(struct netcf *ncf, const char *intf);
+
+/* Get a file descriptor to a ioctl socket */
+int init_ioctl_fd(struct netcf *ncf);

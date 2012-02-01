@@ -721,8 +721,13 @@ int if_is_active(struct netcf *ncf, const char *intf) {
     strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
     ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
     if (ioctl(ncf->driver->ioctl_fd, SIOCGIFFLAGS, &ifr))  {
+        printf("%s:  ncf(%p), ncf->driver(%p), ncf->driver->ioctl_fd(%p)\n",
+            __func__, ncf, ncf->driver, ncf->driver->ioctl_fd);
         return 0;
     }
+    printf("%s:  made it here intf(%s)\n", __func__, intf);
+    if ((ifr.ifr_flags & IFF_UP) == IFF_UP)
+        printf("%s: intf(%s) is IFF_UP\n", __func__, intf);
     return ((ifr.ifr_flags & IFF_UP) == IFF_UP);
 }
 
