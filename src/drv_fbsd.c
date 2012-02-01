@@ -34,6 +34,7 @@
 #include <spawn.h>
 #include <stdbool.h>
 #include <string.h>
+#include <wctype.h>
 
 #include "safe-alloc.h"
 #include "ref.h"
@@ -63,23 +64,49 @@ void drv_entry (struct netcf *ncf ATTRIBUTE_UNUSED) {
 }
 
 static int list_interfaces(struct netcf *ncf, char ***intf) {
-    int nint = 0, result = 0;
+    int nint = 0, count;
     struct augeas *aug = NULL;
+    char buffer[1024];
+    char *write_here = buffer, *buffer_copy, *readhere, *last;
 	FILE *hackery;
 
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
-    /* Look for all interfaces */
-    hackery = popen("r+","ifconfig|grep flags|awk '{print $1}'|wc -l"); // HACKERY
-	fread(&nint, sizeof(nint), 1, hackery);
-	printf ("nint == %d\n", nint);
-	pclose(hackery);
-    ERR_BAIL(ncf);
-    result = nint;
+    memset(buffer, '\0', 1024);
+    hackery = popen("/sbin/ifconfig -l", "r+"); // HACKERY
+
+    while ( !feof(hackery) ) {
+        fread(write_here, sizeof(char), 1, hackery);
+        if (*write_here == '\n')
+            *write_here = '\0';
+        write_here++;
+    }
+    pclose(hackery);
+
+    buffer_copy = strdup(buffer);
+
+    for (readhere = strtok_r(buffer_copy, " ", &last);
+         readhere;
+         readhere = strtok_r(NULL, " ", &last)) {
+        printf("found dev(%s)\n", readhere);
+        nint++;
+    }
+    ALLOC_N(*intf, 1);
 
 	/* TODO filter out slave interfaces */
-    return result;
+    strncpy(buffer_copy, buffer, strlen(buffer));
+    count=0;
+    for (readhere = strtok_r(buffer_copy, " ", &last);
+         readhere;
+         readhere = strtok_r(NULL, " ", &last))
+    {
+
+        ALLOC_N((*intf)[count], strlen(readhere));
+        strncpy((*intf)[count], readhere, strlen(readhere));
+        count++;
+    }
+    return nint;
  error:
     free_matches(nint, intf);
     return -1;
@@ -105,6 +132,7 @@ static int list_interface_ids(struct netcf *ncf,
                              == (NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE));
 
             name = intf[result];
+            printf("looking up name(%s)\n", name);
 
             if (!is_qualified) {
                 int is_active = if_is_active(ncf, name);

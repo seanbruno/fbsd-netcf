@@ -254,6 +254,7 @@ xmlRelaxNGPtr rng_parse(struct netcf *ncf, const char *fname) {
     ERR_NOMEM(r < 0, ncf);
 
     if (access(path, R_OK) < 0) {
+        printf("%s: fail for path(%s)\n", __func__, path);
         report_error(ncf, NETCF_EFILE,
                      "File %s does not exist or is not readable", path);
         goto error;
