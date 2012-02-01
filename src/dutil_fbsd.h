@@ -20,3 +20,12 @@ struct driver {
     unsigned int       augeas_xfm_num_tables;
     const struct augeas_xfm_table **augeas_xfm_tables;
 };
+
+/* Get or create the augeas instance from NCF */
+struct augeas *get_augeas(struct netcf *ncf);
+
+/* Free matches from aug_match (or aug_submatch) */
+void free_matches(int nint, char ***intf);
+
+/* Check if the interface INTF is up using an ioctl call */
+int if_is_active(struct netcf *ncf, const char *intf);

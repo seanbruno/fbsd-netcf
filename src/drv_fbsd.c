@@ -72,8 +72,8 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
 
     /* Look for all interfaces */
     hackery = popen("r+","ifconfig|grep flags|awk '{print $1}'|wc -l"); // HACKERY
-	read(&nint, sizeof(nint), 1, hackery);
-	printf ("nint == %d\n");
+	fread(&nint, sizeof(nint), 1, hackery);
+	printf ("nint == %d\n", nint);
 	pclose(hackery);
     ERR_BAIL(ncf);
     result = nint;
@@ -144,8 +144,8 @@ int drv_num_of_interfaces(struct netcf *ncf, unsigned int flags) {
 
 
 struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
-	int result;
 
+    printf("%s: attempted to lookup %s\n", __func__, name);
     ERR_THROW(1 == 1, ncf, EOTHER, "not implemented on this platform");
 error:
     return NULL;
@@ -175,11 +175,10 @@ error:
 
 
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str ATTRIBUTE_UNUSED) {
-	int result = 0;
 
     ERR_THROW(1 == 1, ncf, EOTHER, "not implemented on this platform");
 error:
-    return result;
+    return NULL;
 }
 
 int drv_undefine(struct netcf_if *nif) {
@@ -192,19 +191,17 @@ error:
 
 
 char *drv_xml_desc(struct netcf_if *nif) {
-	int result = 0;
 
     ERR_THROW(1 == 1, nif->ncf, EOTHER, "not implemented on this platform");
 error:
-    return result;
+    return NULL;
 }
 
 char *drv_xml_state(struct netcf_if *nif) {
-	int result = 0;
 
     ERR_THROW(1 == 1, nif->ncf, EOTHER, "not implemented on this platform");
 error:
-    return result;
+    return NULL;
 }
 
 int drv_if_status(struct netcf_if *nif, unsigned int *flags ATTRIBUTE_UNUSED) {
