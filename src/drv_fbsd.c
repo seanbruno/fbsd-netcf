@@ -80,7 +80,6 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
     struct augeas *aug = NULL;
     char buffer[1024];
     char *write_here = buffer, *buffer_copy, *readhere;
-    char **temp;
 	FILE *hackery;
 
     aug = get_augeas(ncf);
@@ -99,15 +98,20 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
 
 
 	/* TODO filter out slave interfaces */
-    buffer_copy = buffer;
+    buffer_copy = strdup(buffer);
     while ((readhere = strsep(&buffer_copy, " ")) != NULL) {
-        temp[nint]=strdup(readhere);
         nint++;
     }
-    intf = &temp;
 
-    for (count =0; count < nint; count++)
-        printf("found dev(%s) intf(%p)\n", (*intf)[count], intf);
+    *intf = calloc(nint,sizeof(char *));
+    free(buffer_copy);
+    buffer_copy = strdup(buffer);
+
+    count = 0;
+    while ((readhere = strsep(&buffer_copy, " ")) != NULL) {
+        (*intf)[count] = strndup(readhere, strlen(readhere));
+        count++;
+    }
 
     return nint;
  error:
@@ -129,23 +133,18 @@ static int list_interface_ids(struct netcf *ncf,
     if (!names) {
         maxnames = nint;    /* if not returning list, ignore maxnames too */
     }
-    for (result = 0; result < nint; result++)
-        printf("%s: intf[%d] %s\n", __func__, result, intf[result]);
 
     for (result = 0; (result < nint) && (nqualified < maxnames); result++) {
             const char *name;
             int is_qualified = ((flags & (NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE))
                              == (NETCF_IFACE_ACTIVE|NETCF_IFACE_INACTIVE));
 
-            printf("looking up intf[%d](%s)\n", result, intf[result]);
             name = intf[result];
-            printf("looking up name(%s)\n", name);
 
             if (!is_qualified) {
                 int is_active = if_is_active(ncf, name);
                 if ((is_active && (flags & NETCF_IFACE_ACTIVE))
                     || ((!is_active) && (flags & NETCF_IFACE_INACTIVE))) {
-                    printf("%s: down here\n", __func__);
                     is_qualified = 1;
                 }
             }
@@ -157,12 +156,8 @@ static int list_interface_ids(struct netcf *ncf,
                 if (names) {
                     names[nqualified] = strdup(name);
                     ERR_NOMEM(names[nqualified] == NULL, ncf);
-                    printf("%s: names assigned names[nqualified](%s)\n",
-                            __func__, names[nqualified]);
                 }
-                printf("%s: is_qualified(%d) names(%s)\n", __func__, is_qualified, names[nqualified]);
                 nqualified++;
-                printf("%s: here\n", __func__);
             }
     }
     free_matches(nint, &intf);
@@ -181,7 +176,7 @@ int drv_list_interfaces(struct netcf *ncf,
 
 
 int drv_num_of_interfaces(struct netcf *ncf, unsigned int flags) {
-    return list_interface_ids(ncf, 0, NULL, flags);
+    return (list_interface_ids(ncf, 0, NULL, flags));
 }
 
 

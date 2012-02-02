@@ -148,13 +148,17 @@ static int cmd_list(ATTRIBUTE_UNUSED const struct command *cmd) {
     }
 
     nint = ncf_num_of_interfaces(ncf, flags);
-    if (nint < 0)
+    if (nint < 0) {
+		printf("%s: after num_of_int nint(%d)\n", __func__, nint);
         return CMD_RES_ERR;
+	}
     if (ALLOC_N(intf, nint) < 0)
         return CMD_RES_ENOMEM;
     nint = ncf_list_interfaces(ncf, nint, intf, flags);
-    if (nint < 0)
+    if (nint < 0) {
+		printf("%s: nint(%d)\n", __func__, nint);
         return CMD_RES_ERR;
+	}
     for (int i=0; i < nint; i++) {
         if (opt_present(cmd, "macs")) {
             struct netcf_if *nif = NULL;
