@@ -76,41 +76,29 @@ void drv_entry (struct netcf *ncf ATTRIBUTE_UNUSED) {
 }
 
 static int list_interfaces(struct netcf *ncf, char ***intf) {
-    int nint = 0, count;
+    int nint = 0;
     struct augeas *aug = NULL;
-    char buffer[1024];
-    char *write_here = buffer, *buffer_copy, *readhere;
-	FILE *hackery;
+    FILE *hackery;
+    char int_list[1024];
+    char *int_list_ptr = int_list;  /* list of interfaces */
+    char *int_name;		    /* name of an interface */
 
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
 
-    memset(buffer, '\0', 1024);
     hackery = popen("/sbin/ifconfig -l", "r+"); // HACKERY
 
-    while ( !feof(hackery) ) {
-        fread(write_here, sizeof(char), 1, hackery);
-        if (*write_here == '\n')
-            *write_here = '\0';
-        write_here++;
-    }
-    pclose(hackery);
+    /* get the list out from file to int_list */
+    while (fgets(int_list, sizeof(int_list)-1, hackery) != NULL);
 
+    *intf = calloc(strlen(int_list), sizeof(char*));
+    if (intf == NULL)
+	printf("calloc failed in %s\n", __func__);
 
-	/* TODO filter out slave interfaces */
-    buffer_copy = strdup(buffer);
-    while ((readhere = strsep(&buffer_copy, " ")) != NULL) {
-        nint++;
-    }
-
-    *intf = calloc(nint,sizeof(char *));
-    free(buffer_copy);
-    buffer_copy = strdup(buffer);
-
-    count = 0;
-    while ((readhere = strsep(&buffer_copy, " ")) != NULL) {
-        (*intf)[count] = strndup(readhere, strlen(readhere));
-        count++;
+    /* populate intf to contain list of interfaces */
+    while ((int_name = strsep(&int_list_ptr, " ")) != NULL) {
+	(*intf)[nint] = strndup(int_name, strlen(int_name));
+	nint++;
     }
 
     return nint;
