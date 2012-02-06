@@ -257,7 +257,8 @@ int run_program(struct netcf *ncf, const char *const *argv, char **output)
     exec_program(ncf, argv, argv_str, &childpid, &outfd);
     ERR_BAIL(ncf);
 
-#ifdef __FreeBSD__
+    printf("Attempting to execute %s\n", argv_str);
+#if __FreeBSD__
     if ( (outfile = fdopen(outfd, "r")) == NULL) {
         strerror_r(errno, errbuf, sizeof(errbuf));
         report_error(ncf, NETCF_EEXEC,

@@ -170,10 +170,21 @@ int drv_num_of_interfaces(struct netcf *ncf, unsigned int flags) {
 
 struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
 
-    printf("%s: attempted to lookup %s\n", __func__, name);
-    ERR_THROW(1 == 1, ncf, EOTHER, "not implemented on this platform");
-error:
-    return NULL;
+    struct netcf_if *nif = NULL;
+    char *name_dup = NULL;
+
+    name_dup = strdup(name);
+    ERR_NOMEM(name_dup == NULL, ncf);
+
+    nif = make_netcf_if(ncf, name_dup);
+    ERR_BAIL(ncf);
+    goto done;
+
+ error:
+    unref(nif, netcf_if);
+    FREE(name_dup);
+ done:
+    return nif;
 }
 
 const char *drv_mac_string(struct netcf_if *nif) {
@@ -183,19 +194,21 @@ error:
 }
 
 int drv_if_down(struct netcf_if *nif) {
-	int result = 0;
+    const char *ifdownformat = "/sbin/ifconfig %s down";
+    char cmdbuffer[64];
 
-    ERR_THROW(1 == 1, nif->ncf, EOTHER, "not implemented on this platform");
-error:
-    return result;
+    sprintf(cmdbuffer, ifdownformat, nif->name);
+    system (cmdbuffer);
+    return 0;
 }
 
 int drv_if_up(struct netcf_if *nif) {
-	int result = 0;
+    const char *ifupformat = "/sbin/ifconfig %s up";
+    char cmdbuffer[64];
 
-    ERR_THROW(1 == 1, nif->ncf, EOTHER, "not implemented on this platform");
-error:
-    return result;
+    sprintf(cmdbuffer, ifupformat, nif->name);
+    system (cmdbuffer);
+    return 0;
 }
 
 
