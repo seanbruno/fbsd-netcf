@@ -816,6 +816,7 @@ int if_hwaddr(struct netcf *ncf, const char *intf,
 }
 
 
+#ifndef __FreeBSD__
 static int if_bridge_phys_name(struct netcf *ncf,
                                const char *intf, char ***phys_names) {
     /* We can learn the name of the physical interface associated with
@@ -865,6 +866,7 @@ done:
     return ret;
 
 }
+#endif
 
 
 #ifndef __FreeBSD__
@@ -919,9 +921,11 @@ int netlink_close(struct netcf *ncf) {
 #endif
 
 
+#ifndef __FreeBSD__
 static void add_type_specific_info(struct netcf *ncf,
                                    const char *ifname, int ifindex,
                                    xmlDocPtr doc, xmlNodePtr root);
+#endif
 
 /* Data that needs to be preserved between calls to the libnl iterator
  * callback.
@@ -1327,6 +1331,7 @@ static void add_bond_info(struct netcf *ncf,
 #endif
 
 
+#ifndef __FreeBSD__
 static void add_type_specific_info(struct netcf *ncf,
                                    const char *ifname, int ifindex,
                                    xmlDocPtr doc, xmlNodePtr root) {
@@ -1365,6 +1370,7 @@ static void add_type_specific_info(struct netcf *ncf,
 error:
     return;
 }
+#endif
 
 #ifndef __FreeBSD__
 void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {

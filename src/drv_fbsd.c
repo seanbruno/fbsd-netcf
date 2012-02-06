@@ -230,11 +230,18 @@ error:
 }
 
 int drv_if_status(struct netcf_if *nif, unsigned int *flags ATTRIBUTE_UNUSED) {
-	int result = 0;
+    int is_active;
 
-    ERR_THROW(1 == 1, nif->ncf, EOTHER, "not implemented on this platform");
+    ERR_THROW(flags == NULL, nif->ncf, EOTHER, "NULL pointer for flags in ncf_if_status");
+    *flags = 0;
+    is_active = if_is_active(nif->ncf, nif->name);
+    if (is_active)
+        *flags |= NETCF_IFACE_ACTIVE;
+    else
+        *flags |= NETCF_IFACE_INACTIVE;
+    return 0;
 error:
-    return result;
+    return -1;
 }
 
 int drv_lookup_by_mac_string(struct netcf *ncf,
