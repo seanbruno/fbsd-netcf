@@ -90,6 +90,11 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
 
     /* get the list out from file to int_list */
     while (fgets(int_list, sizeof(int_list)-1, hackery) != NULL);
+    pclose(hackery);
+    /* Strip terminating newline */
+    if (int_list[strlen(int_list) - 1] == '\n')
+        int_list[strlen(int_list) - 1] = '\0';
+
     *intf = calloc(strlen(int_list), sizeof(char*));
     if (intf == NULL) {
 	    printf("calloc failed in %s\n", __func__);
@@ -200,8 +205,10 @@ const char *drv_mac_string(struct netcf_if *nif) {
 
     if (strlen(macaddr) < strlen("00:00:00:00:00:00"))
         nif->mac = NULL;
-    else
+    else {
         nif->mac = strdup(macaddr);
+        nif->mac[(strlen(nif->mac)-1)]='\0'; // strip out newline
+    }
     
     return nif->mac;
 }
