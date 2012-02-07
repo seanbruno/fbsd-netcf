@@ -90,17 +90,17 @@ static int list_interfaces(struct netcf *ncf, char ***intf) {
 
     /* get the list out from file to int_list */
     while (fgets(int_list, sizeof(int_list)-1, hackery) != NULL);
-
     *intf = calloc(strlen(int_list), sizeof(char*));
-    if (intf == NULL)
-	printf("calloc failed in %s\n", __func__);
+    if (intf == NULL) {
+	    printf("calloc failed in %s\n", __func__);
+        goto error;
+    }
 
     /* populate intf to contain list of interfaces */
     while ((int_name = strsep(&int_list_ptr, " ")) != NULL) {
-	(*intf)[nint] = strndup(int_name, strlen(int_name));
-	nint++;
+	    (*intf)[nint] = strndup(int_name, strlen(int_name));
+	    nint++;
     }
-
     return nint;
  error:
     free_matches(nint, intf);
@@ -198,8 +198,10 @@ const char *drv_mac_string(struct netcf_if *nif) {
     while (fgets(macaddr, sizeof(macaddr)-1, cmd) != NULL);
     pclose(cmd);
 
-    printf("%s: %s mac addr is (%s)\n", __func__, nif->name, macaddr);
-    nif->mac = strdup(macaddr);
+    if (strlen(macaddr) < strlen("00:00:00:00:00:00"))
+        nif->mac = NULL;
+    else
+        nif->mac = strdup(macaddr);
     
     return nif->mac;
 }

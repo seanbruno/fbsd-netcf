@@ -136,7 +136,7 @@ static const char *arg_value(const struct command *cmd, const char *name) {
 }
 
 static int cmd_list(ATTRIBUTE_UNUSED const struct command *cmd) {
-    int nint;
+    int nint = -1;
     char **intf;
     unsigned int flags = NETCF_IFACE_ACTIVE;
 
