@@ -44,7 +44,7 @@
 
 int drv_init(struct netcf *ncf) {
 
-    if (ALLOC(ncf->driver) < 0)
+   if (ALLOC(ncf->driver) < 0)
 		return -1;
    if (ALLOC(ncf->driver) < 0)
         return -1;
@@ -54,7 +54,7 @@ int drv_init(struct netcf *ncf) {
     /* open a socket for interface ioctls */
     ncf->driver->ioctl_fd = init_ioctl_fd(ncf);
     if (ncf->driver->ioctl_fd < 0) {
-        printf("%s:Unable to opend device\n", __func__);
+        printf("%s:Unable to open device\n", __func__);
         return -1;
     }
 
@@ -188,9 +188,20 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
 }
 
 const char *drv_mac_string(struct netcf_if *nif) {
-    ERR_THROW(1 == 1, nif->ncf, EOTHER, "not implemented on this platform");
-error:
-    return NULL;
+    const char *ifcfgmacformat = "/sbin/ifconfig %s|grep ether|awk '{print $2}'";
+    char cmdbuffer[64];
+    char macaddr[32];
+    FILE *cmd;
+
+    sprintf (cmdbuffer, ifcfgmacformat, nif->name);
+    cmd = popen(cmdbuffer, "r+"); // HACKERY
+    while (fgets(macaddr, sizeof(macaddr)-1, cmd) != NULL);
+    pclose(cmd);
+
+    printf("%s: %s mac addr is (%s)\n", __func__, nif->name, macaddr);
+    nif->mac = strdup(macaddr);
+    
+    return nif->mac;
 }
 
 int drv_if_down(struct netcf_if *nif) {

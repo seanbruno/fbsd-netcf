@@ -46,7 +46,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #ifdef __FreeBSD__
+#include <sys/socket.h> // For AF_INET and the ilk
 #include <net/if.h> // For struct ifreq
+#include <net/if_types.h>
 #include <sys/sockio.h> // For SIOCGIADDR
 #endif
 
