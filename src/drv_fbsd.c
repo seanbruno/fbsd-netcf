@@ -28,7 +28,6 @@
 #include <config.h>
 #include <internal.h>
 
-#include <augeas.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <spawn.h>
@@ -99,12 +98,9 @@ static int list_interfaces(struct netcf *ncf ATTRIBUTE_UNUSED, char ***intf) {
 static int list_interface_ids(struct netcf *ncf,
                               int maxnames,
                               char **names, unsigned int flags ATTRIBUTE_UNUSED) {
-    struct augeas *aug = NULL;
     int nint = 0, nqualified = 0, result = 0;
     char **intf = NULL;
 
-    aug = get_augeas(ncf);
-    ERR_BAIL(ncf);
     nint = list_interfaces(ncf, &intf);
     ERR_BAIL(ncf);
     if (!names) {

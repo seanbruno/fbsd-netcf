@@ -104,7 +104,7 @@ fi
 AM_CONDITIONAL([NETCF_INIT_SCRIPT_RED_HAT],
                [test x$with_driver = xredhat])
 
-if test "x$with_driver" != "xmswindows" || test "x$with_driver" != "xfbsd"
+if test "x$with_driver" != "xmswindows" && test "x$with_driver" != "xfbsd"
 then
 	PKG_CHECK_MODULES([LIBNL], [libnl-1])
 fi

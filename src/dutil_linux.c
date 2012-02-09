@@ -23,7 +23,9 @@
 #include <config.h>
 #include <internal.h>
 
+#ifndef __FreeBSD__
 #include <augeas.h>
+#endif
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -351,6 +353,7 @@ void run1(struct netcf *ncf, const char *prog, const char *arg) {
     run_program(ncf, argv, NULL);
 }
 
+#ifndef __FreeBSD__
 /*
  * augeas-related utilities
  */
@@ -574,6 +577,7 @@ int aug_fmt_match(struct netcf *ncf, char ***matches, const char *fmt, ...) {
     free(path);
     return -1;
 }
+#endif
 
 void free_matches(int nint, char ***intf) {
     if (*intf != NULL) {
@@ -583,6 +587,7 @@ void free_matches(int nint, char ***intf) {
     }
 }
 
+#ifndef __FreeBSD__
 /* Returns a list of all interfaces with MAC address MAC */
 int aug_match_mac(struct netcf *ncf, const char *mac, char ***matches) {
     int nmatches;
@@ -692,6 +697,7 @@ void modprobed_unalias_bond(struct netcf *ncf, const char *name) {
  error:
     FREE(path);
 }
+#endif
 
 /*
  * ioctl and netlink-related utilities
