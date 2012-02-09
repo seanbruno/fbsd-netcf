@@ -104,13 +104,9 @@ fi
 AM_CONDITIONAL([NETCF_INIT_SCRIPT_RED_HAT],
                [test x$with_driver = xredhat])
 
-if test "x$with_driver" != "xmswindows"
+if test "x$with_driver" != "xmswindows" || test "x$with_driver" != "xfbsd"
 then
-    PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.5.0])
-    if test "x$with_driver" != "xfbsd"
-    then
-        PKG_CHECK_MODULES([LIBNL], [libnl-1])
-    fi
+	PKG_CHECK_MODULES([LIBNL], [libnl-1])
 fi
 
 NETCF_LIBDEPS=$(echo $LIBAUGEAS_LIBS $LIBEXSLT_LIBS $LIBXSLT_LIBS $LIBXML_LIBS $LIBNL_LIBS)
