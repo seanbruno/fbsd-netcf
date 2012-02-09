@@ -35,6 +35,10 @@
 #include <stdbool.h>
 #include <string.h>
 #include <wctype.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
+#include <net/if.h>
 
 #include "safe-alloc.h"
 #include "ref.h"
@@ -75,41 +79,21 @@ void drv_close(struct netcf *ncf) {
 void drv_entry (struct netcf *ncf ATTRIBUTE_UNUSED) {
 }
 
-static int list_interfaces(struct netcf *ncf, char ***intf) {
+static int list_interfaces(struct netcf *ncf ATTRIBUTE_UNUSED, char ***intf) {
     int nint = 0;
-    struct augeas *aug = NULL;
-    FILE *hackery;
-    char int_list[1024];
-    char *int_list_ptr = int_list;  /* list of interfaces */
-    char *int_name;		    /* name of an interface */
+    *intf = calloc(1024, sizeof(char*));
+    struct ifaddrs *ifap, *ifa;
 
-    aug = get_augeas(ncf);
-    ERR_BAIL(ncf);
-
-    hackery = popen("/sbin/ifconfig -l", "r+"); // HACKERY
-
-    /* get the list out from file to int_list */
-    while (fgets(int_list, sizeof(int_list)-1, hackery) != NULL);
-    pclose(hackery);
-    /* Strip terminating newline */
-    if (int_list[strlen(int_list) - 1] == '\n')
-        int_list[strlen(int_list) - 1] = '\0';
-
-    *intf = calloc(strlen(int_list), sizeof(char*));
-    if (intf == NULL) {
-	    printf("calloc failed in %s\n", __func__);
-        goto error;
+    getifaddrs(&ifap);
+    for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+        if ((ifa->ifa_addr->sa_family == AF_LINK) &&
+           ((ifa->ifa_flags & IFF_CANTCONFIG) == 0)) {
+	        (*intf)[nint++] = strndup(ifa->ifa_name, strlen(ifa->ifa_name)+1);
+	    }
     }
+    freeifaddrs(ifap);
 
-    /* populate intf to contain list of interfaces */
-    while ((int_name = strsep(&int_list_ptr, " ")) != NULL) {
-	    (*intf)[nint] = strndup(int_name, strlen(int_name));
-	    nint++;
-    }
     return nint;
- error:
-    free_matches(nint, intf);
-    return -1;
 }
 
 static int list_interface_ids(struct netcf *ncf,
