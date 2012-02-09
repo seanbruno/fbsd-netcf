@@ -38,6 +38,9 @@
 #include <sys/socket.h>
 #include <ifaddrs.h>
 #include <net/if.h>
+#include <net/if_dl.h>
+#include <net/if_types.h>
+#include <net/ethernet.h>
 
 #include "safe-alloc.h"
 #include "ref.h"
@@ -78,6 +81,9 @@ void drv_close(struct netcf *ncf) {
 void drv_entry (struct netcf *ncf ATTRIBUTE_UNUSED) {
 }
 
+/*
+ * Populate intf with all interfaces and return total number of interfaces
+ */
 static int list_interfaces(struct netcf *ncf ATTRIBUTE_UNUSED, char ***intf) {
     int nint = 0;
     *intf = calloc(1024, sizeof(char*));
@@ -172,24 +178,28 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
     return nif;
 }
 
+/*
+ * For a given interface nif, return it's mac/ether address
+ */
 const char *drv_mac_string(struct netcf_if *nif) {
-    const char *ifcfgmacformat = "/sbin/ifconfig %s|grep ether|awk '{print $2}'";
-    char cmdbuffer[64];
-    char macaddr[32];
-    FILE *cmd;
+    struct ifaddrs *ifap, *ifa;
+    getifaddrs(&ifap);
+    struct sockaddr_dl *sdl;
 
-    sprintf (cmdbuffer, ifcfgmacformat, nif->name);
-    cmd = popen(cmdbuffer, "r+"); // HACKERY
-    while (fgets(macaddr, sizeof(macaddr)-1, cmd) != NULL);
-    pclose(cmd);
-
-    if (strlen(macaddr) < strlen("00:00:00:00:00:00"))
-        nif->mac = NULL;
-    else {
-        nif->mac = strdup(macaddr);
-        nif->mac[(strlen(nif->mac)-1)]='\0'; // strip out newline
+    for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+	sdl = (struct sockaddr_dl *) ifa->ifa_addr;
+	if (strncmp(nif->name, ifa->ifa_name, strlen(ifa->ifa_name)) == 0) {
+	    if (sdl != NULL && sdl->sdl_alen > 0)
+		if ((sdl->sdl_type == IFT_ETHER ||
+		     sdl->sdl_type == IFT_L2VLAN ||
+		     sdl->sdl_type == IFT_BRIDGE) &&
+		     sdl->sdl_alen == ETHER_ADDR_LEN) {
+		    nif->mac = strdup(ether_ntoa((struct ether_addr *)LLADDR(sdl)));
+		}
+	}
     }
-    
+    freeifaddrs(ifap);
+
     return nif->mac;
 }
 
