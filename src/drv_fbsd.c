@@ -310,64 +310,6 @@ error:
 }
 
 /*
- * Test interface
- */
-static int drv_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
-    xmlDocPtr ncf_doc = NULL, aug_doc = NULL;
-    int result = -1;
-
-    ncf_doc = parse_xml(ncf, ncf_xml);
-    ERR_BAIL(ncf);
-
-    rng_validate(ncf, ncf_doc);
-    ERR_BAIL(ncf);
-
-    *aug_xml = apply_stylesheet_to_string(ncf, ncf->driver->get, ncf_doc);
-    ERR_BAIL(ncf);
-
-    /* fallthrough intentional */
-    result = 0;
- error:
-    xmlFreeDoc(ncf_doc);
-    xmlFreeDoc(aug_doc);
-    return result;
-}
-
-/* Transform the Augeas XML AUG_XML into interface XML NCF_XML */
-static int drv_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
-    xmlDocPtr ncf_doc = NULL, aug_doc = NULL;
-    int result = -1;
-
-    aug_doc = parse_xml(ncf, aug_xml);
-    ERR_BAIL(ncf);
-
-    *ncf_xml = apply_stylesheet_to_string(ncf, ncf->driver->put, aug_doc);
-    ERR_BAIL(ncf);
-
-    /* fallthrough intentional */
-    result = 0;
- error:
-    xmlFreeDoc(ncf_doc);
-    xmlFreeDoc(aug_doc);
-    return result;
-}
-
-/*
- * Test interface
- */
-int ncf_get_aug(struct netcf *ncf, const char *ncf_xml, char **aug_xml) {
-    API_ENTRY(ncf);
-
-    return drv_get_aug(ncf, ncf_xml, aug_xml);
-}
-
-int ncf_put_aug(struct netcf *ncf, const char *aug_xml, char **ncf_xml) {
-    API_ENTRY(ncf);
-
-    return drv_put_aug(ncf, aug_xml, ncf_xml);
-}
-
-/*
  * Local variables:
  *  indent-tabs-mode: nil
  *  c-indent-level: 4

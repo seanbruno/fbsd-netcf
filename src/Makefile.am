@@ -12,7 +12,9 @@ lib_LTLIBRARIES = libnetcf.la
 bin_PROGRAMS = ncftool
 
 if ! NETCF_DRIVER_MSWINDOWS
+if ! NETCF_DRIVER_FBSD
 noinst_PROGRAMS = ncftransform
+endif
 endif
 
 DRIVER_SOURCES_COMMON = dutil.h dutil.c
@@ -83,8 +85,10 @@ ncftool_SOURCES = ncftool.c
 ncftool_LDADD = libnetcf.la $(READLINE_LIBS) $(GNULIB)
 
 if ! NETCF_DRIVER_MSWINDOWS
+if ! NETCF_DRIVER_FBSD
 ncftransform_SOURCES = ncftransform.c
 ncftransform_LDADD = libnetcf.la $(GNULIB)
+endif
 endif
 
 netcf.syms: netcf_public.syms netcf_private.syms
