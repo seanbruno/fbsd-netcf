@@ -50,28 +50,18 @@
 #include "dutil_fbsd.h"
 
 /*
- * Note: doing an SIOCIGIFFLAGS scribbles on the union portion
- * of the ifreq structure, which may confuse other parts of ifconfig.
- * Make a private copy so we can avoid that.
+ * Liberally ripped off from sbin/ifconfig/ifconfig.c
  */
 static int
-setifflags(const char *vname, int value)
+setifflags(const char *vname, int value, int ioctl_fd)
 {
     struct ifreq        my_ifr;
     int flags;
-    int s;
 
     memset(&my_ifr, 0, sizeof(my_ifr));
     (void) strlcpy(my_ifr.ifr_name, vname, sizeof(my_ifr.ifr_name));
 
-    if ((s = socket(my_ifr.ifr_addr.sa_family, SOCK_DGRAM, 0)) < 0 &&
-        (errno != EPROTONOSUPPORT ||
-         (s = socket(AF_LOCAL, SOCK_DGRAM, 0)) < 0)) {
-        printf("socket(family %u,SOCK_DGRAM", my_ifr.ifr_addr.sa_family);
-        return (-1);
-    }
-
-    if (ioctl(s, SIOCGIFFLAGS, (caddr_t)&my_ifr) < 0) {
+    if (ioctl(ioctl_fd, SIOCGIFFLAGS, (caddr_t)&my_ifr) < 0) {
         printf("ioctl (SIOCGIFFLAGS)");
         return(-1);
     }
@@ -84,7 +74,7 @@ setifflags(const char *vname, int value)
         flags |= value;
     my_ifr.ifr_flags = flags & 0xffff;
     my_ifr.ifr_flagshigh = flags >> 16;
-    if (ioctl(s, SIOCSIFFLAGS, (caddr_t)&my_ifr) < 0) {
+    if (ioctl(ioctl_fd, SIOCSIFFLAGS, (caddr_t)&my_ifr) < 0) {
         return(-1);
     }
     return 0;
@@ -246,14 +236,14 @@ const char *drv_mac_string(struct netcf_if *nif) {
 }
 
 int drv_if_down(struct netcf_if *nif) {
-    setifflags(nif->name, -IFF_UP);
+    setifflags(nif->name, -IFF_UP, nif->ncf->driver->ioctl_fd);
     return 0;
 }
 
 int drv_if_up(struct netcf_if *nif) {
 
 
-    setifflags(nif->name, IFF_UP);
+    setifflags(nif->name, IFF_UP, nif->ncf->driver->ioctl_fd);
     return 0;
 }
 
