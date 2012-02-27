@@ -28,12 +28,14 @@
 #include <config.h>
 #include <internal.h>
 
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <spawn.h>
 #include <stdbool.h>
 #include <string.h>
 #include <wctype.h>
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <ifaddrs.h>
@@ -42,6 +44,11 @@
 #include <net/if_types.h>
 #include <net/ethernet.h>
 #include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <net/if_var.h>
+#include <netinet/in_var.h>
 
 #include "safe-alloc.h"
 #include "ref.h"
@@ -275,9 +282,113 @@ error:
 
 
 char *drv_xml_desc(struct netcf_if *nif) {
+    struct ifreq my_ifr;
+    int s, mtu = 0;
+    char *mac;
+    int inet = 0;
+    int inet6 = 0;
+    struct sockaddr_in *sin;
 
-    ERR_THROW(1 == 1, nif->ncf, EOTHER, "not implemented on this platform");
-error:
+    struct sockaddr_in6 *sin6, null_sin6;
+    struct in6_ifreq ifr6;
+    int s6;
+    u_int32_t flags6;
+    struct in6_addrlifetime lifetime;
+    int error;
+    u_int32_t scopeid;
+    char addr_buf[MAXHOSTNAMELEN *2 + 1];   /* for getnameinfo() */
+
+    printf("name: %s\n", nif->name);
+
+    /* mac address */
+    mac = (char *)drv_mac_string(nif);
+    printf("mac: %s\n", mac);
+
+    /* mtu */
+    memset(&my_ifr, 0, sizeof(my_ifr));
+    (void) strlcpy(my_ifr.ifr_name, nif->name, sizeof(my_ifr.ifr_name));
+
+    if ((s = socket(my_ifr.ifr_addr.sa_family, SOCK_DGRAM, 0)) < 0 &&
+        (errno != EPROTONOSUPPORT ||
+         (s = socket(AF_LOCAL, SOCK_DGRAM, 0)) < 0)) {
+        printf("socket(family %u,SOCK_DGRAM", my_ifr.ifr_addr.sa_family);
+        return NULL;
+    }
+
+    if (ioctl(s, SIOCGIFMTU, &my_ifr) != -1) {
+	mtu = my_ifr.ifr_mtu;
+    }
+    printf("mtu: %d\n", mtu);
+
+    /* inet or inet6 ? */
+    struct ifaddrs *ifap, *ifa;
+    getifaddrs(&ifap);
+    struct sockaddr_dl *sdl;
+
+    for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+	sdl = (struct sockaddr_dl *) ifa->ifa_addr;
+	if (strncmp(nif->name, ifa->ifa_name, strlen(ifa->ifa_name)) == 0) {
+	    if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
+		inet = 1;
+		sin = (struct sockaddr_in *)ifa->ifa_addr;
+		if (sin != NULL)
+		    printf("inet: %s\n", inet_ntoa(sin->sin_addr));
+	    }
+	    if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET6) {
+		inet6 = 1;
+
+		memset(&null_sin6, 0, sizeof(null_sin6));
+
+		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+		if (sin6 == NULL)
+			return NULL;
+
+		strncpy(ifr6.ifr_name, ifa->ifa_name, sizeof(ifa->ifa_name));
+		if ((s6 = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
+			warn("socket(AF_INET6,SOCK_DGRAM)");
+			return NULL;
+		}
+		ifr6.ifr_addr = *sin6;
+		if (ioctl(s6, SIOCGIFAFLAG_IN6, &ifr6) < 0) {
+			warn("ioctl(SIOCGIFAFLAG_IN6)");
+			close(s6);
+			return NULL;
+		}
+		flags6 = ifr6.ifr_ifru.ifru_flags6;
+		memset(&lifetime, 0, sizeof(lifetime));
+		ifr6.ifr_addr = *sin6;
+		if (ioctl(s6, SIOCGIFALIFETIME_IN6, &ifr6) < 0) {
+			warn("ioctl(SIOCGIFALIFETIME_IN6)");
+			close(s6);
+			return NULL;
+		}
+		lifetime = ifr6.ifr_ifru.ifru_lifetime;
+		close(s6);
+
+		/* XXX: embedded link local addr check */
+		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr) &&
+		    *(u_short *)&sin6->sin6_addr.s6_addr[2] != 0) {
+			u_short iindex;
+
+			iindex = *(u_short *)&sin6->sin6_addr.s6_addr[2];
+			*(u_short *)&sin6->sin6_addr.s6_addr[2] = 0;
+			if (sin6->sin6_scope_id == 0)
+				sin6->sin6_scope_id = ntohs(iindex);
+		}
+		scopeid = sin6->sin6_scope_id;
+
+		error = getnameinfo((struct sockaddr *)sin6, sin6->sin6_len, addr_buf,
+				    sizeof(addr_buf), NULL, 0, NI_NUMERICHOST);
+		if (error != 0)
+			inet_ntop(AF_INET6, &sin6->sin6_addr, addr_buf,
+				  sizeof(addr_buf));
+		printf("inet6: %s\n", addr_buf);
+
+	    }
+	}
+    }
+    freeifaddrs(ifap);
+
     return NULL;
 }
 
