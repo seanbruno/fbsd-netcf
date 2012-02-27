@@ -72,6 +72,7 @@ setifflags(const char *vname, int value, int ioctl_fd)
         flags &= ~value;
     } else
         flags |= value;
+
     my_ifr.ifr_flags = flags & 0xffff;
     my_ifr.ifr_flagshigh = flags >> 16;
     if (ioctl(ioctl_fd, SIOCSIFFLAGS, (caddr_t)&my_ifr) < 0) {
@@ -241,8 +242,6 @@ int drv_if_down(struct netcf_if *nif) {
 }
 
 int drv_if_up(struct netcf_if *nif) {
-
-
     setifflags(nif->name, IFF_UP, nif->ncf->driver->ioctl_fd);
     return 0;
 }
@@ -293,15 +292,54 @@ error:
     return -1;
 }
 
-int drv_lookup_by_mac_string(struct netcf *ncf,
-			     const char *mac ATTRIBUTE_UNUSED,
-                             int maxifaces ATTRIBUTE_UNUSED,
-			     struct netcf_if **ifaces ATTRIBUTE_UNUSED)
+int drv_lookup_by_mac_string(struct netcf *ncf ATTRIBUTE_UNUSED,
+			     const char *mac, int maxifaces ATTRIBUTE_UNUSED,
+			     struct netcf_if **ifaces)
 {
 	int result = 0;
+    struct ifaddrs *ifap, *ifa;
+#if 0
+struct driver;
 
-    ERR_THROW(1 == 1, ncf, EOTHER, "not implemented on this platform");
-error:
+struct netcf {
+    ref_t            ref;
+    char            *root;                /* The filesystem root, always ends
+                                           * with '/' */
+    const char      *data_dir;            /* Where to find stylesheets etc. */
+    xmlRelaxNGPtr    rng;                 /* RNG of <interface> elements */
+    netcf_errcode_t  errcode;
+    char            *errdetails;          /* Error details */
+    struct driver   *driver;              /* Driver specific data */
+    unsigned int     debug;
+};
+
+struct netcf_if {
+    ref_t         ref;
+    struct netcf *ncf;
+    char         *name;                   /* The device name */
+    char         *mac;                    /* The MAC address, filled by
+                                             drv_mac_string */
+};
+struct sockaddr {
+        unsigned char   sa_len;         /* total length */
+        sa_family_t     sa_family;      /* address family */
+        char            sa_data[14];    /* actually longer; address value */
+};
+
+#endif
+    getifaddrs(&ifap);
+    for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+        if ((ifa->ifa_addr->sa_family == AF_LINK) &&
+           ((ifa->ifa_flags & IFF_CANTCONFIG) == 0)) {
+		ALLOC((*ifaces));
+	        (*ifaces)[result].name = strndup(ifa->ifa_name, strlen(ifa->ifa_name)+1);
+	        (*ifaces)[result].mac = strndup(ifa->ifa_addr->sa_data, ifa->ifa_addr->sa_len);
+            printf("Found intf(%s) with mac(%s)\n", (*ifaces)[result].name, (*ifaces)[result].mac);
+            printf("Looking for mac(%s)\n", mac);
+            printf("mac data is (%s)\n", ifa->ifa_addr->sa_data);
+            result++;
+	    }
+    }
     return result;
 }
 
