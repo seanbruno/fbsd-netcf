@@ -113,7 +113,7 @@ void drv_close(struct netcf *ncf) {
 
 	if (ncf == NULL || ncf->driver == NULL)
     	return;
-
+	// FIXME:  Don't we have to close the ioctl_fd ?  swb
 	FREE(ncf->driver);
 
 }
@@ -126,7 +126,7 @@ void drv_entry (struct netcf *ncf ATTRIBUTE_UNUSED) {
  */
 static int list_interfaces(struct netcf *ncf ATTRIBUTE_UNUSED, char ***intf) {
     int nint = 0;
-    *intf = calloc(1024, sizeof(char*));
+    *intf = calloc(1024, sizeof(char*)); // FIXME:  Should alloc mem based on num found. swb
     struct ifaddrs *ifap, *ifa;
 
     getifaddrs(&ifap);
@@ -403,55 +403,41 @@ error:
     return -1;
 }
 
-int drv_lookup_by_mac_string(struct netcf *ncf ATTRIBUTE_UNUSED,
+/*
+ * Return number of interfaces that match mac string
+ * Return -1 on error
+ * Return 0 to indicate no match
+ *
+ * ifaces == NULL, populate with valid elements
+ */
+int drv_lookup_by_mac_string(struct netcf *ncf,
 			     const char *mac, int maxifaces ATTRIBUTE_UNUSED,
 			     struct netcf_if **ifaces)
 {
+	int iface_counter = 0;
+	int iface_total = 0;
+	char **intf_ids = NULL;
+	char *curr_iface_mac;
 	int result = 0;
-    struct ifaddrs *ifap, *ifa;
-#if 0
-struct driver;
+	struct netcf_if *temp = NULL;
 
-struct netcf {
-    ref_t            ref;
-    char            *root;                /* The filesystem root, always ends
-                                           * with '/' */
-    const char      *data_dir;            /* Where to find stylesheets etc. */
-    xmlRelaxNGPtr    rng;                 /* RNG of <interface> elements */
-    netcf_errcode_t  errcode;
-    char            *errdetails;          /* Error details */
-    struct driver   *driver;              /* Driver specific data */
-    unsigned int     debug;
-};
-
-struct netcf_if {
-    ref_t         ref;
-    struct netcf *ncf;
-    char         *name;                   /* The device name */
-    char         *mac;                    /* The MAC address, filled by
-                                             drv_mac_string */
-};
-struct sockaddr {
-        unsigned char   sa_len;         /* total length */
-        sa_family_t     sa_family;      /* address family */
-        char            sa_data[14];    /* actually longer; address value */
-};
-
-#endif
-    getifaddrs(&ifap);
-    for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
-        if ((ifa->ifa_addr->sa_family == AF_LINK) &&
-           ((ifa->ifa_flags & IFF_CANTCONFIG) == 0)) {
-		ALLOC((*ifaces));
-	        (*ifaces)[result].name = strndup(ifa->ifa_name, strlen(ifa->ifa_name)+1);
-	        (*ifaces)[result].mac = strndup(ifa->ifa_addr->sa_data, ifa->ifa_addr->sa_len);
-            printf("Found intf(%s) with mac(%s)\n", (*ifaces)[result].name, (*ifaces)[result].mac);
-            printf("Looking for mac(%s)\n", mac);
-            printf("mac data is (%s)\n", ifa->ifa_addr->sa_data);
-            result++;
-	    }
-    }
-    return result;
+	result = list_interfaces(ncf, &intf_ids);
+	for (iface_counter = 0; iface_counter < result; iface_counter++)	
+	{
+		temp = drv_lookup_by_name(ncf, intf_ids[iface_counter]);
+		if (temp == NULL)
+			continue;
+		curr_iface_mac = drv_mac_string(temp);
+		if (curr_iface_mac == NULL) // for lo0 or other interfaces without a mac
+			continue;
+		if (!strcmp(curr_iface_mac, mac)) {
+			ifaces[iface_total] = temp;
+			iface_total++;
+		} else {
+			free(temp);
+		}
+	}
+    return iface_total;
 }
 
 int
