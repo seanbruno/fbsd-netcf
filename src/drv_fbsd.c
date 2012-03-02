@@ -279,7 +279,9 @@ error:
 }
 
 /*
- * check for dhcp.lease files
+ * Check whether interface has address from DHCP or not.
+ * Currently we are relying on just existance of
+ * /var/db/dhclient.leases.<interface> file. //hackery
  */
 int dhcp_lease_exists (struct netcf_if *nif) {
     struct dirent **files = 0;
@@ -337,33 +339,34 @@ void xml_print(struct netcf_if *nif, char *mac, char *mtu_str,
 
     start_node = xmlNewChild(interface_node, ns, (xmlChar*)"start", NULL);
     if (has_dhcp)
-	    xmlNewProp(start_node, (xmlChar*)"mode", (xmlChar*)"none");
+	xmlNewProp(start_node, (xmlChar*)"mode", (xmlChar*)"none");
     else
-	    xmlNewProp(start_node, (xmlChar*)"mode", (xmlChar*)"onboot");
+	xmlNewProp(start_node, (xmlChar*)"mode", (xmlChar*)"onboot");
 
     if (has_dhcp) {
-	    mac_node = xmlNewChild(interface_node, ns, (xmlChar*)"mac", NULL);
-	    xmlNewProp(mac_node, (xmlChar*)"address", (xmlChar*)mac);
+	mac_node = xmlNewChild(interface_node, ns, (xmlChar*)"mac", NULL);
+	xmlNewProp(mac_node, (xmlChar*)"address", (xmlChar*)mac);
 
-	    mtu_node = xmlNewChild(interface_node, ns, (xmlChar*)"mtu", NULL);
-	    xmlNewProp(mtu_node, (xmlChar*)"size", (xmlChar*)mtu_str);
+	mtu_node = xmlNewChild(interface_node, ns, (xmlChar*)"mtu", NULL);
+	xmlNewProp(mtu_node, (xmlChar*)"size", (xmlChar*)mtu_str);
     }
 
     protocol_node = xmlNewChild(interface_node, ns, (xmlChar*)"protocol", NULL);
     if (inet == 0)
-       xmlNewProp(protocol_node, (xmlChar*)"family", (xmlChar*)"ipv4");
+	xmlNewProp(protocol_node, (xmlChar*)"family", (xmlChar*)"ipv4");
     else if (inet == 1)
-       xmlNewProp(protocol_node, (xmlChar*)"family", (xmlChar*)"ipv6");
+	xmlNewProp(protocol_node, (xmlChar*)"family", (xmlChar*)"ipv6");
 
     if (has_dhcp) {
-	    dhcp_node = xmlNewChild(protocol_node, ns, (xmlChar*)"dhcp", NULL);
+	dhcp_node = xmlNewChild(protocol_node, ns, (xmlChar*)"dhcp", NULL);
     } else {
-       ip_node = xmlNewChild(protocol_node, ns, (xmlChar*)"ip", NULL);
-       xmlNewProp(ip_node, (xmlChar*)"address", (xmlChar*)addr_buf);
-       xmlNewProp(prefix_node, (xmlChar*)"prefix", (xmlChar*)"AA");
+	/* prefix and gateway are dummy for now. */
+	ip_node = xmlNewChild(protocol_node, ns, (xmlChar*)"ip", NULL);
+	xmlNewProp(ip_node, (xmlChar*)"address", (xmlChar*)addr_buf);
+	xmlNewProp(prefix_node, (xmlChar*)"prefix", (xmlChar*)"00");
 
-       route_node = xmlNewChild(protocol_node, ns, (xmlChar*)"route", NULL);
-       xmlNewProp(route_node, (xmlChar*)"gateway", (xmlChar*)"0.0.0.0");
+	route_node = xmlNewChild(protocol_node, ns, (xmlChar*)"route", NULL);
+	xmlNewProp(route_node, (xmlChar*)"gateway", (xmlChar*)"0.0.0.0");
     }
 
     xmlElemDump(stdout, doc, interface_node);
