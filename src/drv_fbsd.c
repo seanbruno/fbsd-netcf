@@ -34,6 +34,8 @@
 #include <spawn.h>
 #include <stdbool.h>
 #include <string.h>
+#include <dirent.h>
+#include <fnmatch.h>
 #include <wctype.h>
 #include <sys/param.h>
 #include <sys/types.h>
@@ -55,6 +57,13 @@
 #include "list.h"
 #include "dutil.h"
 #include "dutil_fbsd.h"
+
+#define MAX_FILENAME		1024
+#define PATH_VAR_DB		    "/var/db/"
+
+/* forward function declaration */
+int dhcp_lease_exists (struct netcf_if *);
+void xml_print(struct netcf_if *, char *, char *, char *, int);
 
 /*
  * Liberally ripped off from sbin/ifconfig/ifconfig.c
@@ -269,13 +278,104 @@ error:
     return result;
 }
 
+/*
+ * check for dhcp.lease files
+ */
+int dhcp_lease_exists (struct netcf_if *nif) {
+    struct dirent **files = 0;
+    int namelist_count = 0;
+    char filename_dhcp_lease[FILENAME_MAX];
+    int count = 0;
+    int has_dhcp = 0;
+
+    /* fetch all the files in "files" */
+    namelist_count = scandir(PATH_VAR_DB, &files, 0, NULL);
+    snprintf(filename_dhcp_lease, FILENAME_MAX, "dhclient.leases.%s",
+    nif->name);
+
+    /* Go through all files and look for dhcp lease file for our interface */
+    for (count = 0; count < namelist_count ; count++) {
+	    /* Only match "dhclient.leases.*" files */
+	    if (fnmatch(filename_dhcp_lease, files[count]->d_name, 0) == 0) {
+            has_dhcp = 1;
+            break;
+        }
+    }
+
+    return has_dhcp;
+}
+
+/*
+ * print xml from interface information
+ */
+void xml_print(struct netcf_if *nif, char *mac, char *mtu_str,
+	       char *addr_buf, int inet) {
+    xmlDocPtr doc = NULL;
+    xmlNodePtr interface_node = NULL;
+    xmlNodePtr start_node = NULL;
+    xmlNodePtr mac_node = NULL;
+    xmlNodePtr mtu_node = NULL;
+    xmlNodePtr protocol_node = NULL;
+    xmlNodePtr dhcp_node = NULL;
+    xmlNodePtr ip_node = NULL;
+    xmlNodePtr prefix_node = NULL;
+    xmlNodePtr route_node = NULL;
+    xmlNsPtr ns = NULL;
+
+    int has_dhcp = 0;
+
+    has_dhcp = dhcp_lease_exists(nif);
+
+    doc = xmlNewDoc(BAD_CAST "1.0");
+    ns = NULL;
+
+    interface_node = xmlNewNode(ns, BAD_CAST "interface");
+    xmlDocSetRootElement(doc, interface_node);
+
+    xmlNewProp(interface_node, (xmlChar*)"type", (xmlChar*)"ethernet");
+    xmlNewProp(interface_node, (xmlChar*)"name", (xmlChar*)nif->name);
+
+    start_node = xmlNewChild(interface_node, ns, (xmlChar*)"start", NULL);
+    if (has_dhcp)
+	    xmlNewProp(start_node, (xmlChar*)"mode", (xmlChar*)"none");
+    else
+	    xmlNewProp(start_node, (xmlChar*)"mode", (xmlChar*)"onboot");
+
+    if (has_dhcp) {
+	    mac_node = xmlNewChild(interface_node, ns, (xmlChar*)"mac", NULL);
+	    xmlNewProp(mac_node, (xmlChar*)"address", (xmlChar*)mac);
+
+	    mtu_node = xmlNewChild(interface_node, ns, (xmlChar*)"mtu", NULL);
+	    xmlNewProp(mtu_node, (xmlChar*)"size", (xmlChar*)mtu_str);
+    }
+
+    protocol_node = xmlNewChild(interface_node, ns, (xmlChar*)"protocol", NULL);
+    if (inet == 0)
+       xmlNewProp(protocol_node, (xmlChar*)"family", (xmlChar*)"ipv4");
+    else if (inet == 1)
+       xmlNewProp(protocol_node, (xmlChar*)"family", (xmlChar*)"ipv6");
+
+    if (has_dhcp) {
+	    dhcp_node = xmlNewChild(protocol_node, ns, (xmlChar*)"dhcp", NULL);
+    } else {
+       ip_node = xmlNewChild(protocol_node, ns, (xmlChar*)"ip", NULL);
+       xmlNewProp(ip_node, (xmlChar*)"address", (xmlChar*)addr_buf);
+       xmlNewProp(prefix_node, (xmlChar*)"prefix", (xmlChar*)"AA");
+
+       route_node = xmlNewChild(protocol_node, ns, (xmlChar*)"route", NULL);
+       xmlNewProp(route_node, (xmlChar*)"gateway", (xmlChar*)"0.0.0.0");
+    }
+
+    xmlElemDump(stdout, doc, interface_node);
+    printf("\n");
+}
+
 
 char *drv_xml_desc(struct netcf_if *nif) {
     struct ifreq my_ifr;
     int s, mtu = 0;
     char *mac;
-    int inet = 0;
-    int inet6 = 0;
+    int inet = 0;	/* inet = 0 is IPv4 and inet = 1 is IPv6 */
     struct sockaddr_in *sin;
 
     struct sockaddr_in6 *sin6, null_sin6;
@@ -286,12 +386,10 @@ char *drv_xml_desc(struct netcf_if *nif) {
     int error;
     u_int32_t scopeid;
     char addr_buf[MAXHOSTNAMELEN *2 + 1];   /* for getnameinfo() */
-
-    printf("name: %s\n", nif->name);
+    char mtu_str[10];
 
     /* mac address */
     mac = (char *)drv_mac_string(nif);
-    printf("mac: %s\n", mac);
 
     /* mtu */
     memset(&my_ifr, 0, sizeof(my_ifr));
@@ -307,7 +405,7 @@ char *drv_xml_desc(struct netcf_if *nif) {
     if (ioctl(s, SIOCGIFMTU, &my_ifr) != -1) {
 	mtu = my_ifr.ifr_mtu;
     }
-    printf("mtu: %d\n", mtu);
+    snprintf(mtu_str, sizeof(mtu_str), "%d", mtu);
 
     /* inet or inet6 ? */
     struct ifaddrs *ifap, *ifa;
@@ -324,7 +422,7 @@ char *drv_xml_desc(struct netcf_if *nif) {
 		    printf("inet: %s\n", inet_ntoa(sin->sin_addr));
 	    }
 	    if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET6) {
-		inet6 = 1;
+		inet = 1;
 
 		memset(&null_sin6, 0, sizeof(null_sin6));
 
@@ -371,12 +469,13 @@ char *drv_xml_desc(struct netcf_if *nif) {
 		if (error != 0)
 			inet_ntop(AF_INET6, &sin6->sin6_addr, addr_buf,
 				  sizeof(addr_buf));
-		printf("inet6: %s\n", addr_buf);
 
 	    }
 	}
     }
     freeifaddrs(ifap);
+
+    xml_print(nif, mac, mtu_str, addr_buf, inet);
 
     return NULL;
 }
@@ -427,7 +526,7 @@ int drv_lookup_by_mac_string(struct netcf *ncf,
 		temp = drv_lookup_by_name(ncf, intf_ids[iface_counter]);
 		if (temp == NULL)
 			continue;
-		curr_iface_mac = drv_mac_string(temp);
+		curr_iface_mac = (char *)drv_mac_string(temp);
 		if (curr_iface_mac == NULL) // for lo0 or other interfaces without a mac
 			continue;
 		if (!strcmp(curr_iface_mac, mac)) {
