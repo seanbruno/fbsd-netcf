@@ -363,7 +363,9 @@ void xml_print(struct netcf_if *nif, char *mac, char *mtu_str,
 	/* prefix and gateway are dummy for now. */
 	ip_node = xmlNewChild(protocol_node, ns, (xmlChar*)"ip", NULL);
 	xmlNewProp(ip_node, (xmlChar*)"address", (xmlChar*)addr_buf);
-	xmlNewProp(prefix_node, (xmlChar*)"prefix", (xmlChar*)"00");
+	/* prefix only possible with IPv6 */
+	if (inet == 1)
+	    xmlNewProp(prefix_node, (xmlChar*)"prefix", (xmlChar*)"00");
 
 	route_node = xmlNewChild(protocol_node, ns, (xmlChar*)"route", NULL);
 	xmlNewProp(route_node, (xmlChar*)"gateway", (xmlChar*)"0.0.0.0");
@@ -419,10 +421,10 @@ char *drv_xml_desc(struct netcf_if *nif) {
 	sdl = (struct sockaddr_dl *) ifa->ifa_addr;
 	if (strncmp(nif->name, ifa->ifa_name, strlen(ifa->ifa_name)) == 0) {
 	    if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
-		inet = 1;
+		inet = 0;
 		sin = (struct sockaddr_in *)ifa->ifa_addr;
-		if (sin != NULL)
-		    printf("inet: %s\n", inet_ntoa(sin->sin_addr));
+		if (sin == NULL)
+		    return NULL;
 	    }
 	    if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET6) {
 		inet = 1;
