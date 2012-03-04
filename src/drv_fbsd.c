@@ -63,7 +63,7 @@
 
 /* forward function declaration */
 int dhcp_lease_exists (struct netcf_if *);
-void xml_print(struct netcf_if *, char *, char *, char *, int);
+void xml_print(struct netcf_if *, int, char *, char *, char *, int, int);
 
 /*
  * Liberally ripped off from sbin/ifconfig/ifconfig.c
@@ -310,8 +310,8 @@ int dhcp_lease_exists (struct netcf_if *nif) {
 /*
  * print xml from interface information
  */
-void xml_print(struct netcf_if *nif, char *mac, char *mtu_str,
-	       char *addr_buf, int inet) {
+void xml_print(struct netcf_if *nif, int interface_type, char *mac,
+	       char *mtu_str, char *addr_buf, int inet, int vlan_tag) {
     xmlDocPtr doc = NULL;
     xmlNodePtr interface_node = NULL;
     xmlNodePtr start_node = NULL;
@@ -322,7 +322,11 @@ void xml_print(struct netcf_if *nif, char *mac, char *mtu_str,
     xmlNodePtr ip_node = NULL;
     xmlNodePtr prefix_node = NULL;
     xmlNodePtr route_node = NULL;
+    xmlNodePtr vlan_node = NULL;
+    xmlNodePtr vlan_intf_node = NULL;
     xmlNsPtr ns = NULL;
+    char interface[20];
+    char vlan_tag_str[10];
 
     int has_dhcp = 0;
 
@@ -331,10 +335,28 @@ void xml_print(struct netcf_if *nif, char *mac, char *mtu_str,
     doc = xmlNewDoc(BAD_CAST "1.0");
     ns = NULL;
 
+    switch (interface_type) {
+    case 0:
+	strncpy(interface, "ethernet", sizeof("ethernet"));
+	break;
+
+    case 1:
+	strncpy(interface, "bridge", sizeof("bridge"));
+	break;
+
+    case 2:
+	strncpy(interface, "vlan", sizeof("vlan"));
+	break;
+
+    default:
+	printf("Incorrect interface type\n");
+	break;
+    }
+
     interface_node = xmlNewNode(ns, BAD_CAST "interface");
     xmlDocSetRootElement(doc, interface_node);
 
-    xmlNewProp(interface_node, (xmlChar*)"type", (xmlChar*)"ethernet");
+    xmlNewProp(interface_node, (xmlChar*)"type", (xmlChar*)interface);
     xmlNewProp(interface_node, (xmlChar*)"name", (xmlChar*)nif->name);
 
     start_node = xmlNewChild(interface_node, ns, (xmlChar*)"start", NULL);
@@ -367,8 +389,21 @@ void xml_print(struct netcf_if *nif, char *mac, char *mtu_str,
 	if (inet == 1)
 	    xmlNewProp(prefix_node, (xmlChar*)"prefix", (xmlChar*)"00");
 
-	route_node = xmlNewChild(protocol_node, ns, (xmlChar*)"route", NULL);
-	xmlNewProp(route_node, (xmlChar*)"gateway", (xmlChar*)"0.0.0.0");
+	/* gateway info is only for "ethernet" */
+	if (interface_type == 0) {
+	    route_node = xmlNewChild(protocol_node, ns, (xmlChar*)"route", NULL);
+	    xmlNewProp(route_node, (xmlChar*)"gateway", (xmlChar*)"0.0.0.0");
+	}
+    }
+
+    /* XXX: tag value and interface value are dummy (for now) */
+    if (interface_type == 2) {
+	snprintf(vlan_tag_str, sizeof(vlan_tag), "%d", vlan_tag);
+	vlan_node = xmlNewChild(interface_node, ns, (xmlChar*)"vlan", NULL);
+	xmlNewProp(vlan_node, (xmlChar*)"tag", (xmlChar*)vlan_tag_str);
+
+	vlan_intf_node = xmlNewChild(vlan_node, ns, (xmlChar*)"interface", NULL);
+	xmlNewProp(vlan_intf_node, (xmlChar*)"name", (xmlChar*)"sample");
     }
 
     xmlElemDump(stdout, doc, interface_node);
@@ -392,6 +427,9 @@ char *drv_xml_desc(struct netcf_if *nif) {
     u_int32_t scopeid;
     char addr_buf[MAXHOSTNAMELEN *2 + 1];   /* for getnameinfo() */
     char mtu_str[10];
+    int interface_type = 0;	/* 0 = ethernet */
+				/* 1 = bridge */
+				/* 2 = vlan */
 
     /* mac address */
     mac = (char *)drv_mac_string(nif);
@@ -416,10 +454,33 @@ char *drv_xml_desc(struct netcf_if *nif) {
     struct ifaddrs *ifap, *ifa;
     getifaddrs(&ifap);
     struct sockaddr_dl *sdl;
+    //struct ifnet *ifp;
+    //struct ifvlan *ifv;
+    int vlan_tag = 0;
 
     for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
 	sdl = (struct sockaddr_dl *) ifa->ifa_addr;
 	if (strncmp(nif->name, ifa->ifa_name, strlen(ifa->ifa_name)) == 0) {
+
+	    switch (sdl->sdl_type) {
+	    case IFT_BRIDGE:
+		printf("bridge found\n");
+		interface_type = 1;
+		break;
+
+	    case IFT_L2VLAN:
+		//ifp = ifa->ifa_ifp;
+		//ifv = ifp->if_softc;
+		//vlan_tag = ifv->ifv_tag;
+		interface_type = 2;
+		break;
+
+	    default:
+		printf("default ethernet\n");
+		interface_type = 0;
+		break;
+	    }
+
 	    if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
 		inet = 0;
 		sin = (struct sockaddr_in *)ifa->ifa_addr;
@@ -480,7 +541,7 @@ char *drv_xml_desc(struct netcf_if *nif) {
     }
     freeifaddrs(ifap);
 
-    xml_print(nif, mac, mtu_str, addr_buf, inet);
+    xml_print(nif, interface_type, mac, mtu_str, addr_buf, inet, vlan_tag);
 
     return NULL;
 }
