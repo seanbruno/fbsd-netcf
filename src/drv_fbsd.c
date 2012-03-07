@@ -412,6 +412,13 @@ void xml_print(struct netcf_if *nif, int interface_type, char *mac,
 
 
 char *drv_xml_desc(struct netcf_if *nif) {
+
+    ERR_THROW(1 == 1, nif->ncf, EOTHER, "not implemented on this platform");
+error:
+    return NULL;
+}
+
+char *drv_xml_state(struct netcf_if *nif) {
     struct ifreq my_ifr;
     int s, mtu = 0;
     char *mac;
@@ -543,13 +550,6 @@ char *drv_xml_desc(struct netcf_if *nif) {
 
     xml_print(nif, interface_type, mac, mtu_str, addr_buf, inet, vlan_tag);
 
-    return NULL;
-}
-
-char *drv_xml_state(struct netcf_if *nif) {
-
-    ERR_THROW(1 == 1, nif->ncf, EOTHER, "not implemented on this platform");
-error:
     return NULL;
 }
 
