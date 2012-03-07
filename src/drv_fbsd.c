@@ -483,7 +483,6 @@ char *drv_xml_state(struct netcf_if *nif) {
 		break;
 
 	    default:
-		printf("default ethernet\n");
 		interface_type = 0;
 		break;
 	    }
