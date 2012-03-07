@@ -875,10 +875,8 @@ done:
     return ret;
 
 }
-#endif
 
 
-#ifndef __FreeBSD__
 int netlink_init(struct netcf *ncf) {
 
     ncf->driver->nl_sock = nl_handle_alloc();
@@ -927,14 +925,11 @@ int netlink_close(struct netcf *ncf) {
     }
     return 0;
 }
-#endif
 
 
-#ifndef __FreeBSD__
 static void add_type_specific_info(struct netcf *ncf,
                                    const char *ifname, int ifindex,
                                    xmlDocPtr doc, xmlNodePtr root);
-#endif
 
 /* Data that needs to be preserved between calls to the libnl iterator
  * callback.
@@ -949,7 +944,6 @@ struct nl_ip_callback_data {
 
 /* add all ip addresses for the given interface to the xml document
 */
-#ifndef __FreeBSD__
 static void add_ip_info_cb(struct nl_object *obj, void *arg) {
     struct nl_ip_callback_data *cb_data = arg;
     struct rtnl_addr *addr = (struct rtnl_addr *)obj;
@@ -1028,9 +1022,7 @@ static void add_ip_info_cb(struct nl_object *obj, void *arg) {
 error:
     return;
 }
-#endif
 
-#ifndef __FreeBSD__
 static void add_ip_info(struct netcf *ncf,
                         const char *ifname ATTRIBUTE_UNUSED, int ifindex,
                         xmlDocPtr doc, xmlNodePtr root) {
@@ -1050,7 +1042,6 @@ error:
         rtnl_addr_put(filter_addr);
     return;
 }
-#endif
 
 struct nl_ethernet_callback_data {
     xmlDocPtr doc;
@@ -1059,7 +1050,6 @@ struct nl_ethernet_callback_data {
     struct netcf *ncf;
 };
 
-#ifndef __FreeBSD__
 static void add_ethernet_info_cb(struct nl_object *obj, void *arg) {
     struct nl_ethernet_callback_data *cb_data = arg;
     struct rtnl_link *iflink = (struct rtnl_link *)obj;
@@ -1083,15 +1073,7 @@ static void add_ethernet_info_cb(struct nl_object *obj, void *arg) {
 error:
     return;
 }
-#endif
 
-#ifdef __FreeBSD__
-static void add_ethernet_info(struct netcf *ncf,
-                              const char *ifname ATTRIBUTE_UNUSED, int ifindex,
-                              xmlDocPtr doc, xmlNodePtr root) {
-    return;
-}
-#else
 static void add_ethernet_info(struct netcf *ncf,
                               const char *ifname ATTRIBUTE_UNUSED, int ifindex,
                               xmlDocPtr doc, xmlNodePtr root) {
@@ -1115,7 +1097,6 @@ error:
         rtnl_link_put(filter_link);
     return;
 }
-#endif
 
 struct nl_vlan_callback_data {
     xmlDocPtr doc;
@@ -1124,7 +1105,6 @@ struct nl_vlan_callback_data {
     struct netcf *ncf;
 };
 
-#ifndef __FreeBSD__
 static void add_vlan_info_cb(struct nl_object *obj, void *arg) {
     struct nl_vlan_callback_data *cb_data = arg;
     struct rtnl_link *iflink = (struct rtnl_link *)obj;
@@ -1182,15 +1162,7 @@ static void add_vlan_info_cb(struct nl_object *obj, void *arg) {
 error:
     return;
 }
-#endif
 
-#ifdef __FreeBSD__
-static void add_vlan_info(struct netcf *ncf,
-                          const char *ifname ATTRIBUTE_UNUSED, int ifindex,
-                          xmlDocPtr doc, xmlNodePtr root) {
-    return;
-}
-#else
 static void add_vlan_info(struct netcf *ncf,
                           const char *ifname ATTRIBUTE_UNUSED, int ifindex,
                           xmlDocPtr doc, xmlNodePtr root) {
@@ -1215,15 +1187,7 @@ error:
         rtnl_link_put(filter_link);
     return;
 }
-#endif
 
-#ifdef __FreeBSD__
-static void add_bridge_info(struct netcf *ncf,
-                            const char *ifname, int ifindex ATTRIBUTE_UNUSED,
-                            xmlDocPtr doc, xmlNodePtr root) {
-    return;
-}
-#else
 static void add_bridge_info(struct netcf *ncf,
                             const char *ifname, int ifindex ATTRIBUTE_UNUSED,
                             xmlDocPtr doc, xmlNodePtr root) {
@@ -1265,7 +1229,6 @@ error:
         FREE(phys_names[ii]);
     FREE(phys_names);
 }
-#endif
 
 
 struct nl_bond_callback_data {
@@ -1276,7 +1239,6 @@ struct nl_bond_callback_data {
     struct netcf *ncf;
 };
 
-#ifndef __FreeBSD__
 static void add_bond_info_cb(struct nl_object *obj,
                              void *arg ATTRIBUTE_UNUSED) {
     struct nl_bond_callback_data *cb_data = arg;
@@ -1316,15 +1278,7 @@ static void add_bond_info_cb(struct nl_object *obj,
 error:
     return;
 }
-#endif
 
-#ifdef __FreeBSD__
-static void add_bond_info(struct netcf *ncf,
-                          const char *ifname ATTRIBUTE_UNUSED, int ifindex,
-                          xmlDocPtr doc, xmlNodePtr root) {
-    return;
-}
-#else
 static void add_bond_info(struct netcf *ncf,
                           const char *ifname ATTRIBUTE_UNUSED, int ifindex,
                           xmlDocPtr doc, xmlNodePtr root) {
@@ -1337,10 +1291,7 @@ static void add_bond_info(struct netcf *ncf,
 
     nl_cache_foreach(ncf->driver->link_cache, add_bond_info_cb, &cb_data);
 }
-#endif
 
-
-#ifndef __FreeBSD__
 static void add_type_specific_info(struct netcf *ncf,
                                    const char *ifname, int ifindex,
                                    xmlDocPtr doc, xmlNodePtr root) {
