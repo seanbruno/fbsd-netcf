@@ -410,14 +410,65 @@ void xml_print(struct netcf_if *nif, int interface_type, char *mac,
     printf("\n");
 }
 
-
+/*
+ * dumpxml <interface>
+ * Parse rc.conf for any <interface> related setting.
+ *
+ * Possible settings:
+ *	ifconfig_<interface>=dhcp
+ */
 char *drv_xml_desc(struct netcf_if *nif) {
 
-    ERR_THROW(1 == 1, nif->ncf, EOTHER, "not implemented on this platform");
-error:
+    FILE *fp;
+    char line[256];
+    char *line_ptr;
+    char ifcfg_intf[20];	/* ifconfig_em0 */
+
+    char *t_name = (char*)malloc(20);
+    char *t_val = (char*)malloc(20);
+
+    snprintf(ifcfg_intf, sizeof(ifcfg_intf), "ifconfig_%s", nif->name);
+
+    /* read rc.conf */
+    fp = fopen("/etc/rc.conf", "r");
+    if (fp == NULL) {
+	printf("Could not open rc.conf\n");
+	return NULL;
+    }
+
+    while (fgets(line, sizeof(line), fp) != NULL) {
+	line_ptr = line;
+
+	/* if line is not a comment and has <interface>, process it */
+	if (line[0] != '#' && strstr(line, nif->name)) {
+
+	    /* tokenize the line with '=' to get token name */
+	    t_name = strsep(&line_ptr, "=");
+
+	    /* remove double quotes (if present) to get token value */
+	    if (line_ptr[0] == '"') {
+		line_ptr++;
+		t_val = strsep(&line_ptr, "\"");
+	    } else
+		strncpy(t_val, line_ptr, sizeof(line_ptr));
+
+	    /* ifconfig_<interface> */
+	    if (strncmp(t_name, ifcfg_intf, sizeof(ifcfg_intf)) == 0) {
+		printf("token name: %s\t", t_name);
+		printf("token val: %s\n", t_val);
+	    }
+	}
+    }
+
+    fclose(fp);
     return NULL;
 }
 
+/*
+ * dumpxml --live <interface>
+ *
+ * Get live/current information about the <interface>
+ */
 char *drv_xml_state(struct netcf_if *nif) {
     struct ifreq my_ifr;
     int s, mtu = 0;
