@@ -416,6 +416,8 @@ void xml_print(struct netcf_if *nif, int interface_type, char *mac,
  *
  * Possible settings:
  *	ifconfig_<interface>=dhcp
+ *	ifconfig_<interface>_ipv6=
+ *	vlan_<interface>=
  */
 char *drv_xml_desc(struct netcf_if *nif) {
 
@@ -423,11 +425,16 @@ char *drv_xml_desc(struct netcf_if *nif) {
     char line[256];
     char *line_ptr;
     char ifcfg_intf[20];	/* ifconfig_em0 */
+    char ifcfg_intf_ipv6[40];	/* ifconfig_em0_ipv6 */
+    char vlan_intf[20];		/* vlan_em0 */
 
     char *t_name = (char*)malloc(20);
     char *t_val = (char*)malloc(20);
 
     snprintf(ifcfg_intf, sizeof(ifcfg_intf), "ifconfig_%s", nif->name);
+    snprintf(ifcfg_intf_ipv6, sizeof(ifcfg_intf_ipv6),
+	     "ifconfig_%s_ipv6", nif->name);
+    snprintf(vlan_intf, sizeof(vlan_intf), "vlan_%s", nif->name);
 
     /* read rc.conf */
     fp = fopen("/etc/rc.conf", "r");
@@ -457,6 +464,20 @@ char *drv_xml_desc(struct netcf_if *nif) {
 		printf("token name: %s\t", t_name);
 		printf("token val: %s\n", t_val);
 	    }
+
+	    /* ifconfig_<interface>_ipv6 */
+	    if (strncmp(t_name, ifcfg_intf_ipv6,
+			sizeof(ifcfg_intf_ipv6)) == 0) {
+		printf("token name: %s\t", t_name);
+		printf("token val: %s\n", t_val);
+	    }
+
+	    /* vlan_<interface> */
+	    if (strncmp(t_name, vlan_intf, sizeof(vlan_intf)) == 0) {
+		printf("token name: %s\t", t_name);
+		printf("token val: %s\n", t_val);
+	    }
+
 	}
     }
 
