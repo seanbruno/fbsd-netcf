@@ -61,6 +61,8 @@
 #define MAX_FILENAME		1024
 #define PATH_VAR_DB		    "/var/db/"
 
+#define NETCF_TRANSACTION "/usr/bin/false"
+
 /* forward function declaration */
 int dhcp_lease_exists (struct netcf_if *);
 void xml_print(struct netcf_if *, int, char *, char *, char *, int, int);
@@ -263,6 +265,9 @@ int drv_if_up(struct netcf_if *nif) {
 }
 
 
+/*
+ * take xml_str and turn it into /etc/rc.conf stuffs
+ */
 struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str ATTRIBUTE_UNUSED) {
 
     ERR_THROW(1 == 1, ncf, EOTHER, "not implemented on this platform");
@@ -270,6 +275,9 @@ error:
     return NULL;
 }
 
+/*
+ * remove all configurations for nif from /etc/rc.conf
+ */
 int drv_undefine(struct netcf_if *nif) {
 	int result = 0;
 
@@ -676,32 +684,45 @@ int drv_lookup_by_mac_string(struct netcf *ncf,
     return iface_total;
 }
 
+/* Functions to take a snapshot of network config (change_begin), and
+ * later either revert to that config (change_rollback), or make the
+ * new config permanent (change_commit).
+ */
 int
-drv_change_begin(struct netcf *ncf, unsigned int flags ATTRIBUTE_UNUSED)
+drv_change_begin(struct netcf *ncf, unsigned int flags)
 {
-	int result = 0;
+    int result = -1;
 
-    ERR_THROW(1 == 1, ncf, EOTHER, "not implemented on this platform");
+    ERR_THROW(flags != 0, ncf, EOTHER, "unsupported flags value %d", flags);
+    run1(ncf, NETCF_TRANSACTION, "change-begin");
+    ERR_BAIL(ncf);
+    result = 0;
 error:
     return result;
 }
 
 int
-drv_change_rollback(struct netcf *ncf, unsigned int flags ATTRIBUTE_UNUSED)
+drv_change_rollback(struct netcf *ncf, unsigned int flags)
 {
-	int result = 0;
+    int result = -1;
 
-    ERR_THROW(1 == 1, ncf, EOTHER, "not implemented on this platform");
+    ERR_THROW(flags != 0, ncf, EOTHER, "unsupported flags value %d", flags);
+    run1(ncf, NETCF_TRANSACTION, "change-rollback");
+    ERR_BAIL(ncf);
+    result = 0;
 error:
     return result;
 }
 
 int
-drv_change_commit(struct netcf *ncf, unsigned int flags ATTRIBUTE_UNUSED)
+drv_change_commit(struct netcf *ncf, unsigned int flags)
 {
-	int result = 0;
+    int result = -1;
 
-    ERR_THROW(1 == 1, ncf, EOTHER, "not implemented on this platform");
+    ERR_THROW(flags != 0, ncf, EOTHER, "unsupported flags value %d", flags);
+    run1(ncf, NETCF_TRANSACTION, "change-commit");
+    ERR_BAIL(ncf);
+    result = 0;
 error:
     return result;
 }

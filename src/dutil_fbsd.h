@@ -21,8 +21,9 @@ struct driver {
     const struct augeas_xfm_table **augeas_xfm_tables;
 };
 
-/* Get or create the augeas instance from NCF */
-struct augeas *get_augeas(struct netcf *ncf);
+/* run an external program */
+int run_program(struct netcf *ncf, const char *const *argv, char **output);
+void run1(struct netcf *ncf, const char *prog, const char *arg);
 
 /* Free matches from aug_match (or aug_submatch) */
 void free_matches(int nint, char ***intf);
