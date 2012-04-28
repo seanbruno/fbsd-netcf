@@ -48,6 +48,8 @@
 
 #include <libexslt/exslt.h>
 
+#define NETCF_TRANSACTION "/bin/false"
+
 static const char *const network_interfaces_path =
     "/files/etc/network/interfaces";
 
