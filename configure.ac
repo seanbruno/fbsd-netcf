@@ -106,6 +106,21 @@ then
     PKG_CHECK_MODULES([LIBNL], [libnl-1])
 fi
 
+if test "x$with_driver" = "xdebian"; then
+	dnl Check for ifup and ifdown in debian
+	AC_PATH_PROG(IFDOWN, ifdown, false, $PATH$PATHSEPARATOR/sbin)
+	if test "$IFDOWN" = "false"; then
+	   AC_MSG_ERROR([ifdown not found])
+	fi
+	AC_DEFINE_UNQUOTED([IFDOWN], "$IFDOWN", [path to ifdown binary])
+
+	AC_PATH_PROG(IFUP, ifup, false, $PATH$PATHSEPARATOR/sbin)
+	if test "$IFUP" = "false"; then
+	   AC_MSG_ERROR([ifup not found])
+	fi
+	AC_DEFINE_UNQUOTED([IFUP], "$IFUP", [path to ifup binary])
+fi
+
 NETCF_LIBDEPS=$(echo $LIBAUGEAS_LIBS $LIBEXSLT_LIBS $LIBXSLT_LIBS $LIBXML_LIBS $LIBNL_LIBS)
 AC_SUBST([NETCF_LIBDEPS])
 

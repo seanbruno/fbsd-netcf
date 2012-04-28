@@ -1042,7 +1042,7 @@ const char *drv_mac_string(struct netcf_if *nif) {
  */
 
 int drv_if_up(struct netcf_if *nif) {
-    static const char *const ifup = "ifup";
+    static const char *const ifup = IFUP;
     struct netcf *ncf = nif->ncf;
     int result = -1;
 
@@ -1054,7 +1054,7 @@ int drv_if_up(struct netcf_if *nif) {
 }
 
 int drv_if_down(struct netcf_if *nif) {
-    static const char *const ifdown = "ifdown";
+    static const char *const ifdown = IFDOWN;
     struct netcf *ncf = nif->ncf;
     int result = -1;
 
