@@ -103,7 +103,11 @@ AM_CONDITIONAL([NETCF_INIT_SCRIPT_RED_HAT],
 if test "x$with_driver" != "xmswindows"
 then
     PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.5.0])
-    PKG_CHECK_MODULES([LIBNL], [libnl-1])
+    PKG_CHECK_MODULES([LIBNL], [libnl-1],
+       [AC_DEFINE([HAVE_LIBNL], [1], [Use libnl-1])],[
+           PKG_CHECK_MODULES([LIBNL],[libnl-3.0],[AC_DEFINE([HAVE_LIBNL3],[1],[Use libnl-3.0])])
+           PKG_CHECK_MODULES([LIBNL_ROUTE3],[libnl-route-3.0])
+       ])
 fi
 
 if test "x$with_driver" = "xdebian"; then

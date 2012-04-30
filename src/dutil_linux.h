@@ -30,7 +30,11 @@ struct driver {
     xsltStylesheetPtr  put;
     xsltStylesheetPtr  get;
     int                ioctl_fd;
+#ifdef HAVE_LIBNL
     struct nl_handle  *nl_sock;
+#elif HAVE_LIBNL3
+    struct nl_sock     *nl_sock;
+#endif
     struct nl_cache   *link_cache;
     struct nl_cache   *addr_cache;
     unsigned int       load_augeas : 1;

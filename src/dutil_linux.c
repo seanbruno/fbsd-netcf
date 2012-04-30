@@ -1,7 +1,7 @@
 /*
  * dutil_linux.c: Linux utility functions for driver backends.
  *
- * Copyright (C) 2009, 2011 Red Hat Inc.
+ * Copyright (C) 2009, 2011, 2012 Red Hat Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -54,11 +54,17 @@
 #include "dutil.h"
 #include "dutil_linux.h"
 
+#ifndef HAVE_LIBNL3
 #include <net/if.h>
+#endif
 #include <netlink/socket.h>
 #include <netlink/cache.h>
 #include <netlink/route/addr.h>
 #include <netlink/route/link.h>
+
+#ifdef HAVE_LIBNL3
+#define RTNL_LINK_NOT_FOUND 0
+#endif
 
 /* For some reason, the headers for libnl vlan functions aren't installed */
 extern int rtnl_link_vlan_get_id(struct rtnl_link *link);
@@ -796,23 +802,38 @@ done:
 
 int netlink_init(struct netcf *ncf) {
 
+#ifdef HAVE_LIBNL
     ncf->driver->nl_sock = nl_handle_alloc();
+#elif HAVE_LIBNL3
+    int ret;
+    ncf->driver->nl_sock = nl_socket_alloc();
+#endif
     if (ncf->driver->nl_sock == NULL)
         goto error;
-    if (nl_connect(ncf->driver->nl_sock, NETLINK_ROUTE) < 0) {
+    if (nl_connect(ncf->driver->nl_sock, NETLINK_ROUTE) < 0)
         goto error;
-    }
 
+#ifdef HAVE_LIBNL
     ncf->driver->link_cache = rtnl_link_alloc_cache(ncf->driver->nl_sock);
-    if (ncf->driver->link_cache == NULL) {
+    if (ncf->driver->link_cache == NULL)
         goto error;
-    }
+#elif HAVE_LIBNL3
+    ret = rtnl_link_alloc_cache(ncf->driver->nl_sock,
+                                AF_UNSPEC, &ncf->driver->link_cache);
+    if (ret < 0)
+        goto error;
+#endif
     nl_cache_mngt_provide(ncf->driver->link_cache);
 
+#ifdef HAVE_LIBNL
     ncf->driver->addr_cache = rtnl_addr_alloc_cache(ncf->driver->nl_sock);
-    if (ncf->driver->addr_cache == NULL) {
+    if (ncf->driver->addr_cache == NULL)
         goto error;
-    }
+#elif HAVE_LIBNL3
+    ret = rtnl_addr_alloc_cache(ncf->driver->nl_sock, &ncf->driver->addr_cache);
+    if (ret < 0)
+        goto error;
+#endif
     nl_cache_mngt_provide(ncf->driver->addr_cache);
 
     int netlink_fd = nl_socket_get_fd(ncf->driver->nl_sock);
@@ -837,7 +858,11 @@ int netlink_close(struct netcf *ncf) {
     }
     if (ncf->driver->nl_sock) {
         nl_close(ncf->driver->nl_sock);
+#ifdef HAVE_LIBNL
         nl_handle_destroy(ncf->driver->nl_sock);
+#elif HAVE_LIBNL3
+        nl_socket_free(ncf->driver->nl_sock);
+#endif
         ncf->driver->nl_sock = NULL;
     }
     return 0;

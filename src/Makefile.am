@@ -3,7 +3,9 @@ GNULIB= ../gnulib/lib/libgnu.la
 GNULIB_CFLAGS= -I$(top_srcdir)/gnulib/lib -I$(top_builddir)/gnulib/lib
 
 AM_CFLAGS = $(NETCF_CFLAGS) $(GNULIB_CFLAGS) $(WARN_CFLAGS) \
-  $(LIBXML_CFLAGS) $(LIBXSLT_CFLAGS) $(LIBAUGEAS_CFLAGS)
+  $(LIBXML_CFLAGS) $(LIBXSLT_CFLAGS) $(LIBAUGEAS_CFLAGS) $(LIBNL_CFLAGS) $(LIBNL_ROUTE3_CFLAGS)
+
+AM_LDFLAGS = $(LIBNL_LIBS) $(LIBNL_ROUTE3_LIBS)
 
 include_HEADERS = netcf.h
 
@@ -64,15 +66,15 @@ libnetcf_la_SOURCES = netcf.h netcf.c internal.h \
      ref.h list.h \
      xslt_ext.c $(DRIVER_SOURCES)
 libnetcf_la_LDFLAGS = -Wl,--version-script=netcf.syms \
-     -version-info $(LIBNETCF_VERSION_INFO) -no-undefined
-libnetcf_la_LIBADD = $(NETCF_LIBDEPS) $(GNULIB)
+     -version-info $(LIBNETCF_VERSION_INFO) -no-undefined $(LIBNL_CFLAGS) $(LIBNL_ROUTE3_CFLAGS)
+libnetcf_la_LIBADD = $(NETCF_LIBDEPS) $(GNULIB) $(LIBNL_LIBS) $(LIBNL_ROUTE3_LIBS)
 if NETCF_DRIVER_MSWINDOWS
 libnetcf_la_LIBADD += -liphlpapi
 endif
 libnetcf_la_DEPENDENCIES = $(GNULIB) netcf.syms
 
 ncftool_SOURCES = ncftool.c
-ncftool_LDADD = libnetcf.la $(READLINE_LIBS) $(GNULIB)
+ncftool_LDADD = libnetcf.la $(READLINE_LIBS) $(GNULIB) $(LIBNL_LIBS) $(LIBNL_ROUTE3_LIBS)
 
 if ! NETCF_DRIVER_MSWINDOWS
 ncftransform_SOURCES = ncftransform.c
