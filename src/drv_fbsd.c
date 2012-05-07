@@ -316,9 +316,11 @@ int dhcp_lease_exists (struct netcf_if *nif) {
 }
 
 /*
- * print xml from interface information
+ * print xml from interface state information
+ *
+ * for dumpxml --live <interface>
  */
-void xml_print(struct netcf_if *nif, int interface_type, char *mac,
+void xml_print (struct netcf_if *nif, int interface_type, char *mac,
 	       char *mtu_str, char *addr_buf, int inet, int vlan_tag) {
     xmlDocPtr doc = NULL;
     xmlNodePtr interface_node = NULL;
@@ -439,6 +441,15 @@ char *drv_xml_desc(struct netcf_if *nif) {
     char *t_name = (char*)malloc(20);
     char *t_val = (char*)malloc(20);
 
+    char *mac;
+    char mtu_str[10];
+    int inet = 0;		/* inet = 0 is IPv4 and inet = 1 is IPv6 */
+    int interface_type = 0;	/* 0 = ethernet */
+				/* 1 = bridge */
+				/* 2 = vlan */
+    char addr_buf[MAXHOSTNAMELEN *2 + 1];   /* for getnameinfo() */
+    int vlan_tag = 0;
+
     snprintf(ifcfg_intf, sizeof(ifcfg_intf), "ifconfig_%s", nif->name);
     snprintf(ifcfg_intf_ipv6, sizeof(ifcfg_intf_ipv6),
 	     "ifconfig_%s_ipv6", nif->name);
@@ -469,25 +480,34 @@ char *drv_xml_desc(struct netcf_if *nif) {
 
 	    /* ifconfig_<interface> */
 	    if (strncmp(t_name, ifcfg_intf, sizeof(ifcfg_intf)) == 0) {
-		printf("token name: %s\t", t_name);
-		printf("token val: %s\n", t_val);
+		inet = 0;
+		//printf("token name: %s\t", t_name);
+		//printf("token val: %s\n", t_val);
 	    }
 
 	    /* ifconfig_<interface>_ipv6 */
 	    if (strncmp(t_name, ifcfg_intf_ipv6,
 			sizeof(ifcfg_intf_ipv6)) == 0) {
-		printf("token name: %s\t", t_name);
-		printf("token val: %s\n", t_val);
+		inet = 1;
+		//printf("token name: %s\t", t_name);
+		//printf("token val: %s\n", t_val);
 	    }
 
 	    /* vlan_<interface> */
 	    if (strncmp(t_name, vlan_intf, sizeof(vlan_intf)) == 0) {
-		printf("token name: %s\t", t_name);
-		printf("token val: %s\n", t_val);
+		//printf("token name: %s\t", t_name);
+		//printf("token val: %s\n", t_val);
 	    }
 
 	}
     }
+
+    interface_type = 0; //passing interface_type as 0 for now.
+    mac = NULL;
+    mtu_str[0] = '\0';
+    addr_buf[0] = '\0';
+
+    xml_print(nif, interface_type, mac, mtu_str, addr_buf, inet, vlan_tag);
 
     fclose(fp);
     return NULL;
