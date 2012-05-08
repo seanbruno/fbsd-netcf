@@ -51,6 +51,8 @@
 #include <netdb.h>
 #include <net/if_var.h>
 #include <netinet/in_var.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
 
 #include "safe-alloc.h"
 #include "ref.h"
@@ -264,14 +266,47 @@ int drv_if_up(struct netcf_if *nif) {
     return 0;
 }
 
+/*
+ * Recurse through all elements of an XML tree
+ */
+static void
+print_element_names(xmlNodePtr node) {
+    xmlNodePtr cur_node = NULL;
+
+    for (cur_node = node; cur_node; cur_node = cur_node->next) {
+	if (cur_node->type == XML_ELEMENT_NODE) {
+		printf("node name: %s\n", cur_node->name);
+	}
+	print_element_names(cur_node->children);
+    }
+}
 
 /*
- * take xml_str and turn it into /etc/rc.conf stuffs
+ * take xml_str and turn it into /etc/rc.conf stuff
+ *
+ * define <input.xml>
  */
-struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str ATTRIBUTE_UNUSED) {
+struct netcf_if *drv_define(struct netcf *ncf ATTRIBUTE_UNUSED,
+				const char *xml_str) {
 
-    ERR_THROW(1 == 1, ncf, EOTHER, "not implemented on this platform");
-error:
+    xmlDocPtr doc = NULL;
+    xmlNodePtr root_element = NULL;
+
+    doc = xmlReadMemory(xml_str, strlen(xml_str), "noname.xml", NULL, 0);
+
+    if (doc == NULL) {
+	printf("Could not parse file\n");
+	return NULL;
+    } else {
+	root_element = xmlDocGetRootElement(doc);
+
+	//print elements for now
+	print_element_names(root_element);
+
+	xmlFreeDoc(doc);
+    }
+    xmlCleanupParser();
+
     return NULL;
 }
 
