@@ -129,7 +129,13 @@ void drv_close(struct netcf *ncf) {
 
 }
 
+/*
+ * drv_entry() is used by the linux backends to specify the
+ * use of the augeas libs.  fbsd is not using them now, so
+ * this function is unused at this time.
+ */
 void drv_entry (struct netcf *ncf ATTRIBUTE_UNUSED) {
+    return;
 }
 
 /*
