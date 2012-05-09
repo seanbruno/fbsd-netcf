@@ -51,8 +51,6 @@
 #include <netdb.h>
 #include <net/if_var.h>
 #include <netinet/in_var.h>
-#include <libxml/parser.h>
-#include <libxml/tree.h>
 
 #include "safe-alloc.h"
 #include "ref.h"
@@ -267,17 +265,119 @@ int drv_if_up(struct netcf_if *nif) {
 }
 
 /*
- * Recurse through all elements of an XML tree
+ * Recurse through all elements of an XML tree extract attribute values
+ * and actually update rc.conf
  */
 static void
 print_element_names(xmlNodePtr node) {
-    xmlNodePtr cur_node = NULL;
+    xmlChar* type_attr_val = NULL;
+    xmlChar* name_attr_val = NULL;
+    xmlChar* mode_attr_val = NULL;
+    xmlChar* address_attr_val = NULL;
+    xmlChar* size_attr_val = NULL;
+    xmlChar* family_attr_val = NULL;
+    xmlChar* ip_address_attr_val = NULL;
+    xmlChar* prefix_attr_val = NULL;
+    xmlChar* gateway_attr_val = NULL;
+    xmlChar* tag_attr_val = NULL;
+    xmlChar* stp_attr_val = NULL;
+    xmlChar* delay_attr_val = NULL;
 
-    for (cur_node = node; cur_node; cur_node = cur_node->next) {
-	if (cur_node->type == XML_ELEMENT_NODE) {
-		printf("node name: %s\n", cur_node->name);
+    /* handle root node */
+    if ((!xmlStrcmp(node->name, (const xmlChar *)"interface"))) {
+	if ((type_attr_val = xmlGetProp(node, (xmlChar *)"type"))) {
+	    printf("node->name: %s\n", node->name);
+	    printf("\ttype:%s\n", type_attr_val);
+	    xmlFree(type_attr_val);
 	}
-	print_element_names(cur_node->children);
+	if ((name_attr_val = xmlGetProp(node, (xmlChar *)"name"))) {
+	    printf("node->name: %s\n", node->name);
+	    printf("\tname:%s\n", name_attr_val);
+	    xmlFree(name_attr_val);
+	}
+    }
+
+    /* loop through the children */
+    node = node->xmlChildrenNode;
+    while (node != NULL) {
+	if ((!xmlStrcmp(node->name, (const xmlChar *)"start"))) {
+	    if ((mode_attr_val = xmlGetProp(node, (xmlChar *)"mode"))) {
+		printf("node->name: %s\n", node->name);
+		printf("\tmode:%s\n", mode_attr_val);
+		xmlFree(mode_attr_val);
+	    }
+	}
+	if ((!xmlStrcmp(node->name, (const xmlChar *)"mac"))) {
+	    if ((address_attr_val = xmlGetProp(node, (xmlChar *)"address"))) {
+		printf("node->name: %s\n", node->name);
+		printf("\taddress:%s\n", address_attr_val);
+		xmlFree(address_attr_val);
+	    }
+	}
+	if ((!xmlStrcmp(node->name, (const xmlChar *)"mtu"))) {
+	    if ((size_attr_val = xmlGetProp(node, (xmlChar *)"size"))) {
+		printf("node->name: %s\n", node->name);
+		printf("\tsize:%s\n", size_attr_val);
+		xmlFree(size_attr_val);
+	    }
+	}
+	if ((!xmlStrcmp(node->name, (const xmlChar *)"protocol"))) {
+	    if ((family_attr_val = xmlGetProp(node, (xmlChar *)"family"))) {
+		printf("node->name: %s\n", node->name);
+		printf("\tfamily:%s\n", family_attr_val);
+		xmlFree(family_attr_val);
+	    }
+	    /* <protocol> possibly has children */
+	    print_element_names(node);
+	}
+	if ((!xmlStrcmp(node->name, (const xmlChar *)"ip"))) {
+	    if ((ip_address_attr_val = xmlGetProp(node, (xmlChar *)"address"))) {
+		printf("node->name: %s\n", node->name);
+		printf("\tip_address:%s\n", ip_address_attr_val);
+		xmlFree(ip_address_attr_val);
+	    }
+	    if ((prefix_attr_val = xmlGetProp(node, (xmlChar *)"prefix"))) {
+		printf("node->name: %s\n", node->name);
+		printf("\tprefix:%s\n", prefix_attr_val);
+		xmlFree(prefix_attr_val);
+	    }
+	}
+	if ((!xmlStrcmp(node->name, (const xmlChar *)"route"))) {
+	    if ((gateway_attr_val = xmlGetProp(node, (xmlChar *)"gateway"))) {
+		printf("node->name: %s\n", node->name);
+		printf("\tgateway:%s\n", gateway_attr_val);
+		xmlFree(gateway_attr_val);
+	    }
+	}
+
+	/* vlan related */
+	if ((!xmlStrcmp(node->name, (const xmlChar *)"vlan"))) {
+	    if ((tag_attr_val = xmlGetProp(node, (xmlChar *)"tag"))) {
+		printf("node->name: %s\n", node->name);
+		printf("\ttag:%s\n", tag_attr_val);
+		xmlFree(tag_attr_val);
+	    }
+	    /* <vlan> possibly has children */
+	    print_element_names(node);
+	}
+
+	/* bridge related */
+	if ((!xmlStrcmp(node->name, (const xmlChar *)"bridge"))) {
+	    if ((stp_attr_val = xmlGetProp(node, (xmlChar *)"stp"))) {
+		printf("node->name: %s\n", node->name);
+		printf("\tstp:%s\n", stp_attr_val);
+		xmlFree(stp_attr_val);
+	    }
+	    if ((delay_attr_val = xmlGetProp(node, (xmlChar *)"delay"))) {
+		printf("node->name: %s\n", node->name);
+		printf("\tdelay:%s\n", delay_attr_val);
+		xmlFree(delay_attr_val);
+	    }
+	    /* <bridge> possibly has children */
+	    print_element_names(node);
+	}
+
+	node = node->next;
     }
 }
 
