@@ -59,7 +59,9 @@
 #include "dutil_fbsd.h"
 
 #define MAX_FILENAME		1024
-#define PATH_VAR_DB		    "/var/db/"
+#define PATH_VAR_DB		"/var/db/"
+#define PATH_RC_CONF		"/etc/rc.conf"
+#define PATH_RC_CONF_TMP	"/etc/rc.conf.tmp"
 
 #define NETCF_TRANSACTION "/usr/bin/false"
 
@@ -274,7 +276,7 @@ int drv_if_up(struct netcf_if *nif) {
  * Recurse through all elements of an XML tree extract attribute values
  * and actually update rc.conf
  */
-static void
+static int
 print_element_names(xmlNodePtr node) {
     xmlChar* type_attr_val = NULL;
     xmlChar* name_attr_val = NULL;
@@ -385,6 +387,7 @@ print_element_names(xmlNodePtr node) {
 
 	node = node->next;
     }
+    return 0;
 }
 
 /*
@@ -417,14 +420,47 @@ struct netcf_if *drv_define(struct netcf *ncf ATTRIBUTE_UNUSED,
 }
 
 /*
- * remove all configurations for nif from /etc/rc.conf
+ * remove all configurations for nif from rc.conf
+ * We write everything less interface in question to a temp file and then
+ * rename that temp file to rc.conf (bad? got any better idea?)
  */
 int drv_undefine(struct netcf_if *nif) {
-	int result = 0;
 
-    ERR_THROW(1 == 1, nif->ncf, EOTHER, "not implemented on this platform");
-error:
-    return result;
+    FILE *fp, *fp_tmp;
+    char line[256];
+    char *line_ptr;
+
+    /* read rc.conf */
+    fp = fopen(PATH_RC_CONF, "r");
+    if (fp == NULL) {
+	printf("Could not open rc.conf\n");
+	return -1;
+    }
+
+    /* open tmp file for writing */
+    fp_tmp = fopen(PATH_RC_CONF_TMP, "w");
+    if (fp_tmp == NULL) {
+	printf("Could not open tmp file\n");
+	return -1;
+    }
+
+    while (fgets(line, sizeof(line), fp) != NULL) {
+	line_ptr = line;
+
+	/* if line is not a comment and has <interface>, process it */
+	if (line[0] != '#' && strstr(line, nif->name))
+	    continue;
+	else
+	    fputs(line, fp_tmp); /* copy this line to the tmp file */
+    }
+
+    fclose(fp);
+    fclose(fp_tmp);
+
+    /* Rename rc.conf.tmp to rc.conf */
+    rename(PATH_RC_CONF_TMP, PATH_RC_CONF);
+
+    return 0;
 }
 
 /*
