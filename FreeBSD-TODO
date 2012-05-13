@@ -1,14 +1,4 @@
  - TODO
-    dumpxml    - dump the XML description of an interface
-	XXX seems to dump 
-
-		token name: ifconfig_em0	token val: DHCP
-		token name: ifconfig_em0_ipv6	token val: inet6 accept_rtadv
-
-	--mac XXX
-		unsupported
-
-
     define     - define an interface from an XML file
     undefine   - undefine an interface
     change-begin - mark the beginning of a set of revertible network config changes
@@ -16,7 +6,7 @@
     change-rollback - rollback (revert) a set of network config changes
  
 -- done
-    dumpxml --live xxx
+    dumpxml
 	- output XML version of the current network config of an interface (hiren)
     list       - list network interfaces
 	- iterate over the list of valid net interfaces and output names
