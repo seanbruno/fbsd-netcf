@@ -1,6 +1,5 @@
  - TODO
     define     - define an interface from an XML file
-    undefine   - undefine an interface
     change-begin - mark the beginning of a set of revertible network config changes
     change-commit - commit the pending network config changes
     change-rollback - rollback (revert) a set of network config changes
@@ -15,5 +14,6 @@
 	- ioctl to set an interface up (sean)
     ifdown     - bring down an interface
 	- ioctl to set an interface down (sean)
+    undefine   - undefine an interface
     help       - print help
     quit       - exit the program
