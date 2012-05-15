@@ -494,7 +494,7 @@ static xmlDocPtr aug_get_xml(struct netcf *ncf, int nint, char **intf) {
     xmlDocPtr result = NULL;
     xmlNodePtr root = NULL, tree = NULL;
     char **matches = NULL;
-    int nmatches, r;
+    int nmatches = 0, r;
 
     aug = get_augeas(ncf);
     ERR_BAIL(ncf);
