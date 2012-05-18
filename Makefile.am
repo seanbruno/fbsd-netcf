@@ -13,6 +13,7 @@ lensdir=$(netcfdir)/lenses
 
 dist_xml_DATA=data/xml/augeas.rng data/xml/interface.rng \
 	data/xml/util-get.xsl data/xml/util-put.xsl \
+	data/xml/debian-get.xsl data/xml/debian-put.xsl \
 	data/xml/redhat-get.xsl data/xml/redhat-put.xsl \
 	data/xml/suse-get.xsl data/xml/suse-put.xsl
 dist_netcf_DATA=data/iptables-forward-bridged

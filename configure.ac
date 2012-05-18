@@ -106,7 +106,27 @@ AM_CONDITIONAL([NETCF_INIT_SCRIPT_RED_HAT],
 
 if test "x$with_driver" != "xmswindows" && test "x$with_driver" != "xfbsd"
 then
-	PKG_CHECK_MODULES([LIBNL], [libnl-1])
+    PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.5.0])
+    PKG_CHECK_MODULES([LIBNL], [libnl-1],
+       [AC_DEFINE([HAVE_LIBNL], [1], [Use libnl-1])],[
+           PKG_CHECK_MODULES([LIBNL],[libnl-3.0],[AC_DEFINE([HAVE_LIBNL3],[1],[Use libnl-3.0])])
+           PKG_CHECK_MODULES([LIBNL_ROUTE3],[libnl-route-3.0])
+       ])
+fi
+
+if test "x$with_driver" = "xdebian"; then
+	dnl Check for ifup and ifdown in debian
+	AC_PATH_PROG(IFDOWN, ifdown, false, $PATH$PATHSEPARATOR/sbin)
+	if test "$IFDOWN" = "false"; then
+	   AC_MSG_ERROR([ifdown not found])
+	fi
+	AC_DEFINE_UNQUOTED([IFDOWN], "$IFDOWN", [path to ifdown binary])
+
+	AC_PATH_PROG(IFUP, ifup, false, $PATH$PATHSEPARATOR/sbin)
+	if test "$IFUP" = "false"; then
+	   AC_MSG_ERROR([ifup not found])
+	fi
+	AC_DEFINE_UNQUOTED([IFUP], "$IFUP", [path to ifup binary])
 fi
 
 NETCF_LIBDEPS=$(echo $LIBAUGEAS_LIBS $LIBEXSLT_LIBS $LIBXSLT_LIBS $LIBXML_LIBS $LIBNL_LIBS)

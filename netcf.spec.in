@@ -14,6 +14,8 @@ BuildRequires:  libxml2-devel libxslt-devel
 BuildRequires:  libnl-devel
 Requires:       %{name}-libs = %{version}-%{release}
 
+Provides: bundled(gnulib)
+
 %description
 Netcf is a library used to modify the network configuration of a
 system. Network configurations are expressed in a platform-independent
