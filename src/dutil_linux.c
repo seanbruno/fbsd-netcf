@@ -64,6 +64,11 @@
 
 #ifdef HAVE_LIBNL3
 #define RTNL_LINK_NOT_FOUND 0
+
+/* Some distributions seem to never have shipped the vlan header with libnl1 */
+#include <netlink/route/link/vlan.h>
+#else
+extern int rtnl_link_vlan_get_id(struct rtnl_link *link);
 #endif
 
 static struct nl_cache *__rtnl_link_alloc_cache(struct nl_sock *sk)
@@ -93,9 +98,6 @@ static struct nl_cache *__rtnl_addr_alloc_cache(struct nl_sock *sk)
 
     return cache;
 }
-
-/* For some reason, the headers for libnl vlan functions aren't installed */
-extern int rtnl_link_vlan_get_id(struct rtnl_link *link);
 
 /*
  * Executing external programs
