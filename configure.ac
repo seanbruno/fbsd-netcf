@@ -102,12 +102,36 @@ AM_CONDITIONAL([NETCF_INIT_SCRIPT_RED_HAT],
 
 if test "x$with_driver" != "xmswindows"
 then
-    PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.5.0])
-    PKG_CHECK_MODULES([LIBNL], [libnl-1],
-       [AC_DEFINE([HAVE_LIBNL], [1], [Use libnl-1])],[
-           PKG_CHECK_MODULES([LIBNL],[libnl-3.0],[AC_DEFINE([HAVE_LIBNL3],[1],[Use libnl-3.0])])
-           PKG_CHECK_MODULES([LIBNL_ROUTE3],[libnl-route-3.0])
-       ])
+	PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.5.0])
+
+	have_libnl="no"
+	PKG_CHECK_MODULES([LIBNL], [libnl-3.0],
+			  [have_libnl3=yes],
+			  [have_libnl3=no])
+	PKG_CHECK_MODULES([LIBNL_ROUTE3], [libnl-route-3.0],
+			  [have_libnl_route3=yes],
+			  [have_libnl_route3=no])
+	if (test "${have_libnl3}" = "yes" -a "${have_libnl_route3}" = "yes"); then
+		AC_DEFINE([HAVE_LIBNL3], [1], [Use libnl-3.0])
+		have_libnl="yes"
+	else
+		PKG_CHECK_MODULES([LIBNL], [libnl-1],
+				  [have_libnl1=yes],
+				  [have_libnl1=no])
+		if (test "${have_libnl1}" = "yes"); then
+			AC_DEFINE([HAVE_LIBNL], [1], [Use libnl-1])
+			have_libnl="yes"
+		else
+			dnl libnl version 2.x is not supported by netcf
+			PKG_CHECK_MODULES([LIBNL], [libnl-2.0],
+				[AC_MSG_ERROR([libnl-2.x is unsupported, please install libnl-3.x])])
+		fi
+
+	fi
+
+	if (test "${have_libnl}" = "no"); then
+		AC_MSG_ERROR([missing dependency: libnl library not installed])
+	fi
 fi
 
 if test "x$with_driver" = "xdebian"; then
