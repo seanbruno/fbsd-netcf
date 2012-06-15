@@ -66,6 +66,34 @@
 #define RTNL_LINK_NOT_FOUND 0
 #endif
 
+static struct nl_cache *__rtnl_link_alloc_cache(struct nl_sock *sk)
+{
+    struct nl_cache *cache;
+
+#ifdef HAVE_LIBNL3
+    if (rtnl_link_alloc_cache(sk, AF_UNSPEC, &cache) < 0)
+        return NULL;
+#elif HAVE_LIBNL
+    cache = rtnl_link_alloc_cache(sk);
+#endif
+
+    return cache;
+}
+
+static struct nl_cache *__rtnl_addr_alloc_cache(struct nl_sock *sk)
+{
+    struct nl_cache *cache;
+
+#ifdef HAVE_LIBNL3
+    if (rtnl_addr_alloc_cache(sk, &cache) < 0)
+        return NULL;
+#elif HAVE_LIBNL
+    cache = rtnl_addr_alloc_cache(sk);
+#endif
+
+    return cache;
+}
+
 /* For some reason, the headers for libnl vlan functions aren't installed */
 extern int rtnl_link_vlan_get_id(struct rtnl_link *link);
 
@@ -802,38 +830,20 @@ done:
 
 int netlink_init(struct netcf *ncf) {
 
-#ifdef HAVE_LIBNL
-    ncf->driver->nl_sock = nl_handle_alloc();
-#elif HAVE_LIBNL3
-    int ret;
     ncf->driver->nl_sock = nl_socket_alloc();
-#endif
     if (ncf->driver->nl_sock == NULL)
         goto error;
     if (nl_connect(ncf->driver->nl_sock, NETLINK_ROUTE) < 0)
         goto error;
 
-#ifdef HAVE_LIBNL
-    ncf->driver->link_cache = rtnl_link_alloc_cache(ncf->driver->nl_sock);
+    ncf->driver->link_cache = __rtnl_link_alloc_cache(ncf->driver->nl_sock);
     if (ncf->driver->link_cache == NULL)
         goto error;
-#elif HAVE_LIBNL3
-    ret = rtnl_link_alloc_cache(ncf->driver->nl_sock,
-                                AF_UNSPEC, &ncf->driver->link_cache);
-    if (ret < 0)
-        goto error;
-#endif
     nl_cache_mngt_provide(ncf->driver->link_cache);
 
-#ifdef HAVE_LIBNL
-    ncf->driver->addr_cache = rtnl_addr_alloc_cache(ncf->driver->nl_sock);
+    ncf->driver->addr_cache = __rtnl_addr_alloc_cache(ncf->driver->nl_sock);
     if (ncf->driver->addr_cache == NULL)
         goto error;
-#elif HAVE_LIBNL3
-    ret = rtnl_addr_alloc_cache(ncf->driver->nl_sock, &ncf->driver->addr_cache);
-    if (ret < 0)
-        goto error;
-#endif
     nl_cache_mngt_provide(ncf->driver->addr_cache);
 
     int netlink_fd = nl_socket_get_fd(ncf->driver->nl_sock);
@@ -858,11 +868,7 @@ int netlink_close(struct netcf *ncf) {
     }
     if (ncf->driver->nl_sock) {
         nl_close(ncf->driver->nl_sock);
-#ifdef HAVE_LIBNL
-        nl_handle_destroy(ncf->driver->nl_sock);
-#elif HAVE_LIBNL3
         nl_socket_free(ncf->driver->nl_sock);
-#endif
         ncf->driver->nl_sock = NULL;
     }
     return 0;
@@ -1066,7 +1072,7 @@ static void add_vlan_info_cb(struct nl_object *obj, void *arg) {
     if (cb_data->vlan != NULL)
         return;
 
-    link_type = rtnl_link_get_info_type(iflink);
+    link_type = rtnl_link_get_type(iflink);
     if ((link_type == NULL) || STRNEQ(link_type, "vlan"))
         return;
 

@@ -25,16 +25,20 @@
 
 #include <netlink/netlink.h>
 
+#ifndef HAVE_LIBNL3
+/* backwards compatibility for libnl-1.x */
+#define nl_sock nl_handle
+#define nl_socket_alloc()     nl_handle_alloc()
+#define nl_socket_free(x)     nl_handle_destroy(x)
+#define rtnl_link_get_type(x) rtnl_link_get_info_type(x)
+#endif
+
 struct driver {
     struct augeas     *augeas;
     xsltStylesheetPtr  put;
     xsltStylesheetPtr  get;
     int                ioctl_fd;
-#ifdef HAVE_LIBNL
-    struct nl_handle  *nl_sock;
-#elif HAVE_LIBNL3
     struct nl_sock     *nl_sock;
-#endif
     struct nl_cache   *link_cache;
     struct nl_cache   *addr_cache;
     unsigned int       load_augeas : 1;
