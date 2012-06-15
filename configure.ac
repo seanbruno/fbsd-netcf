@@ -100,17 +100,24 @@ fi
 AM_CONDITIONAL([NETCF_INIT_SCRIPT_RED_HAT],
                [test x$with_driver = xredhat])
 
+AC_ARG_ENABLE([libnl1],
+	      AS_HELP_STRING([--enable-libnl1], [Force usage of libnl1]),
+	      [force_libnl1="$enableval"], [force_libnl1=no])
+
 if test "x$with_driver" != "xmswindows"
 then
 	PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.5.0])
 
 	have_libnl="no"
-	PKG_CHECK_MODULES([LIBNL], [libnl-3.0],
-			  [have_libnl3=yes],
-			  [have_libnl3=no])
-	PKG_CHECK_MODULES([LIBNL_ROUTE3], [libnl-route-3.0],
-			  [have_libnl_route3=yes],
-			  [have_libnl_route3=no])
+	if (test "${force_libnl1}" = "no"); then
+		PKG_CHECK_MODULES([LIBNL], [libnl-3.0],
+				  [have_libnl3=yes],
+				  [have_libnl3=no])
+		PKG_CHECK_MODULES([LIBNL_ROUTE3], [libnl-route-3.0],
+				  [have_libnl_route3=yes],
+				  [have_libnl_route3=no])
+	fi
+
 	if (test "${have_libnl3}" = "yes" -a "${have_libnl_route3}" = "yes"); then
 		AC_DEFINE([HAVE_LIBNL3], [1], [Use libnl-3.0])
 		have_libnl="yes"
