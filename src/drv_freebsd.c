@@ -59,10 +59,10 @@
 #include "dutil.h"
 #include "dutil_freebsd.h"
 
-#define MAX_FILENAME		1024
-#define PATH_VAR_DB		"/var/db/"
-#define PATH_RC_CONF		"/etc/rc.conf"
-#define PATH_RC_CONF_TMP	"/etc/rc.conf.tmp"
+#define MAX_FILENAME        1024
+#define PATH_VAR_DB         "/var/db/"
+#define PATH_RC_CONF        "/etc/rc.conf"
+#define PATH_RC_CONF_TMP    "/etc/rc.conf.tmp"
 
 #define NETCF_TRANSACTION "/usr/bin/false"
 
@@ -104,9 +104,9 @@ setifflags(const char *vname, int value, int ioctl_fd)
 
 int drv_init(struct netcf *ncf) {
 
-   if (ALLOC(ncf->driver) < 0)
-		return -1;
-   if (ALLOC(ncf->driver) < 0)
+    if (ALLOC(ncf->driver) < 0)
+        return -1;
+    if (ALLOC(ncf->driver) < 0)
         return -1;
 
     ncf->driver->ioctl_fd = -1;
@@ -125,10 +125,10 @@ int drv_init(struct netcf *ncf) {
 
 void drv_close(struct netcf *ncf) {
 
-	if (ncf == NULL || ncf->driver == NULL)
-    	return;
-	// FIXME:  Don't we have to close the ioctl_fd ?  swb
-	FREE(ncf->driver);
+    if (ncf == NULL || ncf->driver == NULL)
+        return;
+    // FIXME:  Don't we have to close the ioctl_fd ?  swb
+    FREE(ncf->driver);
 
 }
 
@@ -153,8 +153,9 @@ static int list_interfaces(struct netcf *ncf ATTRIBUTE_UNUSED, char ***intf) {
     for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
         if ((ifa->ifa_addr->sa_family == AF_LINK) &&
            ((ifa->ifa_flags & IFF_CANTCONFIG) == 0)) {
-	        (*intf)[nint++] = strndup(ifa->ifa_name, strlen(ifa->ifa_name)+1);
-	    }
+                (*intf)[nint++] =
+                    strndup(ifa->ifa_name, strlen(ifa->ifa_name)+1);
+        }
     }
     freeifaddrs(ifap);
 
@@ -247,16 +248,17 @@ const char *drv_mac_string(struct netcf_if *nif) {
     struct sockaddr_dl *sdl;
 
     for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
-	sdl = (struct sockaddr_dl *) ifa->ifa_addr;
-	if (strncmp(nif->name, ifa->ifa_name, strlen(ifa->ifa_name)) == 0) {
-	    if (sdl != NULL && sdl->sdl_alen > 0)
-		if ((sdl->sdl_type == IFT_ETHER ||
-		     sdl->sdl_type == IFT_L2VLAN ||
-		     sdl->sdl_type == IFT_BRIDGE) &&
-		     sdl->sdl_alen == ETHER_ADDR_LEN) {
-		    nif->mac = strdup(ether_ntoa((struct ether_addr *)LLADDR(sdl)));
-		}
-	}
+        sdl = (struct sockaddr_dl *) ifa->ifa_addr;
+        if (strncmp(nif->name, ifa->ifa_name, strlen(ifa->ifa_name)) == 0) {
+            if (sdl != NULL && sdl->sdl_alen > 0)
+                if ((sdl->sdl_type == IFT_ETHER ||
+                    sdl->sdl_type == IFT_L2VLAN ||
+                    sdl->sdl_type == IFT_BRIDGE) &&
+                    sdl->sdl_alen == ETHER_ADDR_LEN) {
+                        nif->mac =
+                        strdup(ether_ntoa((struct ether_addr *)LLADDR(sdl)));
+                    }
+        }
     }
     freeifaddrs(ifap);
 
@@ -294,99 +296,99 @@ print_element_names(xmlNodePtr node) {
 
     /* handle root node */
     if ((!xmlStrcmp(node->name, (const xmlChar *)"interface"))) {
-	if ((type_attr_val = xmlGetProp(node, (xmlChar *)"type"))) {
-	    printf("node->name: %s\n", node->name);
-	    printf("\ttype:%s\n", type_attr_val);
-	    xmlFree(type_attr_val);
-	}
-	if ((name_attr_val = xmlGetProp(node, (xmlChar *)"name"))) {
-	    printf("node->name: %s\n", node->name);
-	    printf("\tname:%s\n", name_attr_val);
-	    xmlFree(name_attr_val);
-	}
+        if ((type_attr_val = xmlGetProp(node, (xmlChar *)"type"))) {
+            printf("node->name: %s\n", node->name);
+            printf("\ttype:%s\n", type_attr_val);
+            xmlFree(type_attr_val);
+        }
+        if ((name_attr_val = xmlGetProp(node, (xmlChar *)"name"))) {
+            printf("node->name: %s\n", node->name);
+            printf("\tname:%s\n", name_attr_val);
+            xmlFree(name_attr_val);
+        }
     }
 
     /* loop through the children */
     node = node->xmlChildrenNode;
     while (node != NULL) {
-	if ((!xmlStrcmp(node->name, (const xmlChar *)"start"))) {
-	    if ((mode_attr_val = xmlGetProp(node, (xmlChar *)"mode"))) {
-		printf("node->name: %s\n", node->name);
-		printf("\tmode:%s\n", mode_attr_val);
-		xmlFree(mode_attr_val);
-	    }
-	}
-	if ((!xmlStrcmp(node->name, (const xmlChar *)"mac"))) {
-	    if ((address_attr_val = xmlGetProp(node, (xmlChar *)"address"))) {
-		printf("node->name: %s\n", node->name);
-		printf("\taddress:%s\n", address_attr_val);
-		xmlFree(address_attr_val);
-	    }
-	}
-	if ((!xmlStrcmp(node->name, (const xmlChar *)"mtu"))) {
-	    if ((size_attr_val = xmlGetProp(node, (xmlChar *)"size"))) {
-		printf("node->name: %s\n", node->name);
-		printf("\tsize:%s\n", size_attr_val);
-		xmlFree(size_attr_val);
-	    }
-	}
-	if ((!xmlStrcmp(node->name, (const xmlChar *)"protocol"))) {
-	    if ((family_attr_val = xmlGetProp(node, (xmlChar *)"family"))) {
-		printf("node->name: %s\n", node->name);
-		printf("\tfamily:%s\n", family_attr_val);
-		xmlFree(family_attr_val);
-	    }
-	    /* <protocol> possibly has children */
-	    print_element_names(node);
-	}
-	if ((!xmlStrcmp(node->name, (const xmlChar *)"ip"))) {
-	    if ((ip_address_attr_val = xmlGetProp(node, (xmlChar *)"address"))) {
-		printf("node->name: %s\n", node->name);
-		printf("\tip_address:%s\n", ip_address_attr_val);
-		xmlFree(ip_address_attr_val);
-	    }
-	    if ((prefix_attr_val = xmlGetProp(node, (xmlChar *)"prefix"))) {
-		printf("node->name: %s\n", node->name);
-		printf("\tprefix:%s\n", prefix_attr_val);
-		xmlFree(prefix_attr_val);
-	    }
-	}
-	if ((!xmlStrcmp(node->name, (const xmlChar *)"route"))) {
-	    if ((gateway_attr_val = xmlGetProp(node, (xmlChar *)"gateway"))) {
-		printf("node->name: %s\n", node->name);
-		printf("\tgateway:%s\n", gateway_attr_val);
-		xmlFree(gateway_attr_val);
-	    }
-	}
+        if ((!xmlStrcmp(node->name, (const xmlChar *)"start"))) {
+            if ((mode_attr_val = xmlGetProp(node, (xmlChar *)"mode"))) {
+                printf("node->name: %s\n", node->name);
+                printf("\tmode:%s\n", mode_attr_val);
+                xmlFree(mode_attr_val);
+            }
+        }
+        if ((!xmlStrcmp(node->name, (const xmlChar *)"mac"))) {
+            if ((address_attr_val = xmlGetProp(node, (xmlChar *)"address"))) {
+                printf("node->name: %s\n", node->name);
+                printf("\taddress:%s\n", address_attr_val);
+                xmlFree(address_attr_val);
+            }
+        }
+        if ((!xmlStrcmp(node->name, (const xmlChar *)"mtu"))) {
+            if ((size_attr_val = xmlGetProp(node, (xmlChar *)"size"))) {
+                printf("node->name: %s\n", node->name);
+                printf("\tsize:%s\n", size_attr_val);
+                xmlFree(size_attr_val);
+            }
+        }
+        if ((!xmlStrcmp(node->name, (const xmlChar *)"protocol"))) {
+            if ((family_attr_val = xmlGetProp(node, (xmlChar *)"family"))) {
+                printf("node->name: %s\n", node->name);
+                printf("\tfamily:%s\n", family_attr_val);
+                xmlFree(family_attr_val);
+            }
+            /* <protocol> possibly has children */
+            print_element_names(node);
+        }
+        if ((!xmlStrcmp(node->name, (const xmlChar *)"ip"))) {
+            if ((ip_address_attr_val = xmlGetProp(node, (xmlChar *)"address"))) {
+                printf("node->name: %s\n", node->name);
+                printf("\tip_address:%s\n", ip_address_attr_val);
+                xmlFree(ip_address_attr_val);
+            }
+            if ((prefix_attr_val = xmlGetProp(node, (xmlChar *)"prefix"))) {
+                printf("node->name: %s\n", node->name);
+                printf("\tprefix:%s\n", prefix_attr_val);
+                xmlFree(prefix_attr_val);
+            }
+        }
+        if ((!xmlStrcmp(node->name, (const xmlChar *)"route"))) {
+            if ((gateway_attr_val = xmlGetProp(node, (xmlChar *)"gateway"))) {
+                printf("node->name: %s\n", node->name);
+                printf("\tgateway:%s\n", gateway_attr_val);
+                xmlFree(gateway_attr_val);
+            }
+        }
+    
+        /* vlan related */
+        if ((!xmlStrcmp(node->name, (const xmlChar *)"vlan"))) {
+            if ((tag_attr_val = xmlGetProp(node, (xmlChar *)"tag"))) {
+                printf("node->name: %s\n", node->name);
+                printf("\ttag:%s\n", tag_attr_val);
+                xmlFree(tag_attr_val);
+            }
+            /* <vlan> possibly has children */
+            print_element_names(node);
+        }
+    
+        /* bridge related */
+        if ((!xmlStrcmp(node->name, (const xmlChar *)"bridge"))) {
+            if ((stp_attr_val = xmlGetProp(node, (xmlChar *)"stp"))) {
+                printf("node->name: %s\n", node->name);
+                printf("\tstp:%s\n", stp_attr_val);
+                xmlFree(stp_attr_val);
+            }
+            if ((delay_attr_val = xmlGetProp(node, (xmlChar *)"delay"))) {
+                printf("node->name: %s\n", node->name);
+                printf("\tdelay:%s\n", delay_attr_val);
+                xmlFree(delay_attr_val);
+            }
+            /* <bridge> possibly has children */
+            print_element_names(node);
+        }
 
-	/* vlan related */
-	if ((!xmlStrcmp(node->name, (const xmlChar *)"vlan"))) {
-	    if ((tag_attr_val = xmlGetProp(node, (xmlChar *)"tag"))) {
-		printf("node->name: %s\n", node->name);
-		printf("\ttag:%s\n", tag_attr_val);
-		xmlFree(tag_attr_val);
-	    }
-	    /* <vlan> possibly has children */
-	    print_element_names(node);
-	}
-
-	/* bridge related */
-	if ((!xmlStrcmp(node->name, (const xmlChar *)"bridge"))) {
-	    if ((stp_attr_val = xmlGetProp(node, (xmlChar *)"stp"))) {
-		printf("node->name: %s\n", node->name);
-		printf("\tstp:%s\n", stp_attr_val);
-		xmlFree(stp_attr_val);
-	    }
-	    if ((delay_attr_val = xmlGetProp(node, (xmlChar *)"delay"))) {
-		printf("node->name: %s\n", node->name);
-		printf("\tdelay:%s\n", delay_attr_val);
-		xmlFree(delay_attr_val);
-	    }
-	    /* <bridge> possibly has children */
-	    print_element_names(node);
-	}
-
-	node = node->next;
+        node = node->next;
     }
     return 0;
 }
@@ -397,7 +399,7 @@ print_element_names(xmlNodePtr node) {
  * define <input.xml>
  */
 struct netcf_if *drv_define(struct netcf *ncf ATTRIBUTE_UNUSED,
-				const char *xml_str) {
+                            const char *xml_str) {
 
     xmlDocPtr doc = NULL;
     xmlNodePtr root_element = NULL;
@@ -405,15 +407,15 @@ struct netcf_if *drv_define(struct netcf *ncf ATTRIBUTE_UNUSED,
     doc = xmlReadMemory(xml_str, strlen(xml_str), "noname.xml", NULL, 0);
 
     if (doc == NULL) {
-	printf("Could not parse file\n");
-	return NULL;
+        printf("Could not parse file\n");
+        return NULL;
     } else {
-	root_element = xmlDocGetRootElement(doc);
+        root_element = xmlDocGetRootElement(doc);
 
-	//print elements for now
-	print_element_names(root_element);
+        //print elements for now
+        print_element_names(root_element);
 
-	xmlFreeDoc(doc);
+        xmlFreeDoc(doc);
     }
     xmlCleanupParser();
 
@@ -434,25 +436,25 @@ int drv_undefine(struct netcf_if *nif) {
     /* read rc.conf */
     fp = fopen(PATH_RC_CONF, "r");
     if (fp == NULL) {
-	printf("Could not open rc.conf\n");
-	return -1;
+        printf("Could not open rc.conf\n");
+        return -1;
     }
 
     /* open tmp file for writing */
     fp_tmp = fopen(PATH_RC_CONF_TMP, "w");
     if (fp_tmp == NULL) {
-	printf("Could not open tmp file\n");
-	return -1;
+        printf("Could not open tmp file\n");
+        return -1;
     }
 
     while (fgets(line, sizeof(line), fp) != NULL) {
-	line_ptr = line;
+        line_ptr = line;
 
-	/* if line is not a comment and has <interface>, process it */
-	if (line[0] != '#' && strstr(line, nif->name))
-	    continue;
-	else
-	    fputs(line, fp_tmp); /* copy this line to the tmp file */
+        /* if line is not a comment and has <interface>, process it */
+        if (line[0] != '#' && strstr(line, nif->name))
+            continue;
+        else
+            fputs(line, fp_tmp); /* copy this line to the tmp file */
     }
 
     fclose(fp);
@@ -483,8 +485,8 @@ int dhcp_lease_exists (struct netcf_if *nif) {
 
     /* Go through all files and look for dhcp lease file for our interface */
     for (count = 0; count < namelist_count ; count++) {
-	    /* Only match "dhclient.leases.*" files */
-	    if (fnmatch(filename_dhcp_lease, files[count]->d_name, 0) == 0) {
+        /* Only match "dhclient.leases.*" files */
+        if (fnmatch(filename_dhcp_lease, files[count]->d_name, 0) == 0) {
             has_dhcp = 1;
             break;
         }
@@ -499,7 +501,7 @@ int dhcp_lease_exists (struct netcf_if *nif) {
  * for dumpxml --live <interface>
  */
 void xml_print (struct netcf_if *nif, int interface_type, char *mac,
-	       char *mtu_str, char *addr_buf, int inet, int vlan_tag) {
+                char *mtu_str, char *addr_buf, int inet, int vlan_tag) {
     xmlDocPtr doc = NULL;
     xmlNodePtr interface_node = NULL;
     xmlNodePtr start_node = NULL;
@@ -525,20 +527,20 @@ void xml_print (struct netcf_if *nif, int interface_type, char *mac,
 
     switch (interface_type) {
     case 0:
-	strncpy(interface, "ethernet", sizeof("ethernet"));
-	break;
+        strncpy(interface, "ethernet", sizeof("ethernet"));
+        break;
 
     case 1:
-	strncpy(interface, "bridge", sizeof("bridge"));
-	break;
+        strncpy(interface, "bridge", sizeof("bridge"));
+        break;
 
     case 2:
-	strncpy(interface, "vlan", sizeof("vlan"));
-	break;
+        strncpy(interface, "vlan", sizeof("vlan"));
+        break;
 
     default:
-	printf("Incorrect interface type\n");
-	break;
+        printf("Incorrect interface type\n");
+        break;
     }
 
     interface_node = xmlNewNode(ns, BAD_CAST "interface");
@@ -549,49 +551,49 @@ void xml_print (struct netcf_if *nif, int interface_type, char *mac,
 
     start_node = xmlNewChild(interface_node, ns, (xmlChar*)"start", NULL);
     if (has_dhcp)
-	xmlNewProp(start_node, (xmlChar*)"mode", (xmlChar*)"none");
+        xmlNewProp(start_node, (xmlChar*)"mode", (xmlChar*)"none");
     else
-	xmlNewProp(start_node, (xmlChar*)"mode", (xmlChar*)"onboot");
+        xmlNewProp(start_node, (xmlChar*)"mode", (xmlChar*)"onboot");
 
     if (has_dhcp) {
-	mac_node = xmlNewChild(interface_node, ns, (xmlChar*)"mac", NULL);
-	xmlNewProp(mac_node, (xmlChar*)"address", (xmlChar*)mac);
+        mac_node = xmlNewChild(interface_node, ns, (xmlChar*)"mac", NULL);
+        xmlNewProp(mac_node, (xmlChar*)"address", (xmlChar*)mac);
 
-	mtu_node = xmlNewChild(interface_node, ns, (xmlChar*)"mtu", NULL);
-	xmlNewProp(mtu_node, (xmlChar*)"size", (xmlChar*)mtu_str);
+        mtu_node = xmlNewChild(interface_node, ns, (xmlChar*)"mtu", NULL);
+        xmlNewProp(mtu_node, (xmlChar*)"size", (xmlChar*)mtu_str);
     }
 
     protocol_node = xmlNewChild(interface_node, ns, (xmlChar*)"protocol", NULL);
     if (inet == 0)
-	xmlNewProp(protocol_node, (xmlChar*)"family", (xmlChar*)"ipv4");
+        xmlNewProp(protocol_node, (xmlChar*)"family", (xmlChar*)"ipv4");
     else if (inet == 1)
-	xmlNewProp(protocol_node, (xmlChar*)"family", (xmlChar*)"ipv6");
+        xmlNewProp(protocol_node, (xmlChar*)"family", (xmlChar*)"ipv6");
 
     if (has_dhcp) {
-	dhcp_node = xmlNewChild(protocol_node, ns, (xmlChar*)"dhcp", NULL);
+        dhcp_node = xmlNewChild(protocol_node, ns, (xmlChar*)"dhcp", NULL);
     } else {
-	/* prefix and gateway are dummy for now. */
-	ip_node = xmlNewChild(protocol_node, ns, (xmlChar*)"ip", NULL);
-	xmlNewProp(ip_node, (xmlChar*)"address", (xmlChar*)addr_buf);
-	/* prefix only possible with IPv6 */
-	if (inet == 1)
-	    xmlNewProp(prefix_node, (xmlChar*)"prefix", (xmlChar*)"00");
+        /* prefix and gateway are dummy for now. */
+        ip_node = xmlNewChild(protocol_node, ns, (xmlChar*)"ip", NULL);
+        xmlNewProp(ip_node, (xmlChar*)"address", (xmlChar*)addr_buf);
+        /* prefix only possible with IPv6 */
+        if (inet == 1)
+            xmlNewProp(prefix_node, (xmlChar*)"prefix", (xmlChar*)"00");
 
-	/* gateway info is only for "ethernet" */
-	if (interface_type == 0) {
-	    route_node = xmlNewChild(protocol_node, ns, (xmlChar*)"route", NULL);
-	    xmlNewProp(route_node, (xmlChar*)"gateway", (xmlChar*)"0.0.0.0");
-	}
+        /* gateway info is only for "ethernet" */
+        if (interface_type == 0) {
+            route_node = xmlNewChild(protocol_node, ns, (xmlChar*)"route", NULL);
+            xmlNewProp(route_node, (xmlChar*)"gateway", (xmlChar*)"0.0.0.0");
+        }
     }
 
     /* XXX: tag value and interface value are dummy (for now) */
     if (interface_type == 2) {
-	snprintf(vlan_tag_str, sizeof(vlan_tag), "%d", vlan_tag);
-	vlan_node = xmlNewChild(interface_node, ns, (xmlChar*)"vlan", NULL);
-	xmlNewProp(vlan_node, (xmlChar*)"tag", (xmlChar*)vlan_tag_str);
+        snprintf(vlan_tag_str, sizeof(vlan_tag), "%d", vlan_tag);
+        vlan_node = xmlNewChild(interface_node, ns, (xmlChar*)"vlan", NULL);
+        xmlNewProp(vlan_node, (xmlChar*)"tag", (xmlChar*)vlan_tag_str);
 
-	vlan_intf_node = xmlNewChild(vlan_node, ns, (xmlChar*)"interface", NULL);
-	xmlNewProp(vlan_intf_node, (xmlChar*)"name", (xmlChar*)"sample");
+        vlan_intf_node = xmlNewChild(vlan_node, ns, (xmlChar*)"interface", NULL);
+        xmlNewProp(vlan_intf_node, (xmlChar*)"name", (xmlChar*)"sample");
     }
 
     xmlElemDump(stdout, doc, interface_node);
@@ -612,72 +614,72 @@ char *drv_xml_desc(struct netcf_if *nif) {
     FILE *fp;
     char line[256];
     char *line_ptr;
-    char ifcfg_intf[20];	/* ifconfig_em0 */
-    char ifcfg_intf_ipv6[40];	/* ifconfig_em0_ipv6 */
-    char vlan_intf[20];		/* vlan_em0 */
+    char ifcfg_intf[20];        /* ifconfig_em0 */
+    char ifcfg_intf_ipv6[40];   /* ifconfig_em0_ipv6 */
+    char vlan_intf[20];         /* vlan_em0 */
 
     char *t_name = (char*)malloc(20);
     char *t_val = (char*)malloc(20);
 
     char *mac;
     char mtu_str[10];
-    int inet = 0;		/* inet = 0 is IPv4 and inet = 1 is IPv6 */
-    int interface_type = 0;	/* 0 = ethernet */
-				/* 1 = bridge */
-				/* 2 = vlan */
+    int inet = 0;           /* inet = 0 is IPv4 and inet = 1 is IPv6 */
+    int interface_type = 0; /* 0 = ethernet */
+                            /* 1 = bridge */
+                            /* 2 = vlan */
     char addr_buf[MAXHOSTNAMELEN *2 + 1];   /* for getnameinfo() */
     int vlan_tag = 0;
 
     snprintf(ifcfg_intf, sizeof(ifcfg_intf), "ifconfig_%s", nif->name);
     snprintf(ifcfg_intf_ipv6, sizeof(ifcfg_intf_ipv6),
-	     "ifconfig_%s_ipv6", nif->name);
+        "ifconfig_%s_ipv6", nif->name);
     snprintf(vlan_intf, sizeof(vlan_intf), "vlan_%s", nif->name);
 
     /* read rc.conf */
     fp = fopen("/etc/rc.conf", "r");
     if (fp == NULL) {
-	printf("Could not open rc.conf\n");
-	return NULL;
+        printf("Could not open rc.conf\n");
+        return NULL;
     }
 
     while (fgets(line, sizeof(line), fp) != NULL) {
-	line_ptr = line;
+        line_ptr = line;
 
-	/* if line is not a comment and has <interface>, process it */
-	if (line[0] != '#' && strstr(line, nif->name)) {
+        /* if line is not a comment and has <interface>, process it */
+        if (line[0] != '#' && strstr(line, nif->name)) {
 
-	    /* tokenize the line with '=' to get token name */
-	    t_name = strsep(&line_ptr, "=");
+            /* tokenize the line with '=' to get token name */
+            t_name = strsep(&line_ptr, "=");
 
-	    /* remove double quotes (if present) to get token value */
-	    if (line_ptr[0] == '"') {
-		line_ptr++;
-		t_val = strsep(&line_ptr, "\"");
-	    } else
-		strncpy(t_val, line_ptr, sizeof(line_ptr));
+            /* remove double quotes (if present) to get token value */
+            if (line_ptr[0] == '"') {
+                line_ptr++;
+                t_val = strsep(&line_ptr, "\"");
+            } else
+                strncpy(t_val, line_ptr, sizeof(line_ptr));
 
-	    /* ifconfig_<interface> */
-	    if (strncmp(t_name, ifcfg_intf, sizeof(ifcfg_intf)) == 0) {
-		inet = 0;
-		//printf("token name: %s\t", t_name);
-		//printf("token val: %s\n", t_val);
-	    }
+            /* ifconfig_<interface> */
+            if (strncmp(t_name, ifcfg_intf, sizeof(ifcfg_intf)) == 0) {
+                inet = 0;
+                //printf("token name: %s\t", t_name);
+                //printf("token val: %s\n", t_val);
+            }
 
-	    /* ifconfig_<interface>_ipv6 */
-	    if (strncmp(t_name, ifcfg_intf_ipv6,
-			sizeof(ifcfg_intf_ipv6)) == 0) {
-		inet = 1;
-		//printf("token name: %s\t", t_name);
-		//printf("token val: %s\n", t_val);
-	    }
+            /* ifconfig_<interface>_ipv6 */
+            if (strncmp(t_name, ifcfg_intf_ipv6,
+                sizeof(ifcfg_intf_ipv6)) == 0) {
+                inet = 1;
+                //printf("token name: %s\t", t_name);
+                //printf("token val: %s\n", t_val);
+            }
 
-	    /* vlan_<interface> */
-	    if (strncmp(t_name, vlan_intf, sizeof(vlan_intf)) == 0) {
-		//printf("token name: %s\t", t_name);
-		//printf("token val: %s\n", t_val);
-	    }
+            /* vlan_<interface> */
+            if (strncmp(t_name, vlan_intf, sizeof(vlan_intf)) == 0) {
+                //printf("token name: %s\t", t_name);
+                //printf("token val: %s\n", t_val);
+            }
 
-	}
+        }
     }
 
     interface_type = 0; //passing interface_type as 0 for now.
@@ -700,7 +702,7 @@ char *drv_xml_state(struct netcf_if *nif) {
     struct ifreq my_ifr;
     int s, mtu = 0;
     char *mac;
-    int inet = 0;	/* inet = 0 is IPv4 and inet = 1 is IPv6 */
+    int inet = 0;   /* inet = 0 is IPv4 and inet = 1 is IPv6 */
     struct sockaddr_in *sin;
 
     struct sockaddr_in6 *sin6, null_sin6;
@@ -712,9 +714,9 @@ char *drv_xml_state(struct netcf_if *nif) {
     u_int32_t scopeid;
     char addr_buf[MAXHOSTNAMELEN *2 + 1];   /* for getnameinfo() */
     char mtu_str[10];
-    int interface_type = 0;	/* 0 = ethernet */
-				/* 1 = bridge */
-				/* 2 = vlan */
+    int interface_type = 0; /* 0 = ethernet */
+                            /* 1 = bridge */
+                            /* 2 = vlan */
 
     /* mac address */
     mac = (char *)drv_mac_string(nif);
@@ -731,7 +733,7 @@ char *drv_xml_state(struct netcf_if *nif) {
     }
 
     if (ioctl(s, SIOCGIFMTU, &my_ifr) != -1) {
-	mtu = my_ifr.ifr_mtu;
+        mtu = my_ifr.ifr_mtu;
     }
     snprintf(mtu_str, sizeof(mtu_str), "%d", mtu);
 
@@ -744,84 +746,84 @@ char *drv_xml_state(struct netcf_if *nif) {
     int vlan_tag = 0;
 
     for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
-	sdl = (struct sockaddr_dl *) ifa->ifa_addr;
-	if (strncmp(nif->name, ifa->ifa_name, strlen(ifa->ifa_name)) == 0) {
+        sdl = (struct sockaddr_dl *) ifa->ifa_addr;
+        if (strncmp(nif->name, ifa->ifa_name, strlen(ifa->ifa_name)) == 0) {
 
-	    switch (sdl->sdl_type) {
-	    case IFT_BRIDGE:
-		printf("bridge found\n");
-		interface_type = 1;
-		break;
+            switch (sdl->sdl_type) {
+                case IFT_BRIDGE:
+                    printf("bridge found\n");
+                    interface_type = 1;
+                    break;
 
-	    case IFT_L2VLAN:
-		//ifp = ifa->ifa_ifp;
-		//ifv = ifp->if_softc;
-		//vlan_tag = ifv->ifv_tag;
-		interface_type = 2;
-		break;
+                case IFT_L2VLAN:
+                    //ifp = ifa->ifa_ifp;
+                    //ifv = ifp->if_softc;
+                    //vlan_tag = ifv->ifv_tag;
+                    interface_type = 2;
+                    break;
 
-	    default:
-		interface_type = 0;
-		break;
-	    }
+                default:
+                    interface_type = 0;
+                    break;
+            }
 
-	    if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
-		inet = 0;
-		sin = (struct sockaddr_in *)ifa->ifa_addr;
-		if (sin == NULL)
-		    return NULL;
-	    }
-	    if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET6) {
-		inet = 1;
+            if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
+                inet = 0;
+                sin = (struct sockaddr_in *)ifa->ifa_addr;
+                if (sin == NULL)
+                    return NULL;
+            }
+            if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET6) {
+                inet = 1;
 
-		memset(&null_sin6, 0, sizeof(null_sin6));
+                memset(&null_sin6, 0, sizeof(null_sin6));
 
-		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-		if (sin6 == NULL)
-			return NULL;
+                sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+                if (sin6 == NULL)
+                    return NULL;
 
-		strncpy(ifr6.ifr_name, ifa->ifa_name, sizeof(ifa->ifa_name));
-		if ((s6 = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
-			warn("socket(AF_INET6,SOCK_DGRAM)");
-			return NULL;
-		}
-		ifr6.ifr_addr = *sin6;
-		if (ioctl(s6, SIOCGIFAFLAG_IN6, &ifr6) < 0) {
-			warn("ioctl(SIOCGIFAFLAG_IN6)");
-			close(s6);
-			return NULL;
-		}
-		flags6 = ifr6.ifr_ifru.ifru_flags6;
-		memset(&lifetime, 0, sizeof(lifetime));
-		ifr6.ifr_addr = *sin6;
-		if (ioctl(s6, SIOCGIFALIFETIME_IN6, &ifr6) < 0) {
-			warn("ioctl(SIOCGIFALIFETIME_IN6)");
-			close(s6);
-			return NULL;
-		}
-		lifetime = ifr6.ifr_ifru.ifru_lifetime;
-		close(s6);
+                strncpy(ifr6.ifr_name, ifa->ifa_name, sizeof(ifa->ifa_name));
+                if ((s6 = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
+                    warn("socket(AF_INET6,SOCK_DGRAM)");
+                    return NULL;
+                }
+                ifr6.ifr_addr = *sin6;
+                if (ioctl(s6, SIOCGIFAFLAG_IN6, &ifr6) < 0) {
+                    warn("ioctl(SIOCGIFAFLAG_IN6)");
+                    close(s6);
+                    return NULL;
+                }
+                flags6 = ifr6.ifr_ifru.ifru_flags6;
+                memset(&lifetime, 0, sizeof(lifetime));
+                ifr6.ifr_addr = *sin6;
+                if (ioctl(s6, SIOCGIFALIFETIME_IN6, &ifr6) < 0) {
+                    warn("ioctl(SIOCGIFALIFETIME_IN6)");
+                    close(s6);
+                    return NULL;
+                }
+                lifetime = ifr6.ifr_ifru.ifru_lifetime;
+                close(s6);
 
-		/* XXX: embedded link local addr check */
-		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr) &&
-		    *(u_short *)&sin6->sin6_addr.s6_addr[2] != 0) {
-			u_short iindex;
+                /* XXX: embedded link local addr check */
+                if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr) &&
+                  *(u_short *)&sin6->sin6_addr.s6_addr[2] != 0) {
+                    u_short iindex;
 
-			iindex = *(u_short *)&sin6->sin6_addr.s6_addr[2];
-			*(u_short *)&sin6->sin6_addr.s6_addr[2] = 0;
-			if (sin6->sin6_scope_id == 0)
-				sin6->sin6_scope_id = ntohs(iindex);
-		}
-		scopeid = sin6->sin6_scope_id;
+                    iindex = *(u_short *)&sin6->sin6_addr.s6_addr[2];
+                    *(u_short *)&sin6->sin6_addr.s6_addr[2] = 0;
+                    if (sin6->sin6_scope_id == 0)
+                        sin6->sin6_scope_id = ntohs(iindex);
+                }
+                scopeid = sin6->sin6_scope_id;
 
-		error = getnameinfo((struct sockaddr *)sin6, sin6->sin6_len, addr_buf,
-				    sizeof(addr_buf), NULL, 0, NI_NUMERICHOST);
-		if (error != 0)
-			inet_ntop(AF_INET6, &sin6->sin6_addr, addr_buf,
-				  sizeof(addr_buf));
+                error = getnameinfo((struct sockaddr *)sin6, sin6->sin6_len, addr_buf,
+                sizeof(addr_buf), NULL, 0, NI_NUMERICHOST);
+                if (error != 0)
+                    inet_ntop(AF_INET6, &sin6->sin6_addr, addr_buf,
+                sizeof(addr_buf));
 
-	    }
-	}
+            }
+        }
     }
     freeifaddrs(ifap);
 
@@ -853,32 +855,32 @@ error:
  * ifaces == NULL, populate with valid elements
  */
 int drv_lookup_by_mac_string(struct netcf *ncf,
-			     const char *mac, int maxifaces ATTRIBUTE_UNUSED,
-			     struct netcf_if **ifaces)
+        const char *mac, int maxifaces ATTRIBUTE_UNUSED,
+        struct netcf_if **ifaces)
 {
-	int iface_counter = 0;
-	int iface_total = 0;
-	char **intf_ids = NULL;
-	char *curr_iface_mac;
-	int result = 0;
-	struct netcf_if *temp = NULL;
+    int iface_counter = 0;
+    int iface_total = 0;
+    char **intf_ids = NULL;
+    char *curr_iface_mac;
+    int result = 0;
+    struct netcf_if *temp = NULL;
 
-	result = list_interfaces(ncf, &intf_ids);
-	for (iface_counter = 0; iface_counter < result; iface_counter++)	
-	{
-		temp = drv_lookup_by_name(ncf, intf_ids[iface_counter]);
-		if (temp == NULL)
-			continue;
-		curr_iface_mac = (char *)drv_mac_string(temp);
-		if (curr_iface_mac == NULL) // for lo0 or other interfaces without a mac
-			continue;
-		if (!strcmp(curr_iface_mac, mac)) {
-			ifaces[iface_total] = temp;
-			iface_total++;
-		} else {
-			free(temp);
-		}
-	}
+    result = list_interfaces(ncf, &intf_ids);
+    for (iface_counter = 0; iface_counter < result; iface_counter++)
+    {
+        temp = drv_lookup_by_name(ncf, intf_ids[iface_counter]);
+        if (temp == NULL)
+            continue;
+        curr_iface_mac = (char *)drv_mac_string(temp);
+        if (curr_iface_mac == NULL) // for lo0 or other interfaces without a mac
+            continue;
+        if (!strcmp(curr_iface_mac, mac)) {
+            ifaces[iface_total] = temp;
+            iface_total++;
+        } else {
+            free(temp);
+        }
+    }
     return iface_total;
 }
 

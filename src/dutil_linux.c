@@ -175,7 +175,7 @@ exec_program(struct netcf *ncf,
         strerror_r(errno, errbuf, sizeof(errbuf));
         report_error(ncf, NETCF_EEXEC, "failed to fork for '%s': %s",
                      commandline, errbuf);
-        goto error; 
+        goto error;
     }
 #else
     ERR_THROW(*pid < 0, ncf, EEXEC, "failed to fork for '%s': %s",
