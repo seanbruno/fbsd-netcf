@@ -109,6 +109,7 @@ static struct nl_cache *__rtnl_addr_alloc_cache(struct nl_sock *sk)
 
     return cache;
 }
+#endif /* ifndef __FreeBSD__ */
 
 /*
  * Executing external programs
