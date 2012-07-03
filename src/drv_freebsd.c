@@ -360,7 +360,7 @@ print_element_names(xmlNodePtr node) {
                 xmlFree(gateway_attr_val);
             }
         }
-    
+
         /* vlan related */
         if ((!xmlStrcmp(node->name, (const xmlChar *)"vlan"))) {
             if ((tag_attr_val = xmlGetProp(node, (xmlChar *)"tag"))) {
@@ -371,7 +371,7 @@ print_element_names(xmlNodePtr node) {
             /* <vlan> possibly has children */
             print_element_names(node);
         }
-    
+
         /* bridge related */
         if ((!xmlStrcmp(node->name, (const xmlChar *)"bridge"))) {
             if ((stp_attr_val = xmlGetProp(node, (xmlChar *)"stp"))) {
