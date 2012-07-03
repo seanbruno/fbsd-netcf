@@ -1,5 +1,5 @@
 /*
- * dutil_fbsd.c: FreeBSD utility functions for driver backends.
+ * dutil_freebsd.c: FreeBSD utility functions for driver backends.
  */
 
 #include <config.h>

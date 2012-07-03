@@ -56,7 +56,7 @@
 #include "ref.h"
 #include "list.h"
 #include "dutil.h"
-#include "dutil_fbsd.h"
+#include "dutil_freebsd.h"
 
 #define MAX_FILENAME		1024
 #define PATH_VAR_DB		"/var/db/"
@@ -133,7 +133,7 @@ void drv_close(struct netcf *ncf) {
 
 /*
  * drv_entry() is used by the linux backends to specify the
- * use of the augeas libs.  fbsd is not using them now, so
+ * use of the augeas libs.  freebsd is not using them now, so
  * this function is unused at this time.
  */
 void drv_entry (struct netcf *ncf ATTRIBUTE_UNUSED) {
