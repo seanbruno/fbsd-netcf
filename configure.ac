@@ -1,4 +1,4 @@
-AC_INIT(netcf, 0.1.9)
+AC_INIT(netcf, 0.2.0)
 AC_CONFIG_SRCDIR([src/netcf.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([gnulib/m4])

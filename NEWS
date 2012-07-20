@@ -1,3 +1,17 @@
+0.2.0 - 2012-07.20
+  - add support for Ubuntu, debian, and Suse Linux. Also an
+    unfinished port for MS Windows.
+  - added support for libnl-3 (which is incompatible with libnl-1 -
+    netcf will use whichever is available, preferring libnl-3 unless
+    told otherwise during configure stage)
+  - add "bundled(gnulib)" to specfile to indicate that we use a local
+    copy of gnulib sources (used by Fedora/RHEL when determining the scope
+    of security bugs).
+  - Fix ipcalc_netmask, which was trimming off the last digit in
+    character representations of full-length netmasks (all 4 octets
+    having 3 chars each)
+  - other minor bugfixes
+
 0.1.9 - 2011-07-26
   - always add <bridge> element to bridge, even if there is no physdev present
     (resolves: https://bugzilla.redhat.com/show_bug.cgi?id=713180)
