@@ -143,13 +143,13 @@ fi
 
 if test "x$with_driver" = "xdebian"; then
 	dnl Check for ifup and ifdown in debian
-	AC_PATH_PROG(IFDOWN, ifdown, false, $PATH$PATHSEPARATOR/sbin)
+	AC_PATH_PROG(IFDOWN, ifdown, false, $PATH$PATH_SEPARATOR/sbin)
 	if test "$IFDOWN" = "false"; then
 	   AC_MSG_ERROR([ifdown not found])
 	fi
 	AC_DEFINE_UNQUOTED([IFDOWN], "$IFDOWN", [path to ifdown binary])
 
-	AC_PATH_PROG(IFUP, ifup, false, $PATH$PATHSEPARATOR/sbin)
+	AC_PATH_PROG(IFUP, ifup, false, $PATH$PATH_SEPARATOR/sbin)
 	if test "$IFUP" = "false"; then
 	   AC_MSG_ERROR([ifup not found])
 	fi
