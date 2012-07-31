@@ -1031,6 +1031,9 @@ int drv_if_up(struct netcf_if *nif) {
     }
     run1(ncf, ifup, nif->name);
     ERR_BAIL(ncf);
+    ERR_THROW(!if_is_active(ncf, nif->name), ncf, EOTHER,
+              "interface %s failed to become active - "
+              "possible disconnected cable.", nif->name);
     result = 0;
  error:
     free_matches(nslaves, &slaves);

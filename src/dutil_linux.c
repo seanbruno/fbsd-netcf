@@ -692,7 +692,7 @@ int if_is_active(struct netcf *ncf, const char *intf) {
     if (ioctl(ncf->driver->ioctl_fd, SIOCGIFFLAGS, &ifr))  {
         return 0;
     }
-    return ((ifr.ifr_flags & IFF_UP) == IFF_UP);
+    return ((ifr.ifr_flags & (IFF_UP|IFF_RUNNING)) == (IFF_UP|IFF_RUNNING));
 }
 
 netcf_if_type_t if_type(struct netcf *ncf, const char *intf) {
