@@ -13,8 +13,11 @@
 .libs/
 /build-aux
 /ChangeLog
+/GNUmakefile
+/INSTALL
 Makefile
 Makefile.in
+/maint.mk
 /TAGS
 /aclocal.m4
 /autom4te.cache/
@@ -41,5 +44,6 @@ src/netcf-transaction.init
 src/netcf.syms
 stamp-h1
 tests/test-debian
+tests/test-initscripts
 tests/test-redhat
 ylwrap
