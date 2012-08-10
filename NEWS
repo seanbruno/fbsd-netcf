@@ -1,4 +1,10 @@
-0.2.0 - 2012-07.20
+0.2.1 - 2012-08-10
+  - update gnulib to fix broken build on systems with nwer glibc (which no
+    longer provides gets()).
+  - add ncftool manpage
+  - interfaces are only "active" if both UP and RUNNING.
+
+0.2.0 - 2012-07-20
   - add support for Ubuntu, debian, and Suse Linux. Also an
     unfinished port for MS Windows.
   - added support for libnl-3 (which is incompatible with libnl-1 -
