@@ -11,7 +11,13 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires:  readline-devel augeas-devel >= 0.5.2
 BuildRequires:  libxml2-devel libxslt-devel
+
+%if 0%{?fedora} >= 18 || 0%{?rhel} >= 7
+BuildRequires:  libnl3-devel
+%else
 BuildRequires:  libnl-devel
+%endif
+
 Requires:       %{name}-libs = %{version}-%{release}
 
 Provides: bundled(gnulib)
