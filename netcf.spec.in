@@ -12,6 +12,14 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  readline-devel augeas-devel >= 0.5.2
 BuildRequires:  libxml2-devel libxslt-devel
 
+# force the --with-libnl1 option on F17/RHEL6 and earlier
+%if (0%{?fedora} && 0%{?fedora} < 18) || (0%{?rhel} && 0%{?rhel} < 7)
+%define with_libnl1 1
+%else
+%define _with_libnl1 0
+%endif
+
+# require libnl3 on F18/RHEL7 and later
 %if 0%{?fedora} >= 18 || 0%{?rhel} >= 7
 BuildRequires:  libnl3-devel
 %else
@@ -49,7 +57,12 @@ The libraries for %{name}.
 %setup -q
 
 %build
-%configure --disable-static
+%if %{with_libnl1}
+%define _with_libnl1 --with-libnl1
+%endif
+
+%configure --disable-static \
+           %{?_with_libnl1}
 make %{?_smp_mflags}
 
 %install
