@@ -16,7 +16,7 @@ BuildRequires:  libxml2-devel libxslt-devel
 %if (0%{?fedora} && 0%{?fedora} < 18) || (0%{?rhel} && 0%{?rhel} < 7)
 %define with_libnl1 1
 %else
-%define _with_libnl1 0
+%define with_libnl1 0
 %endif
 
 # require libnl3 on F18/RHEL7 and later
