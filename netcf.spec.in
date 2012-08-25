@@ -97,7 +97,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/netcf.pc
 
 %changelog
-* Fri Aug 10 2012 Laine Stump <laine@redhat.com> - 0.2.0-1
+* Sat Aug 25 2012 Laine Stump <laine@redhat.com> - 0.2.2-1
+- specfile: require libnl3-devel for rpm builds on Fedora 18+ and
+  RHEL7+. Likewise, force libnl1 for F17- and RHEL6.x-, even if
+  libnl3-devel is installed.
+
+* Fri Aug 10 2012 Laine Stump <laine@redhat.com> - 0.2.1-1
 - update gnulib to fix broken build on systems with nwer glibc (which no
   longer provides gets()).
 - add ncftool manpage

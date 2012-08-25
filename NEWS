@@ -1,3 +1,9 @@
+0.2.2 - 2012-08-25
+
+  - specfile: require libnl3-devel for rpm builds on Fedora 18+ and
+    RHEL7+. Likewise, force libnl1 for F17- and RHEL6.x-, even if
+    libnl3-devel is installed.
+
 0.2.1 - 2012-08-10
   - update gnulib to fix broken build on systems with nwer glibc (which no
     longer provides gets()).
