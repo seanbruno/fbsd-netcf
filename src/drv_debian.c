@@ -685,7 +685,7 @@ static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml) {
                     label = xml_prop(node, "label");
                     value = xml_prop(node, "value");
 
-                    r = aug_fmt_set(ncf, value, "%s/%s[%d]/%s",
+                    r = aug_fmt_set(ncf, value, "%s/%s[%d]/%s[last()+1]",
                                     network_interfaces_path,
                                     arraylabel, n, label ? label : "1");
                     ERR_COND_BAIL(r < 0, ncf, EOTHER);
