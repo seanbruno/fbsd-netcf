@@ -18,10 +18,13 @@ lib_LTLIBRARIES = libnetcf.la
 bin_PROGRAMS = ncftool
 
 if ! NETCF_DRIVER_MSWINDOWS
+if ! NETCF_DRIVER_FREEBSD
 noinst_PROGRAMS = ncftransform
+endif
 endif
 
 DRIVER_SOURCES_COMMON = dutil.h dutil.c
+DRIVER_SOURCES_FREEBSD = dutil_freebsd.h drv_freebsd.c
 DRIVER_SOURCES_LINUX = dutil_linux.h dutil_linux.c
 DRIVER_SOURCES_MSWINDOWS = dutil_mswindows.h dutil_mswindows.c drv_mswindows.c
 DRIVER_SOURCES_REDHAT = drv_redhat.c
@@ -32,6 +35,7 @@ EXTRA_DIST = netcf_public.syms \
 	netcf_private.syms \
 	netcf-transaction.init.sh \
 	$(DRIVER_SOURCES_COMMON) \
+	$(DRIVER_SOURCES_FREEBSD) \
 	$(DRIVER_SOURCES_LINUX) \
 	$(DRIVER_SOURCES_MSWINDOWS) \
 	$(DRIVER_SOURCES_REDHAT) \
@@ -62,6 +66,12 @@ DRIVER_SOURCES = \
 	$(DRIVER_SOURCES_COMMON) \
 	$(DRIVER_SOURCES_MSWINDOWS)
 endif
+if NETCF_DRIVER_FREEBSD
+DRIVER_SOURCES = \
+	$(DRIVER_SOURCES_COMMON) \
+	$(DRIVER_SOURCES_LINUX) \
+	$(DRIVER_SOURCES_FREEBSD)
+endif
 
 BUILT_SOURCES = datadir.h netcf.syms
 
@@ -85,8 +95,10 @@ ncftool.1: ncftool.pod
 	$(AM_V_GEN)$(POD2MAN) $< $(srcdir)/$@
 
 if ! NETCF_DRIVER_MSWINDOWS
+if ! NETCF_DRIVER_FREEBSD
 ncftransform_SOURCES = ncftransform.c
 ncftransform_LDADD = libnetcf.la $(GNULIB)
+endif
 endif
 
 netcf.syms: netcf_public.syms netcf_private.syms

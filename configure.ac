@@ -80,6 +80,9 @@ fi
 if test "x$with_driver" = "xcheck" && test -f /etc/suse-release ; then
   with_driver=suse
 fi
+if test "x$with_driver" = "xcheck" && test -f /usr/include/sys/param.h ; then
+  with_driver=freebsd
+fi
 if test "x$with_driver" = "xcheck" ; then
   AC_MSG_ERROR([Cannot detect network driver, use --with-driver=NAME to select implementation])
 fi
@@ -91,6 +94,7 @@ AM_CONDITIONAL([NETCF_DRIVER_REDHAT], test "x$with_driver" = "xredhat")
 AM_CONDITIONAL([NETCF_DRIVER_DEBIAN], test "x$with_driver" = "xdebian")
 AM_CONDITIONAL([NETCF_DRIVER_SUSE], test "x$with_driver" = "xsuse")
 AM_CONDITIONAL([NETCF_DRIVER_MSWINDOWS], test "x$with_driver" = "xmswindows")
+AM_CONDITIONAL([NETCF_DRIVER_FREEBSD], test "x$with_driver" = "xfreebsd")
 
 if test "x$with_driver" = "xredhat"; then
     AC_DEFINE_UNQUOTED([NETCF_TRANSACTION],
@@ -104,7 +108,7 @@ AC_ARG_WITH([libnl1],
             AS_HELP_STRING([--with-libnl1], [Force usage of libnl1 @<:@default=no@:>@]),
 	      [force_libnl1=${withval}], [force_libnl1=no])
 
-if test "x$with_driver" != "xmswindows"
+if test "x$with_driver" != "xmswindows" && test "x$with_driver" != "xfreebsd"
 then
 	PKG_CHECK_MODULES([LIBAUGEAS], [augeas >= 0.5.0])
 

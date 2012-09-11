@@ -1,0 +1,19 @@
+ - TODO
+    define     - define an interface from an XML file
+    change-begin - mark the beginning of a set of revertible network config changes
+    change-commit - commit the pending network config changes
+    change-rollback - rollback (revert) a set of network config changes
+ 
+-- done
+    dumpxml
+	- output XML version of the current network config of an interface (hiren)
+    list       - list network interfaces
+	- iterate over the list of valid net interfaces and output names
+	- all arguments work (hiren + sean)
+    ifup       - bring up an interface
+	- ioctl to set an interface up (sean)
+    ifdown     - bring down an interface
+	- ioctl to set an interface down (sean)
+    undefine   - undefine an interface
+    help       - print help
+    quit       - exit the program

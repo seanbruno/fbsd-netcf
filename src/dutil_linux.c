@@ -23,7 +23,9 @@
 #include <config.h>
 #include <internal.h>
 
+#ifndef __FreeBSD__
 #include <augeas.h>
+#endif
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -45,6 +47,12 @@
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#ifdef __FreeBSD__
+#include <sys/socket.h> // For AF_INET and the ilk
+#include <net/if.h> // For struct ifreq
+#include <net/if_types.h>
+#include <sys/sockio.h> // For SIOCGIADDR
+#endif
 
 #include "safe-alloc.h"
 #include "read-file.h"
@@ -54,6 +62,7 @@
 #include "dutil.h"
 #include "dutil_linux.h"
 
+#ifndef __FreeBSD__
 #ifndef HAVE_LIBNL3
 #include <net/if.h>
 #endif
@@ -61,7 +70,9 @@
 #include <netlink/cache.h>
 #include <netlink/route/addr.h>
 #include <netlink/route/link.h>
+#endif
 
+#ifndef __FreeBSD__
 #ifdef HAVE_LIBNL3
 #define RTNL_LINK_NOT_FOUND 0
 
@@ -98,6 +109,7 @@ static struct nl_cache *__rtnl_addr_alloc_cache(struct nl_sock *sk)
 
     return cache;
 }
+#endif /* ifndef __FreeBSD__ */
 
 /*
  * Executing external programs
@@ -122,9 +134,16 @@ exec_program(struct netcf *ncf,
     /* create a pipe to receive stdout+stderr from child */
     if (outfd) {
         if (pipe(pipeout) < 0) {
+#ifdef __FreeBSD__
+            strerror_r(errno, errbuf, sizeof(errbuf));
+            report_error(ncf, NETCF_EEXEC,
+                         "failed to create pipe while forking for '%s': %s",
+                         commandline, errbuf);
+#else
             report_error(ncf, NETCF_EEXEC,
                          "failed to create pipe while forking for '%s': %s",
                          commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
+#endif
             goto error;
         }
         *outfd = pipeout[0];
@@ -136,24 +155,49 @@ exec_program(struct netcf *ncf,
      */
     sigfillset(&newmask);
     if (pthread_sigmask(SIG_SETMASK, &newmask, &oldmask) != 0) {
+#ifdef __FreeBSD__
+        strerror_r(errno, errbuf, sizeof(errbuf));
+        report_error(ncf, NETCF_EEXEC,
+                     "failed to set signal mask while forking for '%s': %s",
+                     commandline, errbuf);
+#else
         report_error(ncf, NETCF_EEXEC,
                      "failed to set signal mask while forking for '%s': %s",
                      commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
+#endif
         goto error;
     }
 
     *pid = fork();
 
+#ifdef __FreeBSD__
+    if (*pid < 0) {
+        strerror_r(errno, errbuf, sizeof(errbuf));
+        report_error(ncf, NETCF_EEXEC, "failed to fork for '%s': %s",
+                     commandline, errbuf);
+        goto error;
+    }
+#else
     ERR_THROW(*pid < 0, ncf, EEXEC, "failed to fork for '%s': %s",
               commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
+#endif
 
     if (*pid) { /* parent */
         /* Restore our original signal mask now that the child is
            safely running */
+#ifdef __FreeBSD__
+        if (pthread_sigmask(SIG_SETMASK, &oldmask, NULL) != 0) {
+            strerror_r(errno, errbuf, sizeof(errbuf));
+            report_error(ncf, NETCF_EEXEC,
+                        "failed to restore signal mask while forking for '%s': %s",
+                        commandline, errbuf);
+        }
+#else
         ERR_THROW(pthread_sigmask(SIG_SETMASK, &oldmask, NULL) != 0,
                   ncf, EEXEC,
                   "failed to restore signal mask while forking for '%s': %s",
                   commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
+#endif
 
         /* parent doesn't use write side of the pipe */
         if (pipeout[1] >= 0)
@@ -253,15 +297,34 @@ int run_program(struct netcf *ncf, const char *const *argv, char **output)
     exec_program(ncf, argv, argv_str, &childpid, &outfd);
     ERR_BAIL(ncf);
 
+    printf("Attempting to execute %s\n", argv_str);
+#if __FreeBSD__
+    if ( (outfile = fdopen(outfd, "r")) == NULL) {
+        strerror_r(errno, errbuf, sizeof(errbuf));
+        report_error(ncf, NETCF_EEXEC,
+                    "Failed to create file stream for output while executing '%s': %s",
+                    argv_str, errbuf);
+    }
+#else
     outfile = fdopen(outfd, "r");
     ERR_THROW(outfile == NULL, ncf, EEXEC,
               "Failed to create file stream for output while executing '%s': %s",
               argv_str, strerror_r(errno, errbuf, sizeof(errbuf)));
+#endif
 
+#ifdef __FreeBSD__
+    if ( (*output = fread_file(outfile, &outlen)) == NULL) {
+        strerror_r(errno, errbuf, sizeof(errbuf));
+        report_error(ncf, NETCF_EEXEC,
+                     "Error while reading output from execution of '%s': %s",
+                     argv_str, errbuf);
+    }
+#else
     *output = fread_file(outfile, &outlen);
     ERR_THROW(*output == NULL, ncf, EEXEC,
               "Error while reading output from execution of '%s': %s",
               argv_str, strerror_r(errno, errbuf, sizeof(errbuf)));
+#endif
 
     /* finished with the stream. Close it so the child can exit. */
     fclose(outfile);
@@ -272,9 +335,18 @@ int run_program(struct netcf *ncf, const char *const *argv, char **output)
         /* empty loop */
     }
 
+#ifdef __FreeBSD__
+    if (waitret == -1) {
+        strerror_r(errno, errbuf, sizeof(errbuf));
+        report_error(ncf, NETCF_EEXEC,
+                     "Failed waiting for completion of '%s': %s",
+                     argv_str, errbuf);
+    }
+#else
     ERR_THROW(waitret == -1, ncf, EEXEC,
               "Failed waiting for completion of '%s': %s",
               argv_str, strerror_r(errno, errbuf, sizeof(errbuf)));
+#endif
     ERR_THROW(!WIFEXITED(exitstatus) && WIFSIGNALED(exitstatus), ncf, EEXEC,
               "'%s' terminated by signal: %d",
               argv_str, WTERMSIG(exitstatus));
@@ -317,6 +389,7 @@ void run1(struct netcf *ncf, const char *prog, const char *arg) {
     run_program(ncf, argv, NULL);
 }
 
+#ifndef __FreeBSD__
 /*
  * augeas-related utilities
  */
@@ -540,6 +613,7 @@ int aug_fmt_match(struct netcf *ncf, char ***matches, const char *fmt, ...) {
     free(path);
     return -1;
 }
+#endif
 
 void free_matches(int nint, char ***intf) {
     if (*intf != NULL) {
@@ -549,6 +623,7 @@ void free_matches(int nint, char ***intf) {
     }
 }
 
+#ifndef __FreeBSD__
 /* Returns a list of all interfaces with MAC address MAC */
 int aug_match_mac(struct netcf *ncf, const char *mac, char ***matches) {
     int nmatches;
@@ -658,6 +733,7 @@ void modprobed_unalias_bond(struct netcf *ncf, const char *name) {
  error:
     FREE(path);
 }
+#endif
 
 /*
  * ioctl and netlink-related utilities
@@ -772,13 +848,20 @@ int if_hwaddr(struct netcf *ncf, const char *intf,
     MEMZERO(&ifr, 1);
     strncpy(ifr.ifr_name, intf, sizeof(ifr.ifr_name));
     ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
+#ifdef __FreeBSD__
+    ret = ioctl(ncf->driver->ioctl_fd, SIOCGIFADDR, &ifr);
+    memcpy(mac,ifr.ifr_addr.sa_data,6);
+    format_mac_addr(mac,buflen, (unsigned char *)ifr.ifr_addr.sa_data,6);
+#else
     ret = ioctl(ncf->driver->ioctl_fd, SIOCGIFHWADDR, &ifr);
     memcpy(mac,ifr.ifr_hwaddr.sa_data,6);
     format_mac_addr(mac,buflen, (unsigned char *)ifr.ifr_hwaddr.sa_data,6);
+#endif
     return ret;
 }
 
 
+#ifndef __FreeBSD__
 static int if_bridge_phys_name(struct netcf *ncf,
                                const char *intf, char ***phys_names) {
     /* We can learn the name of the physical interface associated with
@@ -992,7 +1075,6 @@ error:
         rtnl_addr_put(filter_addr);
     return;
 }
-
 
 struct nl_ethernet_callback_data {
     xmlDocPtr doc;
@@ -1243,7 +1325,6 @@ static void add_bond_info(struct netcf *ncf,
     nl_cache_foreach(ncf->driver->link_cache, add_bond_info_cb, &cb_data);
 }
 
-
 static void add_type_specific_info(struct netcf *ncf,
                                    const char *ifname, int ifindex,
                                    xmlDocPtr doc, xmlNodePtr root) {
@@ -1282,7 +1363,9 @@ static void add_type_specific_info(struct netcf *ncf,
 error:
     return;
 }
+#endif
 
+#ifndef __FreeBSD__
 void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
     xmlNodePtr root;
     int ifindex, code;
@@ -1319,6 +1402,7 @@ void add_state_to_xml_doc(struct netcf_if *nif, xmlDocPtr doc) {
 error:
     return;
 }
+#endif
 
 /*
  * Local variables:
