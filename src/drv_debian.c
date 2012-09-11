@@ -67,6 +67,9 @@ static const struct augeas_pv augeas_xfm_common_pv[] = {
     { "/augeas/load/Interfaces/excl[6]", "*.rpmsave" },
     { "/augeas/load/Interfaces/excl[7]", "*.augnew" },
     { "/augeas/load/Interfaces/excl[8]", "*.augsave" },
+    { "/augeas/load/Interfaces/excl[9]", "*.dpkg-dist" },
+    { "/augeas/load/Interfaces/excl[10]", "*.dpkg-new" },
+    { "/augeas/load/Interfaces/excl[11]", "*.dpkg-old" },
     /* modprobe config */
     { "/augeas/load/Modprobe/lens", "Modprobe.lns" },
     { "/augeas/load/Modprobe/incl[1]", "/etc/modprobe.d/*" },
@@ -76,6 +79,9 @@ static const struct augeas_pv augeas_xfm_common_pv[] = {
     { "/augeas/load/Modprobe/excl[3]", "*.rpmsave" },
     { "/augeas/load/Modprobe/excl[4]", "*.rpmnew" },
     { "/augeas/load/Modprobe/excl[5]", "*~" },
+    { "/augeas/load/Modprobe/excl[6]", "*.dpkg-dist" },
+    { "/augeas/load/Modprobe/excl[7]", "*.dpkg-new" },
+    { "/augeas/load/Modprobe/excl[8]", "*.dpkg-old" },
     /* sysfs (choice entries from /class/net) */
     { "/augeas/load/Sysfs/lens", "Netcf.id" },
     { "/augeas/load/Sysfs/incl", "/sys/class/net/*/address" }
