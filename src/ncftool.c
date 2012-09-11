@@ -880,8 +880,9 @@ int main(int argc, char **argv) {
 
         r = run_command_line(cmd, &ignore_status);
         free(cmd);
-    } else
+    } else {
         r = main_loop();
+    }
 
     return r == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

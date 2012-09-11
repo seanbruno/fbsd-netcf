@@ -1076,6 +1076,7 @@ error:
     return;
 }
 
+
 struct nl_ethernet_callback_data {
     xmlDocPtr doc;
     xmlNodePtr root;
@@ -1324,6 +1325,7 @@ static void add_bond_info(struct netcf *ncf,
 
     nl_cache_foreach(ncf->driver->link_cache, add_bond_info_cb, &cb_data);
 }
+
 
 static void add_type_specific_info(struct netcf *ncf,
                                    const char *ifname, int ifindex,
