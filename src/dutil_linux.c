@@ -158,22 +158,16 @@ exec_program(struct netcf *ncf,
 
     *pid = fork();
 
-    if (*pid < 0) {
-        strerror_r(errno, errbuf, sizeof(errbuf));
-        report_error(ncf, NETCF_EEXEC, "failed to fork for '%s': %s",
-                     commandline, errbuf);
-        goto error;
-    }
+    ERR_THROW_STRERROR(*pid < 0, ncf, EEXEC, "failed to fork for '%s': %s",
+                       commandline, errbuf);
 
     if (*pid) { /* parent */
         /* Restore our original signal mask now that the child is
            safely running */
-        if (pthread_sigmask(SIG_SETMASK, &oldmask, NULL) != 0) {
-            strerror_r(errno, errbuf, sizeof(errbuf));
-            report_error(ncf, NETCF_EEXEC,
-                        "failed to restore signal mask while forking for '%s': %s",
-                        commandline, errbuf);
-        }
+        ERR_THROW_STRERROR(pthread_sigmask(SIG_SETMASK, &oldmask, NULL) != 0,
+            ncf, EEXEC,
+            "failed to restore signal mask while forking for '%s': %s",
+            commandline, errbuf);
 
         /* parent doesn't use write side of the pipe */
         if (pipeout[1] >= 0)
@@ -274,19 +268,15 @@ int run_program(struct netcf *ncf, const char *const *argv, char **output)
     ERR_BAIL(ncf);
 
     printf("Attempting to execute %s\n", argv_str);
-    if ( (outfile = fdopen(outfd, "r")) == NULL) {
-        strerror_r(errno, errbuf, sizeof(errbuf));
-        report_error(ncf, NETCF_EEXEC,
-            "Failed to create file stream for output while executing '%s': %s",
-                    argv_str, errbuf);
-    }
+    outfile = fdopen(outfd, "r");
+    ERR_THROW_STRERROR(outfile == NULL,ncf, EEXEC,
+              "Failed to create file stream for output while executing '%s': %s",
+              argv_str, errbuf);
 
-    if ( (*output = fread_file(outfile, &outlen)) == NULL) {
-        strerror_r(errno, errbuf, sizeof(errbuf));
-        report_error(ncf, NETCF_EEXEC,
-                     "Error while reading output from execution of '%s': %s",
-                     argv_str, errbuf);
-    }
+    *output = fread_file(outfile, &outlen);
+    ERR_THROW_STRERROR(*output == NULL, ncf, EEXEC,
+                       "Error while reading output from execution of '%s': %s",
+                       argv_str, errbuf);
 
     /* finished with the stream. Close it so the child can exit. */
     fclose(outfile);
@@ -297,12 +287,9 @@ int run_program(struct netcf *ncf, const char *const *argv, char **output)
         /* empty loop */
     }
 
-    if (waitret == -1) {
-        strerror_r(errno, errbuf, sizeof(errbuf));
-        report_error(ncf, NETCF_EEXEC,
-                     "Failed waiting for completion of '%s': %s",
-                     argv_str, errbuf);
-    }
+    ERR_THROW_STRERROR(waitret == -1, ncf, EEXEC,
+                       "Failed waiting for completion of '%s': %s",
+                       argv_str, errbuf);
     ERR_THROW(!WIFEXITED(exitstatus) && WIFSIGNALED(exitstatus), ncf, EEXEC,
               "'%s' terminated by signal: %d",
               argv_str, WTERMSIG(exitstatus));
