@@ -2,7 +2,7 @@
  * drv_suse.c: the suse backend for suse
  *
  * Copyright (C) 2010 Novell Inc.
- * Copyright (C) 2009 Red Hat Inc.
+ * Copyright (C) 2009-2012 Red Hat Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -1007,6 +1007,8 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     struct netcf_if *result = NULL;
     int r;
     struct augeas *aug = get_augeas(ncf);
+
+    ERR_BAIL(ncf);
 
     ncf_xml = parse_xml(ncf, xml_str);
     ERR_BAIL(ncf);
