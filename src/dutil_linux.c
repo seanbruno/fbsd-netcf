@@ -134,16 +134,10 @@ exec_program(struct netcf *ncf,
     /* create a pipe to receive stdout+stderr from child */
     if (outfd) {
         if (pipe(pipeout) < 0) {
-#ifdef __FreeBSD__
             strerror_r(errno, errbuf, sizeof(errbuf));
             report_error(ncf, NETCF_EEXEC,
                          "failed to create pipe while forking for '%s': %s",
                          commandline, errbuf);
-#else
-            report_error(ncf, NETCF_EEXEC,
-                         "failed to create pipe while forking for '%s': %s",
-                         commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
-#endif
             goto error;
         }
         *outfd = pipeout[0];
@@ -155,49 +149,31 @@ exec_program(struct netcf *ncf,
      */
     sigfillset(&newmask);
     if (pthread_sigmask(SIG_SETMASK, &newmask, &oldmask) != 0) {
-#ifdef __FreeBSD__
         strerror_r(errno, errbuf, sizeof(errbuf));
         report_error(ncf, NETCF_EEXEC,
                      "failed to set signal mask while forking for '%s': %s",
                      commandline, errbuf);
-#else
-        report_error(ncf, NETCF_EEXEC,
-                     "failed to set signal mask while forking for '%s': %s",
-                     commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
-#endif
         goto error;
     }
 
     *pid = fork();
 
-#ifdef __FreeBSD__
     if (*pid < 0) {
         strerror_r(errno, errbuf, sizeof(errbuf));
         report_error(ncf, NETCF_EEXEC, "failed to fork for '%s': %s",
                      commandline, errbuf);
         goto error;
     }
-#else
-    ERR_THROW(*pid < 0, ncf, EEXEC, "failed to fork for '%s': %s",
-              commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
-#endif
 
     if (*pid) { /* parent */
         /* Restore our original signal mask now that the child is
            safely running */
-#ifdef __FreeBSD__
         if (pthread_sigmask(SIG_SETMASK, &oldmask, NULL) != 0) {
             strerror_r(errno, errbuf, sizeof(errbuf));
             report_error(ncf, NETCF_EEXEC,
                         "failed to restore signal mask while forking for '%s': %s",
                         commandline, errbuf);
         }
-#else
-        ERR_THROW(pthread_sigmask(SIG_SETMASK, &oldmask, NULL) != 0,
-                  ncf, EEXEC,
-                  "failed to restore signal mask while forking for '%s': %s",
-                  commandline, strerror_r(errno, errbuf, sizeof(errbuf)));
-#endif
 
         /* parent doesn't use write side of the pipe */
         if (pipeout[1] >= 0)
@@ -298,33 +274,19 @@ int run_program(struct netcf *ncf, const char *const *argv, char **output)
     ERR_BAIL(ncf);
 
     printf("Attempting to execute %s\n", argv_str);
-#if __FreeBSD__
     if ( (outfile = fdopen(outfd, "r")) == NULL) {
         strerror_r(errno, errbuf, sizeof(errbuf));
         report_error(ncf, NETCF_EEXEC,
-                    "Failed to create file stream for output while executing '%s': %s",
+            "Failed to create file stream for output while executing '%s': %s",
                     argv_str, errbuf);
     }
-#else
-    outfile = fdopen(outfd, "r");
-    ERR_THROW(outfile == NULL, ncf, EEXEC,
-              "Failed to create file stream for output while executing '%s': %s",
-              argv_str, strerror_r(errno, errbuf, sizeof(errbuf)));
-#endif
 
-#ifdef __FreeBSD__
     if ( (*output = fread_file(outfile, &outlen)) == NULL) {
         strerror_r(errno, errbuf, sizeof(errbuf));
         report_error(ncf, NETCF_EEXEC,
                      "Error while reading output from execution of '%s': %s",
                      argv_str, errbuf);
     }
-#else
-    *output = fread_file(outfile, &outlen);
-    ERR_THROW(*output == NULL, ncf, EEXEC,
-              "Error while reading output from execution of '%s': %s",
-              argv_str, strerror_r(errno, errbuf, sizeof(errbuf)));
-#endif
 
     /* finished with the stream. Close it so the child can exit. */
     fclose(outfile);
@@ -335,18 +297,12 @@ int run_program(struct netcf *ncf, const char *const *argv, char **output)
         /* empty loop */
     }
 
-#ifdef __FreeBSD__
     if (waitret == -1) {
         strerror_r(errno, errbuf, sizeof(errbuf));
         report_error(ncf, NETCF_EEXEC,
                      "Failed waiting for completion of '%s': %s",
                      argv_str, errbuf);
     }
-#else
-    ERR_THROW(waitret == -1, ncf, EEXEC,
-              "Failed waiting for completion of '%s': %s",
-              argv_str, strerror_r(errno, errbuf, sizeof(errbuf)));
-#endif
     ERR_THROW(!WIFEXITED(exitstatus) && WIFSIGNALED(exitstatus), ncf, EEXEC,
               "'%s' terminated by signal: %d",
               argv_str, WTERMSIG(exitstatus));
