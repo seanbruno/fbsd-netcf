@@ -58,25 +58,6 @@ struct augeas_xfm_table {
 };
 
 
-enum
-{
-    EXIT_DUP2=124,          /* dup2() of stdout/stderr in child failed */
-    EXIT_SIGMASK=125,       /* failed to reset signal mask of child */
-    EXIT_CANNOT_INVOKE=126, /* program located, but not usable. */
-    EXIT_ENOENT=127,        /* could not find program to execute */
-
-    /* any application-specific exit codes returned by the exec'ed
-     * binary should be in the range 193-199 to avoid various
-     *ambiguities (confusion with signals, truncation...
-     */
-    /* NB: the following code matches that in the netcf-transact script */
-    EXIT_INVALID_IN_THIS_STATE=199, /* wrong state to perform this operation */
-};
-
-/* run an external program */
-int run_program(struct netcf *ncf, const char *const *argv, char **output);
-void run1(struct netcf *ncf, const char *prog, const char *arg);
-
 /* Add a table of transformations that the next GET_AUGEAS should run */
 int add_augeas_xfm_table(struct netcf *ncf,
                          const struct augeas_xfm_table *table);
@@ -127,9 +108,6 @@ void modprobed_alias_bond(struct netcf *ncf, const char *name);
 
 /* Remove an 'alias NAME bonding' as created by modprobed_alias_bond */
 void modprobed_unalias_bond(struct netcf *ncf, const char *name);
-
-/* Get a file descriptor to a ioctl socket */
-int init_ioctl_fd(struct netcf *ncf);
 
 /* setup the netlink socket */
 int netlink_init(struct netcf *ncf);
