@@ -142,21 +142,33 @@ void drv_entry (struct netcf *ncf ATTRIBUTE_UNUSED) {
  * Populate intf with all interfaces and return total number of interfaces
  */
 static int list_interfaces(struct netcf *ncf ATTRIBUTE_UNUSED, char ***intf) {
-    int nint = 0;
-    *intf = calloc(1024, sizeof(char*)); // FIXME:  Should alloc mem based on num found. swb
+    int nint = 0, pass;
     struct ifaddrs *ifap, *ifa;
 
     getifaddrs(&ifap);
-    for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
-        if ((ifa->ifa_addr->sa_family == AF_LINK) &&
-           ((ifa->ifa_flags & IFF_CANTCONFIG) == 0)) {
-                (*intf)[nint++] =
-                    strndup(ifa->ifa_name, strlen(ifa->ifa_name)+1);
+    for (pass = 0; pass < 1; pass++) {
+        for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+            if ((ifa->ifa_addr->sa_family == AF_LINK) &&
+               ((ifa->ifa_flags & IFF_CANTCONFIG) == 0)) {
+                if (pass == 1) {
+                    (*intf)[nint] =
+                      strndup(ifa->ifa_name, strlen(ifa->ifa_name)+1);
+                }
+                nint++;
+            }
+        }
+        if (pass == 0)
+        {
+            *intf = calloc(nint, sizeof(char*));
+            ERR_NOMEM(*intf == NULL, ncf);
+            nint = 0;
         }
     }
     freeifaddrs(ifap);
 
     return nint;
+error:
+    return -1;
 }
 
 static int list_interface_ids(struct netcf *ncf,
