@@ -124,7 +124,8 @@ void drv_close(struct netcf *ncf) {
 
     if (ncf == NULL || ncf->driver == NULL)
         return;
-    // FIXME:  Don't we have to close the ioctl_fd ?  swb
+    if (ncf->driver->ioctl_fd >= 0)
+        close(ncf->driver->ioctl_fd);
     FREE(ncf->driver);
 
 }
