@@ -105,8 +105,6 @@ int drv_init(struct netcf *ncf) {
 
     if (ALLOC(ncf->driver) < 0)
         return -1;
-    if (ALLOC(ncf->driver) < 0)
-        return -1;
 
     ncf->driver->ioctl_fd = -1;
 
