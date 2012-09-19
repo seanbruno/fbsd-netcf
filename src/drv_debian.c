@@ -1,7 +1,7 @@
 /*
  * drv_initscripts.c: the initscripts backend for netcf
  *
- * Copyright (C) 2009 Red Hat Inc.
+ * Copyright (C) 2009-2012 Red Hat Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -36,6 +36,7 @@
 #include "ref.h"
 #include "list.h"
 #include "dutil.h"
+#include "dutil_posix.h"
 #include "dutil_linux.h"
 
 #include <libxml/parser.h>
@@ -67,6 +68,9 @@ static const struct augeas_pv augeas_xfm_common_pv[] = {
     { "/augeas/load/Interfaces/excl[6]", "*.rpmsave" },
     { "/augeas/load/Interfaces/excl[7]", "*.augnew" },
     { "/augeas/load/Interfaces/excl[8]", "*.augsave" },
+    { "/augeas/load/Interfaces/excl[9]", "*.dpkg-dist" },
+    { "/augeas/load/Interfaces/excl[10]", "*.dpkg-new" },
+    { "/augeas/load/Interfaces/excl[11]", "*.dpkg-old" },
     /* modprobe config */
     { "/augeas/load/Modprobe/lens", "Modprobe.lns" },
     { "/augeas/load/Modprobe/incl[1]", "/etc/modprobe.d/*" },
@@ -76,6 +80,9 @@ static const struct augeas_pv augeas_xfm_common_pv[] = {
     { "/augeas/load/Modprobe/excl[3]", "*.rpmsave" },
     { "/augeas/load/Modprobe/excl[4]", "*.rpmnew" },
     { "/augeas/load/Modprobe/excl[5]", "*~" },
+    { "/augeas/load/Modprobe/excl[6]", "*.dpkg-dist" },
+    { "/augeas/load/Modprobe/excl[7]", "*.dpkg-new" },
+    { "/augeas/load/Modprobe/excl[8]", "*.dpkg-old" },
     /* sysfs (choice entries from /class/net) */
     { "/augeas/load/Sysfs/lens", "Netcf.id" },
     { "/augeas/load/Sysfs/incl", "/sys/class/net/*/address" }
@@ -679,7 +686,7 @@ static int aug_put_xml(struct netcf *ncf, xmlDocPtr xml) {
                     label = xml_prop(node, "label");
                     value = xml_prop(node, "value");
 
-                    r = aug_fmt_set(ncf, value, "%s/%s[%d]/%s",
+                    r = aug_fmt_set(ncf, value, "%s/%s[%d]/%s[last()+1]",
                                     network_interfaces_path,
                                     arraylabel, n, label ? label : "1");
                     ERR_COND_BAIL(r < 0, ncf, EOTHER);
@@ -905,6 +912,8 @@ struct netcf_if *drv_define(struct netcf *ncf, const char *xml_str) {
     char *name = NULL;
     int r;
     struct augeas *aug = get_augeas(ncf);
+
+    ERR_BAIL(ncf);
 
     ncf_xml = parse_xml(ncf, xml_str);
     ERR_BAIL(ncf);
