@@ -1,7 +1,7 @@
 /*
  * dutil_linux.c: Linux utility functions for driver backends.
  *
- * Copyright (C) 2009, 2011, 2012 Red Hat Inc.
+ * Copyright (C) 2009-2012 Red Hat Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -514,6 +514,8 @@ int defnode(struct netcf *ncf, const char *name, const char *value,
     char *expr = NULL;
     int r, created;
 
+    ERR_BAIL(ncf);
+
     va_start(ap, format);
     r = vasprintf (&expr, format, ap);
     va_end (ap);
@@ -665,6 +667,8 @@ int aug_get_mac(struct netcf *ncf, const char *intf, const char **mac) {
     char *path;
     struct augeas *aug = get_augeas(ncf);
 
+    ERR_BAIL(ncf);
+
     r = xasprintf(&path, "/files/sys/class/net/%s/address/content", intf);
     ERR_NOMEM(r < 0, ncf);
 
@@ -685,6 +689,8 @@ void modprobed_alias_bond(struct netcf *ncf, const char *name) {
     char *path = NULL;
     struct augeas *aug = get_augeas(ncf);
     int r, nmatches;
+
+    ERR_BAIL(ncf);
 
     nmatches = aug_fmt_match(ncf, NULL,
                              "/files/etc/modprobe.d/*/alias[ . = '%s']",
@@ -722,6 +728,8 @@ void modprobed_unalias_bond(struct netcf *ncf, const char *name) {
     char *path = NULL;
     struct augeas *aug = get_augeas(ncf);
     int r;
+
+    ERR_BAIL(ncf);
 
     r = xasprintf(&path,
          "/files/etc/modprobe.d/*/alias[ . = '%s'][modulename = 'bonding']",
@@ -768,7 +776,7 @@ int if_is_active(struct netcf *ncf, const char *intf) {
     if (ioctl(ncf->driver->ioctl_fd, SIOCGIFFLAGS, &ifr))  {
         return 0;
     }
-    return ((ifr.ifr_flags & IFF_UP) == IFF_UP);
+    return ((ifr.ifr_flags & (IFF_UP|IFF_RUNNING)) == (IFF_UP|IFF_RUNNING));
 }
 
 netcf_if_type_t if_type(struct netcf *ncf, const char *intf) {

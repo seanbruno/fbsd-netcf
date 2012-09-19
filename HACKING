@@ -1,0 +1,7 @@
+To run nctool from the built source dir use:
+
+  NETCF_DATADIR=data/ src/nctool
+
+To run the tests use:
+
+  make check

@@ -1,0 +1,91 @@
+=head1 NAME
+
+ncftool - Network configuration tool
+
+=head1 SYNOPSIS
+
+ncftool [command [options]]
+
+=head1 DESCRIPTION
+
+ncftool is a command line utility to configure networking.  It can be invoked
+with no arguments to bring up the interactive ncftool shell.  Alternatively a
+command and optional arguments can be specified to have ncftool execute the
+command non-interactively.
+
+=head1 COMMANDS
+
+=head2 B<list [--macs] [--all] [--inactive]>
+
+List the currently configured toplevel network interfaces
+
+=over
+
+=item B<[--macs]> - show MAC addresses
+
+=item B<[--all]> - show all (up & down) interfaces
+
+=item B<[--inactive]> - show only inactive (down) interfaces
+
+=back
+
+=head2 B<dumpxml [--mac] [--live] name>
+
+Dump the XML description of an interface
+
+=over 4
+
+=item B<[--mac]> - interpret the name as MAC address
+
+=item B<[--live]> - include information about the live interface
+
+=item B<name> - the name of the interface
+
+=back
+
+=head2 B<define xmlfile>
+
+Define an interface from the specified XML file.
+
+=head2 B<undefine iface>
+
+Remove the configuration of the specified interface.
+
+=head2 B<ifup iface>
+
+Bring up specified interface.
+
+=head2 B<ifdown iface>
+
+Bring down specified interface.
+
+=head2 B<change-begin>
+
+Mark the beginning of a set of revertible network configuration changes.
+
+=head2 B<change-commit>
+
+Commit (make permanent) a set of network configuration changes begun
+with B<change-begin>.
+
+=head2 B<change-rollback>
+
+Rollback (revert) a set of network configuration changes begun with
+B<change-begin>.
+
+=head2 B<help [command]>
+
+Print details about command, if specified, or list all commands if
+command is not specified.
+
+=head2 quit
+
+Exit the program.
+
+=head1 SEE ALSO
+
+interfaces (5)
+
+=head1 AUTHORS
+
+Please refer to the AUTHORS file distributed with netcf.

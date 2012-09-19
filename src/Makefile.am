@@ -2,6 +2,10 @@
 GNULIB= ../gnulib/lib/libgnu.la
 GNULIB_CFLAGS= -I$(top_srcdir)/gnulib/lib -I$(top_builddir)/gnulib/lib
 
+POD2MAN = pod2man -c "Network Configuration" -r "$(PACKAGE)-$(VERSION)"
+
+dist_man1_MANS = ncftool.1
+
 AM_CFLAGS = $(NETCF_CFLAGS) $(GNULIB_CFLAGS) $(WARN_CFLAGS) \
   $(LIBXML_CFLAGS) $(LIBXSLT_CFLAGS) $(LIBAUGEAS_CFLAGS) $(LIBNL_CFLAGS) $(LIBNL_ROUTE3_CFLAGS)
 
@@ -36,6 +40,7 @@ EXTRA_DIST = netcf_public.syms \
 	$(DRIVER_SOURCES_MSWINDOWS) \
 	$(DRIVER_SOURCES_REDHAT) \
         $(DRIVER_SOURCES_DEBIAN) \
+	ncftool.pod \
         $(DRIVER_SOURCES_SUSE)
 
 if NETCF_DRIVER_REDHAT
@@ -85,6 +90,9 @@ libnetcf_la_DEPENDENCIES = $(GNULIB) netcf.syms
 
 ncftool_SOURCES = ncftool.c
 ncftool_LDADD = libnetcf.la $(READLINE_LIBS) $(GNULIB) $(LIBNL_LIBS) $(LIBNL_ROUTE3_LIBS)
+
+ncftool.1: ncftool.pod
+	$(AM_V_GEN)$(POD2MAN) $< $(srcdir)/$@
 
 if ! NETCF_DRIVER_MSWINDOWS
 if ! NETCF_DRIVER_FREEBSD

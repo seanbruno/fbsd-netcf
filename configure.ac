@@ -1,4 +1,4 @@
-AC_INIT(netcf, 0.1.9)
+AC_INIT(netcf, 0.2.2)
 AC_CONFIG_SRCDIR([src/netcf.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([gnulib/m4])
@@ -104,9 +104,9 @@ fi
 AM_CONDITIONAL([NETCF_INIT_SCRIPT_RED_HAT],
                [test x$with_driver = xredhat])
 
-AC_ARG_ENABLE([libnl1],
-	      AS_HELP_STRING([--enable-libnl1], [Force usage of libnl1]),
-	      [force_libnl1="$enableval"], [force_libnl1=no])
+AC_ARG_WITH([libnl1],
+            AS_HELP_STRING([--with-libnl1], [Force usage of libnl1 @<:@default=no@:>@]),
+	      [force_libnl1=${withval}], [force_libnl1=no])
 
 if test "x$with_driver" != "xmswindows" && test "x$with_driver" != "xfreebsd"
 then
@@ -147,13 +147,13 @@ fi
 
 if test "x$with_driver" = "xdebian"; then
 	dnl Check for ifup and ifdown in debian
-	AC_PATH_PROG(IFDOWN, ifdown, false, $PATH$PATHSEPARATOR/sbin)
+	AC_PATH_PROG(IFDOWN, ifdown, false, $PATH$PATH_SEPARATOR/sbin)
 	if test "$IFDOWN" = "false"; then
 	   AC_MSG_ERROR([ifdown not found])
 	fi
 	AC_DEFINE_UNQUOTED([IFDOWN], "$IFDOWN", [path to ifdown binary])
 
-	AC_PATH_PROG(IFUP, ifup, false, $PATH$PATHSEPARATOR/sbin)
+	AC_PATH_PROG(IFUP, ifup, false, $PATH$PATH_SEPARATOR/sbin)
 	if test "$IFUP" = "false"; then
 	   AC_MSG_ERROR([ifup not found])
 	fi

@@ -11,7 +11,21 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires:  readline-devel augeas-devel >= 0.5.2
 BuildRequires:  libxml2-devel libxslt-devel
+
+# force the --with-libnl1 option on F17/RHEL6 and earlier
+%if (0%{?fedora} && 0%{?fedora} < 18) || (0%{?rhel} && 0%{?rhel} < 7)
+%define with_libnl1 1
+%else
+%define with_libnl1 0
+%endif
+
+# require libnl3 on F18/RHEL7 and later
+%if 0%{?fedora} >= 18 || 0%{?rhel} >= 7
+BuildRequires:  libnl3-devel
+%else
 BuildRequires:  libnl-devel
+%endif
+
 Requires:       %{name}-libs = %{version}-%{release}
 
 Provides: bundled(gnulib)
@@ -43,7 +57,12 @@ The libraries for %{name}.
 %setup -q
 
 %build
-%configure --disable-static
+%if %{with_libnl1}
+%define _with_libnl1 --with-libnl1
+%endif
+
+%configure --disable-static \
+           %{?_with_libnl1}
 make %{?_smp_mflags}
 
 %install
@@ -61,6 +80,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %{_bindir}/ncftool
+%{_mandir}/man1/ncftool.1*
 
 %files libs
 %defattr(-,root,root,-)
@@ -77,6 +97,31 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/netcf.pc
 
 %changelog
+* Sat Aug 25 2012 Laine Stump <laine@redhat.com> - 0.2.2-1
+- specfile: require libnl3-devel for rpm builds on Fedora 18+ and
+  RHEL7+. Likewise, force libnl1 for F17- and RHEL6.x-, even if
+  libnl3-devel is installed.
+
+* Fri Aug 10 2012 Laine Stump <laine@redhat.com> - 0.2.1-1
+- update gnulib to fix broken build on systems with nwer glibc (which no
+  longer provides gets()).
+- add ncftool manpage
+- interfaces are only "active" if both UP and RUNNING.
+
+* Fri Jul 20 2012 Laine Stump <laine@redhat.com> - 0.2.0-1
+- add support for Ubuntu, debian, and Suse Linux. Also an
+  unfinished port for MS Windows.
+- added support for libnl-3 (which is incompatible with libnl-1 -
+  netcf will use whichever is available, preferring libnl-3 unless
+  told otherwise during configure stage)
+- add "bundled(gnulib)" to specfile to indicate that we use a local
+  copy of gnulib sources (used by Fedora/RHEL when determining the scope
+  of security bugs).
+- Fix ipcalc_netmask, which was trimming off the last digit in
+  character representations of full-length netmasks (all 4 octets
+  having 3 chars each)
+- other minor bugfixes
+
 * Tue Jul 26 2011 Laine Stump <laine@redhat.com> - 0.1.9-1
 - always add <bridge> element to bridge, even if there is no physdev present
 - don't log error if interface isn't found in kernel during status report
