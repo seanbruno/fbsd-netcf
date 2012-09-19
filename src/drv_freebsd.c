@@ -147,7 +147,7 @@ static int list_interfaces(struct netcf *ncf ATTRIBUTE_UNUSED, char ***intf) {
     struct ifaddrs *ifap, *ifa;
 
     getifaddrs(&ifap);
-    for (pass = 0; pass < 1; pass++) {
+    for (pass = 0; pass < 2; pass++) {
         for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
             if ((ifa->ifa_addr->sa_family == AF_LINK) &&
                ((ifa->ifa_flags & IFF_CANTCONFIG) == 0)) {
