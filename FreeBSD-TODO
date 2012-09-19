@@ -18,8 +18,61 @@
     help       - print help
     quit       - exit the program
 
+Bugs
+====
+- The MAC address is not included in dumpxml in non -live mode.
+- ncf_lookup_by_name returns a netcf_if * even if the interface does not exist
+
 Example output
 ==============
+
+list
+----
+feynman% src/ncftool list --all --macs           
+em0      90:2b:34:00:01:02
+plip0    could not get MAC
+fwe0     02:49:e5:00:01:02
+fwip0    could not get MAC
+alc0     90:2b:34:03:04:05
+lo0      could not get MAC
+vboxnet0 0a:00:27:00:00:00
+vboxnet1 0a:00:27:00:00:01
+vboxnet2 0a:00:27:00:00:02
+vboxnet3 0a:00:27:00:00:03
+br0      90:2b:34:00:01:02
+
+dumpxml
+-------
+feynman% src/ncftool dumpxml em0 
+<interface type="ethernet" name="em0">
+  <start mode="none"/>
+  <mac address=""/>
+  <mtu size=""/>
+  <protocol family="ipv4">
+    <dhcp/>
+  </protocol>
+</interface>
+
+On CentOS, <start mode="onboot"/> and MAC address is printed (because the
+MAC address is defined in /etc/sysconfig/network-scripts/ifcfg-$name).
+
+feynman% src/ncftool dumpxml -live em0
+<interface type="ethernet" name="em0">
+  <start mode="none"/>
+  <mac address="90:2b:34:01:02:03"/>
+  <mtu size="1500"/>
+  <protocol family="ipv4">
+    <dhcp/>
+  </protocol>
+</interface>
+
+define
+------
+
+undefine
+--------
+feynman% src/ncftool undefine em0 
+Could not open tmp file
 
 ifup
 ----
@@ -31,12 +84,57 @@ ifdown
 feynman% src/ncftool ifdown em0                                
 Interface em0 bring-down failed!
 feynman% sudo src/ncftool ifdown em0
-Password:
 Interface em0 successfully brought down
 feynman% ifconfig em0               
 em0: flags=28d02<BROADCAST,PROMISC,OACTIVE,SIMPLEX,MULTICAST,PPROMISC> metric 0 mtu 1500
         options=153098<VLAN_MTU,VLAN_HWTAGGING,VLAN_HWCSUM,WOL_MCAST,WOL_MAGIC,VLAN_HWFILTER,VLAN_HWTSO,NETMAP>
-        ether 90:2b:34:36:13:49
+        ether 90:2b:34:00:01:02
         nd6 options=29<PERFORMNUD,IFDISABLED,AUTO_LINKLOCAL>
         media: Ethernet autoselect (1000baseT <full-duplex>)
         status: active
+
+change-begin
+------------
+feynman% src/ncftool change-begin
+Attempting to execute /usr/bin/false change-begin
+error: failed to execute external program
+error: Running '/usr/bin/false change-begin' failed with exit code 1: 
+
+change-commit
+-------------
+feynman% src/ncftool change-commit
+Attempting to execute /usr/bin/false change-commit
+error: failed to execute external program
+error: Running '/usr/bin/false change-commit' failed with exit code 1: 
+
+change-rollback
+---------------
+feynman% src/ncftool change-rollback
+Attempting to execute /usr/bin/false change-rollback
+error: failed to execute external program
+error: Running '/usr/bin/false change-rollback' failed with exit code 1: 
+
+help
+----
+feynman% src/ncftool help
+Commands:
+
+    list       - list network interfaces
+    dumpxml    - dump the XML description of an interface
+    define     - define an interface from an XML file
+    undefine   - undefine an interface
+    ifup       - bring up an interface
+    ifdown     - bring down an interface
+    change-begin - mark the beginning of a set of revertible network config changes
+    change-commit - commit the pending network config changes
+    change-rollback - rollback (revert) a set of network config changes
+    help       - print help
+    quit       - exit the program
+
+Type 'help <command>' for more information on a command
+
+
+quit
+----
+feynman% src/ncftool     
+ncftool> quit
