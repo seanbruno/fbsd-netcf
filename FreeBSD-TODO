@@ -17,3 +17,26 @@
     undefine   - undefine an interface
     help       - print help
     quit       - exit the program
+
+Example output
+==============
+
+ifup
+----
+feynman% sudo src/ncftool ifup em0
+Interface em0 successfully brought up
+
+ifdown
+------
+feynman% src/ncftool ifdown em0                                
+Interface em0 bring-down failed!
+feynman% sudo src/ncftool ifdown em0
+Password:
+Interface em0 successfully brought down
+feynman% ifconfig em0               
+em0: flags=28d02<BROADCAST,PROMISC,OACTIVE,SIMPLEX,MULTICAST,PPROMISC> metric 0 mtu 1500
+        options=153098<VLAN_MTU,VLAN_HWTAGGING,VLAN_HWCSUM,WOL_MCAST,WOL_MAGIC,VLAN_HWFILTER,VLAN_HWTSO,NETMAP>
+        ether 90:2b:34:36:13:49
+        nd6 options=29<PERFORMNUD,IFDISABLED,AUTO_LINKLOCAL>
+        media: Ethernet autoselect (1000baseT <full-duplex>)
+        status: active

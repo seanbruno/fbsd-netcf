@@ -276,13 +276,11 @@ const char *drv_mac_string(struct netcf_if *nif) {
 }
 
 int drv_if_down(struct netcf_if *nif) {
-    setifflags(nif->name, -IFF_UP, nif->ncf->driver->ioctl_fd);
-    return 0;
+    return setifflags(nif->name, -IFF_UP, nif->ncf->driver->ioctl_fd);
 }
 
 int drv_if_up(struct netcf_if *nif) {
-    setifflags(nif->name, IFF_UP, nif->ncf->driver->ioctl_fd);
-    return 0;
+    return setifflags(nif->name, IFF_UP, nif->ncf->driver->ioctl_fd);
 }
 
 /*
