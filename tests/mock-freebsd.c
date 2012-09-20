@@ -26,14 +26,18 @@
 #include <sys/types.h>
 #include <assert.h>
 #include <ifaddrs.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <net/ethernet.h>
+#include <net/if.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
 
+#include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/sockio.h>
 
 #define GETIFADDRS_BUF_SIZE 1024
 static void
@@ -123,7 +127,7 @@ sockaddr_ether(const char *name, const char *addr)
 	struct ether_addr *ea;
 
 	ea = ether_aton(addr);
-	sdl = sockaddr_dl_common(name, ea->octet, ETHER_ADDR_LEN);
+	sdl = sockaddr_dl_common(name, (const char *)ea->octet, ETHER_ADDR_LEN);
 	sdl->sdl_family = AF_LINK;
 	sdl->sdl_index = 0;
 	sdl->sdl_type = IFT_ETHER;
@@ -170,5 +174,38 @@ int getifaddrs(struct ifaddrs **ifap)
 
 	*ifap = ifa;
 	return (0);
+}
+
+/* ioctl */
+static int is_valid_name(const char *name)
+{
+	if (!strcmp(name, "em0") ||
+	    !strcmp(name, "em1") ||
+	    !strcmp(name, "lo0") ||
+	    !strcmp(name, "lagg0") ||
+	    !strcmp(name, "bridge0"))
+		return (0);
+	return (-1);
+}
+
+int ioctl(int d, unsigned long request, ...)
+{
+	struct ifreq *ifr;
+	void *data;
+	va_list ap;
+
+	va_start(ap, request);
+	data = va_arg(ap, void *);
+	va_end(ap);
+
+	switch (request) {
+	case SIOCGIFFLAGS:
+		ifr = (struct ifreq *)data;
+		return (is_valid_name(ifr->ifr_name));
+	case SIOCSIFFLAGS:
+		ifr = (struct ifreq *)data;
+		return (is_valid_name(ifr->ifr_name));
+	}
+	return (-1);
 }
 
