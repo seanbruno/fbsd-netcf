@@ -58,10 +58,8 @@ static const char *const errmsgs[] = {
 
 int ncf_init(struct netcf **ncf, const char *root) {
     *ncf = NULL;
-    if (make_ref(*ncf) < 0) {
-		printf ("make_ref failed\n");
+    if (make_ref(*ncf) < 0)
         goto error;
-	}
     if (root == NULL) {
 #ifdef WIN32
         root = getenv("SYSTEMDRIVE");
@@ -74,15 +72,11 @@ int ncf_init(struct netcf **ncf, const char *root) {
     if (root[strlen(root)-1] == '/') {
         (*ncf)->root = strdup(root);
     } else {
-        if (xasprintf(&(*ncf)->root, "%s/", root) < 0) {
-			printf ("xasprintf failed\n");
+        if (xasprintf(&(*ncf)->root, "%s/", root) < 0)
             goto error;
-		}
     }
-    if ((*ncf)->root == NULL) {
-		printf("root still NULL\n");
+    if ((*ncf)->root == NULL)
         goto error;
-	}
     (*ncf)->data_dir = getenv("NETCF_DATADIR");
     if ((*ncf)->data_dir == NULL)
         (*ncf)->data_dir = NETCF_DATADIR "/netcf";
