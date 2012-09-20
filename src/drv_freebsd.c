@@ -69,6 +69,19 @@
 int dhcp_lease_exists (struct netcf_if *);
 void xml_print(struct netcf_if *, int, char *, char *, char *, int, int);
 
+static int
+probe_interface(const char *name, int ioctl_fd)
+{
+    struct ifreq ifr;
+
+    memset(&ifr, 0, sizeof(ifr));
+    strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+    if (ioctl(ioctl_fd, SIOCGIFFLAGS, (caddr_t)&ifr) < 0)
+        return (-1);
+
+    return 0;
+}
+
 /*
  * Liberally ripped off from sbin/ifconfig/ifconfig.c
  */
@@ -234,6 +247,9 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
 
     struct netcf_if *nif = NULL;
     char *name_dup = NULL;
+
+    if (probe_interface(name, ncf->driver->ioctl_fd) != 0)
+        goto done;
 
     name_dup = strdup(name);
     ERR_NOMEM(name_dup == NULL, ncf);
