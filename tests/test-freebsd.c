@@ -82,10 +82,9 @@ static void testLookupByNameDecoy(CuTest *tc) {
     struct netcf_if *nif;
     char *xml, *loc;
 
-    nif = ncf_lookup_by_name(ncf, "eth4");
+    nif = ncf_lookup_by_name(ncf, "em0");
     CuAssertPtrNotNull(tc, nif);
-    CuAssertStrEquals(tc, "eth4", nif->name);
-printf("nif=%p\n", nif);
+    CuAssertStrEquals(tc, "em0", nif->name);
 
     xml = ncf_if_xml_desc(nif);
     CuAssertPtrNotNull(tc, xml);
