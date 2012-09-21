@@ -27,10 +27,6 @@
 #include <errno.h>
 #include <arpa/inet.h>
 
-#ifdef __FreeBSD__
-#include <sys/socket.h>
-#endif
-
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
 #include <libxslt/xsltutils.h>

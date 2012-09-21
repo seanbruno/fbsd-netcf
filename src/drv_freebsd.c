@@ -2,28 +2,27 @@
  * Copyright (c) 2012, Sean Bruno sbruno@freebsd.org
  * Copyright (c) 2012, Hiren Panchasara hiren.panchasara@gmail.com
  * All rights reserved.
-
+ *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * The names of the authors may not be used to endorse or promote
-      products derived from this software without specific prior written
-      permission
-
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include <config.h>
@@ -70,6 +69,19 @@
 int dhcp_lease_exists (struct netcf_if *);
 void xml_print(struct netcf_if *, int, char *, char *, char *, int, int);
 
+static int
+probe_interface(const char *name, int ioctl_fd)
+{
+    struct ifreq ifr;
+
+    memset(&ifr, 0, sizeof(ifr));
+    strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+    if (ioctl(ioctl_fd, SIOCGIFFLAGS, (caddr_t)&ifr) < 0)
+        return (-1);
+
+    return 0;
+}
+
 /*
  * Liberally ripped off from sbin/ifconfig/ifconfig.c
  */
@@ -106,8 +118,6 @@ int drv_init(struct netcf *ncf) {
 
     if (ALLOC(ncf->driver) < 0)
         return -1;
-    if (ALLOC(ncf->driver) < 0)
-        return -1;
 
     ncf->driver->ioctl_fd = -1;
 
@@ -127,7 +137,8 @@ void drv_close(struct netcf *ncf) {
 
     if (ncf == NULL || ncf->driver == NULL)
         return;
-    // FIXME:  Don't we have to close the ioctl_fd ?  swb
+    if (ncf->driver->ioctl_fd >= 0)
+        close(ncf->driver->ioctl_fd);
     FREE(ncf->driver);
 
 }
@@ -145,21 +156,33 @@ void drv_entry (struct netcf *ncf ATTRIBUTE_UNUSED) {
  * Populate intf with all interfaces and return total number of interfaces
  */
 static int list_interfaces(struct netcf *ncf ATTRIBUTE_UNUSED, char ***intf) {
-    int nint = 0;
-    *intf = calloc(1024, sizeof(char*)); // FIXME:  Should alloc mem based on num found. swb
+    int nint = 0, pass;
     struct ifaddrs *ifap, *ifa;
 
     getifaddrs(&ifap);
-    for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
-        if ((ifa->ifa_addr->sa_family == AF_LINK) &&
-           ((ifa->ifa_flags & IFF_CANTCONFIG) == 0)) {
-                (*intf)[nint++] =
-                    strndup(ifa->ifa_name, strlen(ifa->ifa_name)+1);
+    for (pass = 0; pass < 2; pass++) {
+        for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+            if ((ifa->ifa_addr->sa_family == AF_LINK) &&
+               ((ifa->ifa_flags & IFF_CANTCONFIG) == 0)) {
+                if (pass == 1) {
+                    (*intf)[nint] =
+                      strndup(ifa->ifa_name, strlen(ifa->ifa_name)+1);
+                }
+                nint++;
+            }
+        }
+        if (pass == 0)
+        {
+            *intf = calloc(nint, sizeof(char*));
+            ERR_NOMEM(*intf == NULL, ncf);
+            nint = 0;
         }
     }
     freeifaddrs(ifap);
 
     return nint;
+error:
+    return -1;
 }
 
 static int list_interface_ids(struct netcf *ncf,
@@ -225,6 +248,9 @@ struct netcf_if *drv_lookup_by_name(struct netcf *ncf, const char *name) {
     struct netcf_if *nif = NULL;
     char *name_dup = NULL;
 
+    if (probe_interface(name, ncf->driver->ioctl_fd) != 0)
+        goto done;
+
     name_dup = strdup(name);
     ERR_NOMEM(name_dup == NULL, ncf);
 
@@ -266,13 +292,11 @@ const char *drv_mac_string(struct netcf_if *nif) {
 }
 
 int drv_if_down(struct netcf_if *nif) {
-    setifflags(nif->name, -IFF_UP, nif->ncf->driver->ioctl_fd);
-    return 0;
+    return setifflags(nif->name, -IFF_UP, nif->ncf->driver->ioctl_fd);
 }
 
 int drv_if_up(struct netcf_if *nif) {
-    setifflags(nif->name, IFF_UP, nif->ncf->driver->ioctl_fd);
-    return 0;
+    return setifflags(nif->name, IFF_UP, nif->ncf->driver->ioctl_fd);
 }
 
 /*

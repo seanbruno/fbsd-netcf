@@ -23,6 +23,9 @@
 #include <config.h>
 #include <stdio.h>
 #include <libxml/tree.h>
+#ifdef __FreeBSD__
+#include <sys/wait.h>
+#endif
 
 #include "internal.h"
 #include "cutest.h"
@@ -200,7 +203,9 @@ void setup(CuTest *tc) {
     run(tc, "mkdir -p %s", root);
     run(tc, "cp -pr %s/* %s", src_root, root);
     run(tc, "chmod -R u+w %s", root);
+#ifndef __FreeBSD__
     run(tc, "chmod -R a-w %s/sys", root);
+#endif
 
     r = ncf_init(&ncf, root);
     CuAssertIntEquals(tc, 0, r);

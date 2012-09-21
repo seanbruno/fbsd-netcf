@@ -150,12 +150,18 @@ void CuAssertDblEquals_LineMsg(CuTest* tc, const char* file, int line,
 	CuFail_Line(tc, file, line, message, buf);
 }
 
+#ifdef __FreeBSD__
+#define PTR_FMT "%p"
+#else
+#define PTR_FMT "0x%p"
+#endif
+
 void CuAssertPtrEquals_LineMsg(CuTest* tc, const char* file, int line,
                                const char* message,
                                const void* expected, const void* actual) {
 	char buf[STRING_MAX];
 	if (expected == actual) return;
-	sprintf(buf, "expected pointer <0x%p> but was <0x%p>", expected, actual);
+	sprintf(buf, "expected pointer <" PTR_FMT "> but was <" PTR_FMT ">", expected, actual);
 	CuFail_Line(tc, file, line, message, buf);
 }
 
@@ -164,7 +170,7 @@ void CuAssertPtrNotEqual_LineMsg(CuTest* tc, const char* file, int line,
                                  const void* expected, const void* actual) {
 	char buf[STRING_MAX];
 	if (expected != actual) return;
-	sprintf(buf, "expected pointer <0x%p> to be different from <0x%p>",
+	sprintf(buf, "expected pointer <" PTR_FMT "> to be different from <" PTR_FMT ">",
             expected, actual);
 	CuFail_Line(tc, file, line, message, buf);
 }

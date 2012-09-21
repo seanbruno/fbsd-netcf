@@ -36,6 +36,7 @@
 #include "ref.h"
 #include "list.h"
 #include "dutil.h"
+#include "dutil_posix.h"
 #include "dutil_linux.h"
 
 #include <libxml/parser.h>
